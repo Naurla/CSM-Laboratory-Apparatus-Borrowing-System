@@ -152,7 +152,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             background-color: var(--msu-red); 
         }
         .logout-link .nav-link { 
-            background-color: var(--student-logout-red) !important; 
+            background-color: #C62828 !important; /* FIXED to match consistent base logout color */
             color: white !important;
             padding: 18px 25px; 
             border-radius: 0; 
@@ -160,7 +160,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             font-size: 1.1rem; /* Increased font size */
         }
         .logout-link .nav-link:hover {
-            background-color: #c82333 !important; 
+            background-color: var(--msu-red-dark) !important; /* FIXED to use consistent dark hover color */
         }
         
         .main-content {

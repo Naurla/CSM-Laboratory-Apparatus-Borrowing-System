@@ -253,7 +253,7 @@ $today = date("Y-m-d");
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     .logout-link .nav-link { 
-        background-color: #dc3545 !important; 
+        background-color: #C62828 !important; /* FIXED: To match student_dashboard.php base color */
         color: white !important;
     }
     .logout-link .nav-link:hover {

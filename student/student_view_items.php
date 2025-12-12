@@ -45,7 +45,7 @@ if ($context === 'history') {
 
 // Define the Web URL base path for the browser (assumes 'wd123' is the folder under htdocs)
 // This must match your web server setup.
-$baseURL = "/wd123/uploads/apparatus_images/"; 
+$baseURL = "../uploads/apparatus_images/"; 
 ?>
 
 <!DOCTYPE html>
@@ -62,8 +62,8 @@ $baseURL = "/wd123/uploads/apparatus_images/";
     <style>
         
         :root {
-            --msu-red: #b8312d; 
-            --msu-red-dark: #a82e2a; 
+            --msu-red: #A40404; /* FIXED: Consistent Red */
+            --msu-red-dark: #820303; /* FIXED: Consistent Dark Red */
             --primary-blue: #007bff;
             --header-height: 60px; /* Define header height */
             --bg-light: #f5f6fa;
@@ -163,7 +163,7 @@ $baseURL = "/wd123/uploads/apparatus_images/";
         }
         /* END MODIFIED */
 
-      
+        
         .page-header {
             color: var(--msu-red); 
             margin-bottom: 30px;
@@ -453,12 +453,13 @@ $baseURL = "/wd123/uploads/apparatus_images/";
 
             // 2. Clear previous dynamic items
             const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            $dropdown.find('.mark-all-btn-wrapper').remove(); 
             
             if (notifications.length > 0) {
                 // Add a Mark All button if there are unread items
                 if (unreadCount > 0) {
                      $placeholder.append(`
-                          <a class="dropdown-item text-center small text-muted dynamic-notif-item" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
                              <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
                           </a>
                      `);
@@ -485,11 +486,11 @@ $baseURL = "/wd123/uploads/apparatus_images/";
 
                     // Insert the item into the placeholder div
                     $placeholder.append(`
-                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                            href="${link}" 
-                            data-id="${notif.id}"
-                            data-is-read="${notif.is_read}"
-                            onclick="window.markSingleAlertAndGo(event, this)">
+                           <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                             href="${link}" 
+                             data-id="${notif.id}"
+                             data-is-read="${notif.is_read}"
+                             onclick="window.markSingleAlertAndGo(event, this)">
                              <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
                              <div class="flex-grow-1">
                                  <div class="small text-gray-500">${datePart}</div>
@@ -502,8 +503,8 @@ $baseURL = "/wd123/uploads/apparatus_images/";
                                              onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
                                      <i class="fas fa-check-circle"></i>
                                  </button>` : ''}
-                         </a>
-                     `);
+                           </a>
+                      `);
                 });
             } else {
                 // Display a "No Alerts" message

@@ -202,9 +202,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quick_update_stock'])
             $current_app['size'], 
             $current_app['material'], 
             $current_app['description'],
-            $total_stock,      // New Total
-            $damaged_stock,    // New Damaged
-            $lost_stock,       // New Lost
+            $total_stock, 
+            $damaged_stock, 
+            $lost_stock, 
             $current_app['image']
         )
     ) {
@@ -341,8 +341,8 @@ if (!empty($search_query)) {
 <style>
     /* CSS FIXES: Explicitly constraining image and description width to stabilize table UI */
     :root {
-        --msu-red: #b8312d; 
-        --msu-red-dark: #a82e2a; 
+        --msu-red: #A40404; /* FIXED to consistent staff/student red */
+        --msu-red-dark: #820303; /* FIXED to consistent dark red */
         --msu-blue: #007bff;
         --sidebar-width: 280px; 
         --header-height: 60px; 
@@ -489,7 +489,7 @@ if (!empty($search_query)) {
         display: flex; 
         align-items: center;
         justify-content: flex-start; 
-        background-color: var(--student-logout-red) !important; 
+        background-color: #C62828 !important; /* FIXED to match consistent base logout color */
         color: white !important;
         padding: 18px 25px; 
         border-radius: 0; 
@@ -499,7 +499,7 @@ if (!empty($search_query)) {
         transition: background 0.3s;
     }
     .logout-link .nav-link:hover {
-        background-color: #c82333 !important; 
+        background-color: var(--msu-red-dark) !important; /* FIXED to use consistent dark hover color */
     }
     /* --- END FINAL LOGOUT FIX --- */
 
@@ -1017,15 +1017,15 @@ if (!empty($search_query)) {
                                         $display_text = (strlen($description) > $display_limit) ? substr($description, 0, $display_limit) . '...' : $description;
 
                                         echo '<span 
-                                                    tabindex="0" 
-                                                    role="button"
-                                                    data-bs-toggle="popover" 
-                                                    data-bs-trigger="hover focus" 
-                                                    data-bs-placement="bottom" 
-                                                    data-bs-custom-class="description-popover" 
-                                                    data-bs-title="Full Description" 
-                                                    data-bs-content="' . $description . '">' . $display_text . 
-                                                    '</span>';
+                                                tabindex="0" 
+                                                role="button"
+                                                data-bs-toggle="popover" 
+                                                data-bs-trigger="hover focus" 
+                                                data-bs-placement="bottom" 
+                                                data-bs-custom-class="description-popover" 
+                                                data-bs-title="Full Description" 
+                                                data-bs-content="' . $description . '">' . $display_text . 
+                                                '</span>';
                                     ?>
                                 </td>
                                 
@@ -1338,7 +1338,7 @@ if (!empty($search_query)) {
             
             // Re-append the Mark All link and View All link in order
             if (unreadCount > 0) {
-                 $dropdown.append($markAllLink);
+                   $dropdown.append($markAllLink);
             }
             $dropdown.append($viewAllLink);
             
@@ -1538,7 +1538,7 @@ if (!empty($search_query)) {
                                                             class="btn btn-sm btn-success restore-unit-btn" 
                                                             data-unit-id="${unit.unit_id}">
                                                            <i class="fas fa-wrench me-1"></i> Restore
-                                                         </button>`;
+                                                          </button>`;
                                 } else if (unit.current_condition === 'good' && unit.current_status === 'available') {
                                     buttonHtml = `<button class="btn btn-sm btn-secondary" disabled>No Action</button>`;
                                 } else {

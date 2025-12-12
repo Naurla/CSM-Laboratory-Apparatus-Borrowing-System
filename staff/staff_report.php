@@ -184,12 +184,12 @@ foreach ($allApparatus as $app) {
     <style>
         /* --- General and Hub View CSS --- */
         :root {
-            --msu-red: #b8312d;
-            --msu-red-dark: #a82e2a;
+            --msu-red: #A40404; /* FIXED to consistent staff/student red */
+            --msu-red-dark: #820303; /* FIXED to consistent dark red */
             --msu-blue: #007bff;
             --sidebar-width: 280px;
             --header-height: 60px; /* ADDED for top bar */
-            --student-logout-red: #dc3545; 
+            --student-logout-red: #C62828; /* FIXED to consistent base red */
             --base-font-size: 15px;
             --main-text: #333; /* ADDED for top bar */
         }
@@ -287,9 +287,28 @@ foreach ($allApparatus as $app) {
         .sidebar-nav .nav-link:hover { background-color: var(--msu-red-dark); }
         .sidebar-nav .nav-link.active { background-color: var(--msu-red-dark); }
         
-        .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); width: 100%; background-color: var(--msu-red); }
-        .logout-link .nav-link { display: flex; align-items: center; justify-content: flex-start; background-color: var(--student-logout-red) !important; color: white !important; padding: 18px 25px; border-radius: 0; text-decoration: none; font-weight: 600; font-size: 1.05rem; transition: background 0.3s; }
-        .logout-link .nav-link:hover { background-color: #c82333 !important; }
+        .logout-link { 
+            margin-top: auto; 
+            border-top: 1px solid rgba(255, 255, 255, 0.1); 
+            width: 100%; 
+            background-color: var(--msu-red); 
+        }
+        .logout-link .nav-link { 
+            display: flex; 
+            align-items: center;
+            justify-content: flex-start; 
+            background-color: var(--student-logout-red) !important; /* FIXED to consistent base red */
+            color: white !important;
+            padding: 18px 25px; 
+            border-radius: 0; 
+            text-decoration: none;
+            font-weight: 600; 
+            font-size: 1.05rem; 
+            transition: background 0.3s; 
+        }
+        .logout-link .nav-link:hover { 
+            background-color: var(--msu-red-dark) !important; /* FIXED to consistent dark hover color */
+        }
 
         .main-content {
             margin-left: var(--sidebar-width); 
@@ -787,12 +806,12 @@ foreach ($allApparatus as $app) {
                 <div class="col-md-3">
                     <label for="start_date" class="form-label">Start Date (Form Created)</label>
                     <input type="date" name="start_date" id="start_date" class="form-control" 
-                                    value="<?= htmlspecialchars($start_date) ?>">
+                                     value="<?= htmlspecialchars($start_date) ?>">
                 </div>
                 <div class="col-md-3">
                     <label for="end_date" class="form-label">End Date (Form Created)</label>
                     <input type="date" name="end_date" id="end_date" class="form-control" 
-                                    value="<?= htmlspecialchars($end_date) ?>">
+                                     value="<?= htmlspecialchars($end_date) ?>">
                 </div>
                 
                 <div class="col-md-3 mt-3">
@@ -1116,36 +1135,6 @@ foreach ($allApparatus as $app) {
     // --- END JAVASCRIPT FOR STAFF NOTIFICATION LOGIC ---
 
 
-    // --- Hub View Logic (Retained) ---
-    function updateHubView() {
-        const select = document.getElementById('report_view_type_select');
-        const viewType = select.value;
-        const printButton = document.getElementById('main-print-button');
-
-        // Update button text
-        let buttonText = '<i class="fas fa-print me-2"></i> ';
-        if (viewType === 'all') {
-            buttonText += 'Print All Reports (Hub View)';
-        } else if (viewType === 'summary') {
-            buttonText += 'Print Transaction Summary';
-        } else if (viewType === 'inventory') {
-            buttonText += 'Print Apparatus Inventory';
-        } else if (viewType === 'detailed') {
-            buttonText += 'Print Filtered History';
-        }
-        printButton.innerHTML = buttonText;
-
-        // Dynamically hide/show sections in the Hub View (NOT Print View)
-        const isSummaryView = (viewType === 'all' || viewType === 'summary');
-        const isInventoryView = (viewType === 'all' || viewType === 'inventory');
-        const isHistoryView = (viewType === 'all' || viewType === 'detailed');
-
-        document.getElementById('report-summary').style.display = isSummaryView ? 'block' : 'none';
-        document.getElementById('report-inventory').style.display = isInventoryView ? 'block' : 'none';
-        document.getElementById('report-detailed-table').style.display = isHistoryView ? 'block' : 'none';
-    }
-
-
     // --- Print Fix Logic (Alternative Method - Recommended for Chrome/Opera) ---
     function handlePrint() {
         const viewType = document.getElementById('report_view_type_select').value;
@@ -1172,10 +1161,12 @@ foreach ($allApparatus as $app) {
             reportsLink.classList.add('active');
         }
         
-        // **CRITICAL FIX:** Remove the browser event listeners 
-        // to prevent conflict with the new handlePrint function.
-        window.onbeforeprint = null;
-        window.onafterprint = null; 
+        // **CRITICAL FIX:** Update CSS variables to current standard
+        document.querySelector(':root').style.setProperty('--msu-red', '#A40404');
+        document.querySelector(':root').style.setProperty('--msu-red-dark', '#820303');
+        
+        // Update Logout Hover to use the new dark red
+        document.styleSheets[0].insertRule('.logout-link .nav-link:hover { background-color: var(--msu-red-dark) !important; }', 0);
         
         // Set initial view state
         updateHubView();
@@ -1189,7 +1180,7 @@ foreach ($allApparatus as $app) {
         
         // --- Notification Initialization ---
         fetchStaffNotifications();
-        setInterval(fetchStaffNotifications, 30000);
+        setInterval(fetchStaffNotifications, 30000); 
     });
 </script>
 </body>

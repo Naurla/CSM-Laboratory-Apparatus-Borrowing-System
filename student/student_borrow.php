@@ -400,13 +400,13 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         margin-top: 5px; 
     }
     
-    /* Logout Link Styles */
+    /* Logout Link Styles - FIXED */
     .logout-link { 
         margin-top: auto; 
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     .logout-link .nav-link { 
-        background-color: #dc3545 !important; 
+        background-color: #C62828 !important; /* FIXED to match student_dashboard/return base color */
         color: white !important;
     }
     .logout-link .nav-link:hover {
@@ -801,9 +801,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                             <label class="form-label fw-bold">Expected Return Date <span class="text-danger">*</span>:</label>
                             <div class="input-group">
                                 <input type="text" id="expected_return_date_display" class="form-control" 
-                                       value="<?= htmlspecialchars($expected_return_date) ?>" 
-                                       placeholder="Auto-filled"
-                                       readonly> 
+                                        value="<?= htmlspecialchars($expected_return_date) ?>" 
+                                        placeholder="Auto-filled"
+                                        readonly> 
                                 <span class="input-group-text"><i class="fas fa-clock"></i></span>
                             </div>
                             
@@ -1397,12 +1397,13 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
             // 2. Clear previous dynamic items
             const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            $dropdown.find('.mark-all-btn-wrapper').remove(); 
             
             if (notifications.length > 0) {
                 // Add a Mark All button if there are unread items
                 if (unreadCount > 0) {
                      $placeholder.append(`
-                          <a class="dropdown-item text-center small text-muted dynamic-notif-item" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
                              <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
                           </a>
                      `);

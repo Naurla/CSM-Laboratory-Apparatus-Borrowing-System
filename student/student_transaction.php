@@ -227,7 +227,7 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
     }
     .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .logout-link .nav-link { 
-        background-color: #dc3545 !important; 
+        background-color: #C62828 !important; /* FIXED: To match student_dashboard/return base color */
         color: white !important;
     }
     .logout-link .nav-link:hover {
@@ -572,13 +572,13 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
                 $imageFile = $firstApparatus["image"] ?? "default.jpg";
                 
                 // CRITICAL FIX: The full URL path (browser side)
-                $imageURL = "/wd123/uploads/apparatus_images/" . $imageFile; 
+                $imageURL = "../uploads/apparatus_images/" . $imageFile; 
                 
                 // Server-side check for robust fallback path
                 $serverPath = __DIR__ . "/../uploads/apparatus_images/" . $imageFile;
                 
                 if (!file_exists($serverPath) || is_dir($serverPath)) {
-                    $imageURL = "/wd123/uploads/apparatus_images/default.jpg";
+                    $imageURL = "../uploads/apparatus_images/default.jpg";
                 }
             ?>
                 <tr class="<?= $row_class ?>">
@@ -697,12 +697,13 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
             $badge.toggle(unreadCount > 0); 
 
             // 2. Clear previous dynamic items
+            $dropdown.find('.mark-all-btn-wrapper').remove(); 
             
             if (notifications.length > 0) {
                 // Add a Mark All button if there are unread items
                 if (unreadCount > 0) {
                      $placeholder.append(`
-                          <a class="dropdown-item text-center small text-muted dynamic-notif-item" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
                              <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
                           </a>
                      `);

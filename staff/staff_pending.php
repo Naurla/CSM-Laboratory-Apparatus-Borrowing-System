@@ -242,8 +242,8 @@ $pendingForms = $transaction->getPendingForms();
     <style>
 
         :root {
-            --msu-red: #b8312d; 
-            --msu-red-dark: #a82e2a; 
+            --msu-red: #A40404; /* FIXED: Consistent Red */
+            --msu-red-dark: #820303; /* FIXED: Consistent Dark Red */
             --sidebar-width: 280px; 
             --student-logout-red: #dc3545;
             --base-font-size: 15px; /* Base size for overall clarity */
@@ -390,7 +390,7 @@ $pendingForms = $transaction->getPendingForms();
             display: flex; 
             align-items: center;
             justify-content: flex-start; 
-            background-color: var(--student-logout-red) !important; 
+            background-color: #C62828 !important; /* FIXED: Consistent base color */
             color: white !important;
             padding: 18px 25px; 
             border-radius: 0; 
@@ -400,7 +400,7 @@ $pendingForms = $transaction->getPendingForms();
             transition: background 0.3s;
         }
         .logout-link .nav-link:hover {
-            background-color: #c82333 !important; 
+            background-color: var(--msu-red-dark) !important; /* FIXED: Consistent hover color */
         }
 
         .main-content {
@@ -534,7 +534,7 @@ $pendingForms = $transaction->getPendingForms();
 
 <div class="sidebar">
     <div class="sidebar-header">
-           <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo" class="img-fluid"> 
+            <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo" class="img-fluid"> 
         <div class="title">
             CSM LABORATORY <br>APPARATUS BORROWING
         </div>
@@ -672,13 +672,13 @@ $pendingForms = $transaction->getPendingForms();
                             <form method="POST" class="pending-form" data-form-id="<?= htmlspecialchars($form["id"]) ?>">
                                 <td class="remarks-cell">
                                     <?php if ($clean_status == "checking" || $clean_status == "waiting_for_approval"): ?>
-                                                        <textarea name="staff_remarks" rows="2" placeholder="Enter staff remarks..."></textarea>
+                                                     <textarea name="staff_remarks" rows="2" placeholder="Enter staff remarks..."></textarea>
                                     <?php else: ?>
-                                                        -
+                                                     -
                                     <?php endif; ?>
-                                    <input type="hidden" name="form_id" value="<?= htmlspecialchars($form["id"]) ?>">
-                                    <input type="hidden" name="action_type" value=""> 
-                                    
+                                     <input type="hidden" name="form_id" value="<?= htmlspecialchars($form["id"]) ?>">
+                                     <input type="hidden" name="action_type" value=""> 
+                                     
                                     <?php if ($clean_status == "checking"): ?>
                                         <div class="mt-2 text-start">
                                             <label for="damaged_unit_id_<?= $form['id'] ?>" class="fw-bold mb-1">Mark Damaged Unit:</label>

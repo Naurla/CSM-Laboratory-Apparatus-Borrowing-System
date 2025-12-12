@@ -43,8 +43,8 @@ function getFormItemsText($form_id, $transaction) {
         }
         
         $output .= '<div class="d-flex align-items-center justify-content-between mb-1">';
-        $output .= '    <span class="me-2">' . $name . ' (x' . ($item['quantity'] ?? 1) . ')</span>';
-        $output .= '    <span class="status-tag ' . $tag_class . '">' . $tag_text . '</span>';
+        $output .= '    <span class="me-2">' . $name . ' (x' . ($item['quantity'] ?? 1) . ')</span>';
+        $output .= '    <span class="status-tag ' . $tag_class . '">' . $tag_text . '</span>';
         $output .= '</div>';
     }
     return $output;
@@ -63,12 +63,12 @@ function getFormItemsText($form_id, $transaction) {
     <style>
         
         :root {
-            --msu-red: #b8312d;
-            --msu-red-dark: #a82e2a; 
+            --msu-red: #A40404; /* FIXED to consistent staff/student red */
+            --msu-red-dark: #820303; /* FIXED to consistent dark red */
             --msu-blue: #007bff;
             --sidebar-width: 280px; 
             --header-height: 60px; /* ADDED for top bar */
-            --student-logout-red: #dc3545;
+            --student-logout-red: #C62828; /* FIXED to consistent base red */
             --base-font-size: 15px; 
             --main-text: #333; /* ADDED for top bar */
         }
@@ -203,7 +203,7 @@ function getFormItemsText($form_id, $transaction) {
             display: flex; 
             align-items: center;
             justify-content: flex-start; 
-            background-color: var(--student-logout-red) !important; 
+            background-color: var(--student-logout-red) !important; /* FIXED to consistent base red */
             color: white !important;
             padding: 18px 25px; 
             border-radius: 0; 
@@ -213,7 +213,7 @@ function getFormItemsText($form_id, $transaction) {
             transition: background 0.3s;
         }
         .logout-link .nav-link:hover {
-            background-color: #c82333 !important; 
+            background-color: var(--msu-red-dark) !important; /* FIXED to consistent dark hover color */
         }
         /* --- END FINAL LOGOUT FIX --- */
 
@@ -474,17 +474,17 @@ function getFormItemsText($form_id, $transaction) {
                                     
                                     // Apply MONOCHROME and custom coloring based on item status
                                     if ($item_status === 'damaged') {
-                                           $tag_class = 'damaged'; 
-                                           $tag_text = 'Damaged';
+                                             $tag_class = 'damaged'; 
+                                             $tag_text = 'Damaged';
                                     } elseif ($item_status === 'returned') {
-                                           // Check for LATE RETURN status consistency
-                                           if ($form_status_for_helper === 'returned' && (isset($trans['is_late_return']) && $trans['is_late_return'] == 1)) {
-                                               $tag_class = 'returned-late'; // Red for late return
-                                               $tag_text = 'Returned (Late)';
-                                           } else {
-                                               $tag_class = 'returned'; // Green for normal return
-                                               $tag_text = 'Returned';
-                                           }
+                                             // Check for LATE RETURN status consistency
+                                             if ($form_status_for_helper === 'returned' && (isset($trans['is_late_return']) && $trans['is_late_return'] == 1)) {
+                                                $tag_class = 'returned-late'; // Red for late return
+                                                $tag_text = 'Returned (Late)';
+                                             } else {
+                                                $tag_class = 'returned'; // Green for normal return
+                                                $tag_text = 'Returned';
+                                             }
                                     }
                                 ?>
                                     <div class="d-flex align-items-center justify-content-between mb-1">

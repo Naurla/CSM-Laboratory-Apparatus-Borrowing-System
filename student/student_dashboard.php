@@ -107,8 +107,8 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
    <style>
     /* CSS Synchronized from your dashboard file */
     :root {
-        --msu-red: #b8312d; 
-        --msu-red-dark: #a82e2a;
+        --msu-red: #A40404; /* CHANGED FROM #b8312d */
+        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --header-height: 60px; 
@@ -225,9 +225,15 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         margin-top: auto; 
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
+    
+    /* --- UPDATED LOGOUT STYLES --- */
     .logout-link .nav-link { 
-        background-color: #dc3545 !important; 
+        background-color: #C62828 !important; /* Darker than #dc3545, but lighter than #A40404 */
         color: white !important;
+        transition: background-color 0.3s;
+    }
+    .logout-link .nav-link:hover {
+        background-color: #A40404 !important; /* Turns exactly #A40404 (Main Red) on hover */
     }
     
     /* Dropdown Menu Styles (Staff-style preview) */

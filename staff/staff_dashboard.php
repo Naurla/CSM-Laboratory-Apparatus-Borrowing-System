@@ -39,8 +39,8 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
     <style>
         /* ... (CSS styles remain unchanged except for the two below) ... */
         :root {
-            --msu-red: #b8312d; 
-            --msu-red-dark: #a82e2a;
+            --msu-red: #A40404;  /* CHANGED FROM #b8312d */
+            --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
             --msu-blue: #007bff;
             --sidebar-width: 280px;
             --bg-light: #f5f6fa;

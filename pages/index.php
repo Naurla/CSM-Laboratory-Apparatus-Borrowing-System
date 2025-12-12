@@ -46,7 +46,7 @@ session_start();
 
         /* 3. HERO CONTENT BOX (Dark Overlay for Text) */
         .hero-content-box {
-            background-color: rgba(139, 0, 0, 0.8); /* Dark Red with slight transparency */
+            background-color: rgba(164, 4, 4, 0.8); /* CHANGED FROM rgba(139, 0, 0, 0.8) */
             color: white;
             padding: 40px 50px;
             border-radius: 10px;
@@ -95,21 +95,21 @@ session_start();
 
         /* Primary CTA (Sign Up) */
         .cta-primary {
-            background-color: #8B0000; /* WMSU Red */
+            background-color: #A40404; /* CHANGED FROM #8B0000 */
             color: white;
-            border: 2px solid #8B0000;
+            border: 2px solid #A40404; /* CHANGED FROM #8B0000 */
         }
 
         .cta-primary:hover {
-            background-color: #6a0000;
+            background-color: #820303; /* CHANGED FROM #6a0000 */
             transform: translateY(-2px);
         }
         
         /* Secondary CTA (Login) */
         .cta-secondary {
             background-color: white;
-            color: #8B0000; /* WMSU Red */
-            border: 2px solid #8B0000;
+            color: #A40404; /* CHANGED FROM #8B0000 */
+            border: 2px solid #A40404; /* CHANGED FROM #8B0000 */
         }
 
         .cta-secondary:hover {
@@ -130,7 +130,7 @@ session_start();
         
         .features-section h2 {
             margin-bottom: 30px;
-            color: #8B0000;
+            color: #A40404; /* CHANGED FROM #8B0000 */
         }
         
         /* 6. MEDIA QUERIES for Mobile Responsiveness */

@@ -109,7 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .digital-education {
             font-size: 16px; 
-            color: #b8312d;
+            color: #A40404; /* CHANGED FROM #b8312d */
             margin-bottom: 30px; 
             font-weight: bold;
             letter-spacing: 1px;
@@ -148,7 +148,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .input-field.error-border {
-            border-color: #b8312d !important;
+            border-color: #A40404 !important; /* CHANGED FROM #b8312d */
         }
         
         .toggle-password {
@@ -162,13 +162,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             z-index: 10;
         }
         .toggle-password:hover {
-            color: #b8312d;
+            color: #A40404; /* CHANGED FROM #b8312d */
         }
 
         .btn-continue {
             width: 100%;
             padding: 14px; 
-            background-color: #b8312d; 
+            background-color: #A40404; /* CHANGED FROM #b8312d */
             border: none;
             border-radius: 4px;
             color: white;
@@ -179,7 +179,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-top: 10px;
         }
         .btn-continue:hover {
-            background-color: #a82e2a; 
+            background-color: #820303; /* CHANGED FROM #a82e2a (approx darker shade) */
         }
 
         .bottom-links-container {
@@ -191,7 +191,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             width: 100%; 
         }
         .bottom-links-container a {
-            color: #b8312d; 
+            color: #A40404; /* CHANGED FROM #b8312d */
             text-decoration: none;
         }
         .bottom-links-container a:hover {
@@ -208,7 +208,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .specific-error {
-            color: #b8312d; 
+            color: #A40404; /* CHANGED FROM #b8312d */
             font-size: 14px;
             margin-top: 5px;
             font-weight: bold;
@@ -243,7 +243,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-top: 15px;
         }
         .back-to-home-link a {
-            color: #b8312d;
+            color: #A40404; /* CHANGED FROM #b8312d */
             text-decoration: none;
             font-size: 0.95em;
             font-weight: bold;

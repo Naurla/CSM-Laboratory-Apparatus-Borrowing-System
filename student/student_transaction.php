@@ -52,8 +52,8 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
     <style>
     /* Custom Variables and Base Layout (MSU Theme) */
     :root {
-        --msu-red: #b8312d; 
-        --msu-red-dark: #a82e2a;
+        --msu-red: #A40404; /* CHANGED FROM #b8312d */
+        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --header-bg: #e9ecef;
@@ -687,6 +687,9 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
+            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            
+            // Re-append the 'View All' link to the end of the dropdown
             const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
             
             // 1. Update the Badge Count
@@ -694,7 +697,6 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
             $badge.toggle(unreadCount > 0); 
 
             // 2. Clear previous dynamic items
-            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
             
             if (notifications.length > 0) {
                 // Add a Mark All button if there are unread items
@@ -727,7 +729,7 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
 
                     // Insert the item into the placeholder div
                     $placeholder.append(`
-                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                          <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
                             href="${link}" 
                             data-id="${notif.id}"
                             data-is-read="${notif.is_read}"
@@ -744,8 +746,8 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
                                              onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
                                      <i class="fas fa-check-circle"></i>
                                  </button>` : ''}
-                         </a>
-                     `);
+                          </a>
+                      `);
                 });
             } else {
                 // Display a "No Alerts" message

@@ -275,8 +275,8 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 <style>
     /* CSS is the same as previous step */
     :root {
-        --msu-red: #b8312d; 
-        --msu-red-dark: #a82e2a; 
+        --msu-red: #A40404; /* CHANGED FROM #b8312d */
+        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
         --sidebar-width: 280px; 
         --main-text: #333;
         --header-height: 60px; /* Added for Top Bar reference */
@@ -1429,7 +1429,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                     // Insert the item into the placeholder div
                     $placeholder.append(`
-                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                          <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
                             href="${link}" 
                             data-id="${notif.id}"
                             data-is-read="${notif.is_read}"
@@ -1446,8 +1446,8 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                                              onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
                                      <i class="fas fa-check-circle"></i>
                                  </button>` : ''}
-                         </a>
-                     `);
+                          </a>
+                      `);
                 });
             } else {
                 // Display a "No Alerts" message

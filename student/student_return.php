@@ -99,8 +99,8 @@ $today = date("Y-m-d");
     <style>
     /* Custom Variables and Base Layout (MSU Theme) */
     :root {
-        --msu-red: #b8312d; 
-        --msu-red-dark: #a82e2a; 
+        --msu-red: #A40404; /* CHANGED FROM #b8312d */
+        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --danger-dark: #8b0000;
@@ -113,7 +113,7 @@ $today = date("Y-m-d");
         background: #f5f6fa; 
         padding: 0;
         margin: 0;
-        display: flex;
+        display: flex; 
         min-height: 100vh;
         font-size: 1.05rem; 
         color: var(--main-text);
@@ -533,15 +533,15 @@ $today = date("Y-m-d");
                     $action_content = '';
                     if ($is_pending_check) {
                         $action_content = '<span class="action-message-checking">
-                                                         <i class="fas fa-clock me-1"></i> Pending Staff Check
-                                                     </span>';
+                                                                                 <i class="fas fa-clock me-1"></i> Pending Staff Check
+                                                                             </span>';
                     } elseif (
                         (!$is_expected_return_date_reached) && 
                         ($clean_status === 'reserved' || $clean_status === 'approved')
                     ) {
                         $action_content = '<span class="action-message-checking bg-info text-white">
-                                                         <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
-                                                     </span>';
+                                                                                 <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
+                                                                             </span>';
                     } else {
                         $overdue_warning = '';
                         if ($is_overdue) {
@@ -676,7 +676,7 @@ $today = date("Y-m-d");
                 if (unreadCount > 0) {
                      $placeholder.append(`
                           <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                              <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
                           </a>
                      `);
                 }
@@ -706,20 +706,20 @@ $today = date("Y-m-d");
                              data-id="${notif.id}"
                              data-is-read="${notif.is_read}"
                              onclick="window.markSingleAlertAndGo(event, this)">
-                              <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                              <div class="flex-grow-1">
-                                  <div class="small text-gray-500">${datePart}</div>
-                                  <span class="d-block">${cleanMessage}</span>
-                              </div>
-                              ${notif.is_read == 0 ? 
-                                  `<button type="button" class="mark-read-hover-btn" 
-                                                      title="Mark as Read" 
-                                                      data-id="${notif.id}"
-                                                      onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                              <i class="fas fa-check-circle"></i>
-                                            </button>` : ''}
+                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                             <div class="flex-grow-1">
+                                 <div class="small text-gray-500">${datePart}</div>
+                                 <span class="d-block">${cleanMessage}</span>
+                             </div>
+                             ${notif.is_read == 0 ? 
+                                 `<button type="button" class="mark-read-hover-btn" 
+                                             title="Mark as Read" 
+                                             data-id="${notif.id}"
+                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                     <i class="fas fa-check-circle"></i>
+                                 </button>` : ''}
                            </a>
-                     `);
+                      `);
                 });
             } else {
                 $placeholder.html(`

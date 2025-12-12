@@ -99,13 +99,13 @@ $today = date("Y-m-d");
     <style>
     /* Custom Variables and Base Layout (MSU Theme) */
     :root {
-        --msu-red: #A40404; /* CHANGED FROM #b8312d */
-        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
+        --msu-red: #A40404;
+        --msu-red-dark: #820303;
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --danger-dark: #8b0000;
         --main-text: #333;
-        --header-height: 60px; /* ADDED VARIABLE FOR TOP BAR */
+        --header-height: 60px;
     }
     
     body { 
@@ -117,6 +117,22 @@ $today = date("Y-m-d");
         min-height: 100vh;
         font-size: 1.05rem; 
         color: var(--main-text);
+    }
+    
+    /* NEW CSS for Mobile Toggle */
+    .menu-toggle {
+        display: none; 
+        position: fixed;
+        top: 15px;
+        left: 20px;
+        z-index: 1060; 
+        background: var(--msu-red);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 1.2rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     
     /* === NEW: TOP HEADER BAR STYLES (Copied from dashboard) === */
@@ -237,7 +253,7 @@ $today = date("Y-m-d");
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
     .sidebar .nav-link {
         color: white;
-        padding: 15px 20px; /* FIX: Set padding to 15px to match dashboard and borrow */
+        padding: 15px 20px; 
         font-size: 1.1rem;
         font-weight: 600;
         transition: background-color 0.3s;
@@ -270,8 +286,8 @@ $today = date("Y-m-d");
     /* === MAIN CONTENT STYLES === */
     .main-wrapper {
         margin-left: var(--sidebar-width); 
-        padding: 25px;
         /* ADDED PADDING TOP TO ACCOUNT FOR THE NEW FIXED HEADER */
+        padding: 25px;
         padding-top: calc(var(--header-height) + 25px); 
         flex-grow: 1;
     }
@@ -302,8 +318,6 @@ $today = date("Y-m-d");
         padding: 15px 20px;
         font-weight: 500;
     }
-
-    /* ... (Rest of existing UI improvement styles - omitting for brevity) ... */
 
     .form-list {
         display: flex;
@@ -428,9 +442,97 @@ $today = date("Y-m-d");
         flex-grow: 1; 
         text-align: center;
     }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 992px) {
+        /* Mobile Sidebar */
+        .menu-toggle {
+            display: block;
+        }
+        .sidebar {
+            left: calc(var(--sidebar-width) * -1); 
+            transition: left 0.3s ease;
+            box-shadow: none;
+            --sidebar-width: 250px; 
+        }
+        .sidebar.active {
+            left: 0; 
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        }
+        .main-wrapper {
+            margin-left: 0;
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        .top-header-bar {
+            left: 0;
+            padding-left: 70px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        /* Content Stacking for Return Cards */
+        .return-card {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 15px;
+        }
+        .card-col-action {
+            width: 100%; 
+            justify-content: flex-start;
+            margin-top: 15px;
+        }
+        .action-container {
+            flex-direction: column; /* Stack textarea and button */
+            max-width: 100%;
+        }
+        .action-container textarea {
+            max-height: 80px; 
+            min-height: 50px;
+        }
+        .btn-return, .action-message-checking {
+            width: 100%;
+            text-align: center;
+        }
+        .card-col-info {
+             width: 100%;
+        }
+        .card-col-info h5 {
+            font-size: 1.2rem;
+        }
+        .app-list { 
+            font-size: 1rem;
+        }
+        .date-info span {
+            display: block;
+            margin-right: 0;
+            font-size: 0.95rem;
+        }
+        .apparatus-thumbnail {
+            width: 60px;
+            height: 60px;
+        }
+    }
+    @media (max-width: 576px) {
+        .top-header-bar {
+            padding: 0 15px;
+            justify-content: flex-end;
+            padding-left: 65px;
+        }
+        .top-header-bar .notification-bell-container {
+             margin-right: 15px;
+        }
+        .container {
+             padding: 20px;
+        }
+    }
 </style>
 </head>
 <body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
+    <i class="fas fa-bars"></i>
+</button>
 
 <div class="sidebar">
     <div class="sidebar-header">
@@ -605,7 +707,7 @@ $today = date("Y-m-d");
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- GLOBAL HANDLERS (for notification dropdown logic) ---
+    // --- GLOBAL HANDLERS (for notification dropdown logic - Restored) ---
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
         event.preventDefault();
@@ -776,6 +878,36 @@ $today = date("Y-m-d");
                  link.classList.remove('active');
             }
         });
+        
+        // New Mobile Toggle Logic
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainWrapper = document.querySelector('.main-wrapper');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                } else {
+                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                }
+            });
+            
+            function closeSidebarOnce() {
+                 sidebar.classList.remove('active');
+                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+            }
+            
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                 link.addEventListener('click', () => {
+                     if (window.innerWidth <= 992) {
+                        sidebar.classList.remove('active');
+                     }
+                 });
+            });
+        }
     });
 </script>
 </body>

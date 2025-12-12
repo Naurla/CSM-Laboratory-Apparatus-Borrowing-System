@@ -1,5 +1,5 @@
 <?php
-// student_notifications.php (NOW A CONTENT ENDPOINT FOR MODAL)
+// student_notifications_content.php (NOW A CONTENT ENDPOINT FOR MODAL)
 session_start();
 // Include the PHPMailer autoloader first (assuming it's in vendor)
 require_once "../vendor/autoload.php"; 
@@ -29,6 +29,58 @@ function time_ago($timestamp) {
     if ($interval->i >= 1) return $interval->i . " minute" . ($interval->i > 1 ? "s" : "") . " ago";
     return "just now";
 }
+
+// Inline CSS for the rendered content to ensure responsiveness/styling, as this is used in a modal/dropdown.
+echo '<style>
+    .alert-item {
+        padding: 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #333;
+        transition: background-color 0.1s;
+    }
+    .alert-unread {
+        background-color: #f8f8ff; /* Light blue tint for unread */
+        font-weight: 600;
+        border: 1px solid #e0e0f0;
+    }
+    .alert-read {
+        background-color: #fff;
+        font-weight: normal;
+        border: 1px solid #eee;
+    }
+    .alert-item:hover {
+        background-color: #f0f0ff;
+    }
+    .alert-icon {
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .alert-body {
+        /* Ensure the message body respects wrapping */
+        min-width: 0;
+    }
+    .alert-message {
+        font-size: 0.95rem;
+        line-height: 1.3;
+        word-wrap: break-word; /* Ensure wrapping on small devices */
+        white-space: normal; /* Override potential nowrap */
+    }
+    .alert-timestamp {
+        display: block;
+        font-size: 0.8em;
+    }
+    .unread-badge {
+        font-size: 0.7em;
+        padding: 0.3em 0.6em;
+    }
+    /* Button inside the content */
+    .btn-outline-secondary {
+        border-color: #ccc;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+</style>';
 
 
 try {
@@ -69,7 +121,7 @@ try {
             $alert_class = $is_read ? 'alert-read' : 'alert-unread';
             
             // Determine icon and link behavior
-            $icon = 'fas fa-info-circle'; 
+            $icon = 'fas fa-info-circle text-secondary'; 
             if (strpos($n['type'], 'approved') !== false || strpos($n['type'], 'good') !== false) {
                 $icon = 'fas fa-check-circle text-success';
             } elseif (strpos($n['type'], 'rejected') !== false || strpos($n['type'], 'damaged') !== false || strpos($n['type'], 'late') !== false || strpos($n['type'], 'overdue') !== false) {

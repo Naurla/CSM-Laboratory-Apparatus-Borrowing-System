@@ -80,8 +80,24 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
         /* INCREASED BASE FONT SIZE */
         font-size: 1.05rem;
     }
+
+    /* NEW CSS for Mobile Toggle */
+    .menu-toggle {
+        display: none; /* Hidden on desktop */
+        position: fixed;
+        top: 15px;
+        left: 20px;
+        z-index: 1060; 
+        background: var(--msu-red);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 1.2rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
     
-    /* === TOP HEADER BAR STYLES (COPIED FROM DASHBOARD) === */
+    /* === TOP HEADER BAR STYLES (Restored Bell Position) === */
     .top-header-bar {
         position: fixed;
         top: 0;
@@ -375,6 +391,7 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
         border-radius: 8px;
         font-size: 1rem;
         font-weight: 600;
+        white-space: nowrap; /* Prevent button text from wrapping on desktop */
     }
     .btn-view-items:hover { background: var(--msu-red-dark); color: white; }
 
@@ -437,9 +454,136 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
         box-shadow: 0 0 5px rgba(0,0,0,0.2);
         border: 1px solid #ccc;
     }
+    
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 992px) {
+        /* Mobile Sidebar */
+        .menu-toggle {
+            display: block;
+        }
+        .sidebar {
+            left: calc(var(--sidebar-width) * -1); 
+            transition: left 0.3s ease;
+            box-shadow: none;
+            --sidebar-width: 250px; 
+        }
+        .sidebar.active {
+            left: 0; 
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        }
+        .main-wrapper {
+            margin-left: 0;
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        .top-header-bar {
+            left: 0;
+            padding-left: 70px;
+        }
+        
+        /* HIDE EYE ICON ON TABLET/LAPTOP (<= 992px) */
+        .btn-view-items .fas.fa-eye {
+            display: none;
+        }
+    }
+    
+    /* Tablet/Medium Screen (Max 768px) */
+    @media (max-width: 768px) {
+        /* HIDE STAFF REMARKS COLUMN */
+        .table thead th:nth-child(4), 
+        .table tbody td:nth-child(4) { 
+            display: none;
+        }
+
+        /* Adjust Transaction Details column for stacking/spacing */
+        .trans-details {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .trans-details img {
+            margin-right: 0;
+            margin-bottom: 5px;
+            width: 40px !important;
+            height: 40px !important;
+        }
+        .trans-id {
+            font-size: 1rem;
+        }
+        .trans-type {
+            font-size: 0.85rem;
+        }
+        
+        /* Adjust Dates column */
+        .date-col {
+            font-size: 0.95rem; 
+            line-height: 1.4;
+        }
+        
+        /* Adjust Action column: Button becomes full width of the cell */
+        .table tbody td:last-child {
+            width: 15%; 
+        }
+        .btn-view-items {
+            padding: 8px 15px; /* Maintain smaller padding on tablets */
+            width: 100%; 
+            text-align: center;
+        }
+        
+        /* Adjust Filter row */
+        .filter form {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+        .filter label {
+            margin-bottom: 5px !important;
+        }
+        .filter .form-select {
+            width: 100% !important;
+        }
+        
+        /* General Table Cell/Row Padding */
+        .table td {
+             padding: 10px 8px;
+        }
+    }
+    
+    /* Small Mobile Screen (Max 576px) */
+    @media (max-width: 576px) {
+         /* HIDE DATES COLUMN (Small Mobile) */
+        .table thead th:nth-child(2), 
+        .table tbody td:nth-child(2) { 
+            display: none; 
+        }
+        .top-header-bar {
+            padding: 0 15px;
+            justify-content: flex-end;
+            padding-left: 65px;
+        }
+        .container {
+             padding: 20px;
+        }
+        
+         .table thead th, .table tbody td {
+            font-size: 0.8rem;
+         }
+
+         /* Re-confirm full width view button on smallest screen */
+         .btn-view-items {
+             padding: 6px 10px;
+         }
+         .status {
+            min-width: 80px;
+            font-size: 0.75rem;
+            padding: 6px 8px;
+         }
+    }
 </style>
 </head>
 <body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
+    <i class="fas fa-bars"></i>
+</button>
 
 <div class="sidebar">
     <div class="sidebar-header">
@@ -628,7 +772,7 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- DROPDOWN NOTIFICATION LOGIC (COPIED FROM DASHBOARD) ---
+    // --- DROPDOWN NOTIFICATION LOGIC (Restored) ---
 
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
@@ -788,6 +932,36 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
         // 2. Notification Logic Setup
         fetchStudentAlerts(); // Initial fetch on page load
         setInterval(fetchStudentAlerts, 30000); // Poll the server every 30 seconds
+
+        // 3. New Mobile Toggle Logic
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainWrapper = document.querySelector('.main-wrapper');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                } else {
+                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                }
+            });
+            
+            function closeSidebarOnce() {
+                 sidebar.classList.remove('active');
+                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+            }
+            
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                 link.addEventListener('click', () => {
+                     if (window.innerWidth <= 992) {
+                        sidebar.classList.remove('active');
+                     }
+                 });
+            });
+        }
     });
 </script>
 </body>

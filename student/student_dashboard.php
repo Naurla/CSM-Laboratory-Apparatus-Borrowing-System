@@ -107,8 +107,8 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
    <style>
     /* CSS Synchronized from your dashboard file */
     :root {
-        --msu-red: #A40404; /* CHANGED FROM #b8312d */
-        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
+        --msu-red: #A40404;
+        --msu-red-dark: #820303;
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --header-height: 60px; 
@@ -127,11 +127,27 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         font-size: 1.05rem; 
     }
 
+    /* NEW CSS for Mobile Toggle */
+    .menu-toggle {
+        display: none; /* Hidden on desktop */
+        position: fixed;
+        top: 15px;
+        left: 20px;
+        z-index: 1060; 
+        background: var(--msu-red);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 1.2rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
     /* 🛑 URGENT HIGHLIGHT FIX 🛑 */
     .alert-overdue-urgent {
-        border: 3px solid var(--danger-dark); /* Red border/outline */
-        box-shadow: 0 4px 8px rgba(139, 0, 0, 0.3); /* Subtle shadow for urgency */
-        background-color: #fff8f8; /* Very light red tint */
+        border: 3px solid var(--danger-dark);
+        box-shadow: 0 4px 8px rgba(139, 0, 0, 0.3);
+        background-color: #fff8f8; 
     }
     
     /* --- Top Header Bar Styles (NEW) --- */
@@ -201,11 +217,10 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         border-bottom: 1px solid rgba(255, 255, 255, 0.4);
         margin-bottom: 20px;
     }
-    /* FIX: Set fixed height and width for the logo to prevent shifting */
     .sidebar-header img { 
-        width: 90px; /* Enforce fixed width */
-        height: 90px; /* Enforce fixed height */
-        object-fit: contain; /* Prevent distortion while maintaining the box size */
+        width: 90px;
+        height: 90px;
+        object-fit: contain; 
         margin-bottom: 15px; 
     }
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
@@ -215,7 +230,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         font-size: 1.1rem; 
         font-weight: 600;
         transition: background-color 0.3s;
-        display: flex; /* Ensure badge alignment */
+        display: flex; 
         align-items: center;
     }
     .sidebar .nav-link:hover, .sidebar .nav-link.active { 
@@ -231,18 +246,16 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         margin-top: auto; 
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
-    /* --- UPDATED LOGOUT STYLES --- */
     .logout-link .nav-link { 
-        background-color: #C62828 !important; /* Darker than #dc3545, but lighter than #A40404 */
+        background-color: #C62828 !important;
         color: white !important;
         transition: background-color 0.3s;
     }
     .logout-link .nav-link:hover {
-        background-color: #A40404 !important; /* Turns exactly #A40404 (Main Red) on hover */
+        background-color: var(--msu-red-dark) !important;
     }
     
-    /* Dropdown Menu Styles (Staff-style preview) */
+    /* Dropdown Menu Styles */
     .dropdown-menu {
         min-width: 300px;
         padding: 0;
@@ -255,16 +268,15 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         border-bottom: 1px solid #eee;
         margin-bottom: 0;
     }
-    /* Specific list item styling for dynamic content */
     .dropdown-item {
         padding: 10px 15px;
         white-space: normal;
         transition: background-color 0.1s;
-        position: relative; /* For hover button */
+        position: relative; 
     }
     .dropdown-item.unread-item {
         font-weight: 600;
-        background-color: #f8f8ff; /* Light blue for unread */
+        background-color: #f8f8ff; 
     }
     .dropdown-item.unread-item:hover {
           background-color: #f0f0ff;
@@ -277,8 +289,6 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         font-size: 0.8em;
         color: #999;
     }
-    
-    /* --- HOVER MARK AS READ BUTTON STYLES (for individual items) --- */
     .mark-read-hover-btn {
         position: absolute;
         top: 50%;
@@ -287,23 +297,18 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         background: none;
         border: none;
         color: #6c757d;
-        opacity: 0; /* Hidden by default */
+        opacity: 0; 
         padding: 5px;
         cursor: pointer;
         transition: opacity 0.2s;
         z-index: 10;
     }
-
-    /* Show button on hover over the notification item */
     .dropdown-item:hover .mark-read-hover-btn {
         opacity: 1;
     }
-
-    /* Hide the button when the item is already marked read */
     .dropdown-item.read-item .mark-read-hover-btn {
         display: none !important; 
     }
-    /* --- End Dropdown Styles --- */
 
 
     /* --- Main Content CSS --- */
@@ -313,7 +318,6 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         padding-top: calc(var(--header-height) + 20px); 
         flex-grow: 1;
     }
-    /* FIX: Adjusted container padding slightly to reduce 'big' feel */
     .container {
         background: #fff;
         border-radius: 10px;
@@ -326,173 +330,71 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
     h2 { 
         border-bottom: 2px solid var(--msu-red); 
         padding-bottom: 10px; 
-        font-size: 2rem; /* Adjusted down slightly */
+        font-size: 2rem; 
         font-weight: 600;
     }
     .lead {
-        font-size: 1.15rem; /* Adjusted down slightly */
+        font-size: 1.15rem; 
     }
     
-    /* --- TRANSACTION CARD STYLES (PROFESSIONAL FIX) --- */
-    
-    /* Base card structure: flex container for detail, dates, status, action */
+    /* --- TRANSACTION CARD STYLES (Focus on Mobile Reflow) --- */
     .transaction-list {
         gap: 15px; 
         margin-top: 20px;
-        display: flex; /* Added for clean list stacking */
-        flex-direction: column; /* Added for clean list stacking */
-    }
-    .transaction-card {
-        display: flex; /* Enables flexible arrangement of columns */
-        align-items: center; /* Vertically centers content */
-        border: 1px solid #e0e0e0;
-        border-left: 6px solid #4CAF50; /* Default: Approved (Green) - Will be overridden by status */
-        border-radius: 8px;
-        padding: 15px 20px; /* Slightly reduced vertical padding for tighter look */
-        margin-bottom: 0; /* Removed default margin since it's now in the gap */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow for depth */
-        background-color: #ffffff;
-        transition: all 0.2s ease;
-        flex-wrap: wrap; /* Allows wrapping on smaller screens */
-    }
-    .transaction-card:hover {
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-    .transaction-card.card-critical { /* For OVERDUE or DAMAGED */
-        border-left-color: var(--danger-dark); /* Dark Red accent for critical */
-        background-color: var(--danger-light); /* Light red background */
-    }
-
-    /* Dynamic Status Border Color Overrides */
-    .status-border-pending, .status-border-reserved, .status-border-for_release { border-left-color: #ffc107 !important; }
-    .status-border-approved, .status-border-borrowed { border-left-color: #28a745 !important; }
-    .status-border-checking { border-left-color: #007bff !important; }
-    .status-border-rejected, .status-border-damaged, .status-border-overdue { border-left-color: #dc3545 !important; }
-    .status-border-returned { border-left-color: #6c757d !important; } /* Grey for completed */
-    
-
-    /* Columns for card content */
-    .card-col-details {
-        display: flex;
-        align-items: center;
-        flex-basis: 35%; /* Gives more space to ID and Type */
-        min-width: 200px; /* Minimum width before wrap */
-    }
-    .card-col-dates {
-        flex-basis: 30%; /* INCREASED WIDTH to 30% */
         display: flex;
         flex-direction: column;
-        padding-left: 20px;
-        border-left: 1px solid #eee;
-        min-width: 180px; /* Increased minimum width */
     }
-    .card-col-status {
-        flex-basis: 15%; /* Adjusted for date width increase */
-        text-align: center;
-        min-width: 100px;
-    }
-    .card-col-action {
-        flex-basis: 20%;
-        text-align: right;
-        min-width: 100px;
-    }
-
-    /* Enhancing Text and Icons */
-    .app-image {
-        width: 50px !important; 
-        height: 50px !important;
-        object-fit: contain !important;
-        border-radius: 4px;
-        margin-right: 15px;
-        border: 1px solid #ddd;
-        padding: 4px;
-    }
-    .trans-id-text {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #333;
-        display: block;
-    }
-    .trans-type-text {
-        font-size: 0.85rem;
-        color: #777;
-        font-weight: 500;
-        text-transform: uppercase;
-        display: block; /* Ensures type is below ID */
-        margin-top: -3px;
-    }
-    .date-item {
+    .transaction-card {
         display: flex;
-        align-items: center;
-        margin-bottom: 4px;
-        font-size: 0.9rem;
-        color: #555;
+        align-items: center; 
+        border: 1px solid #e0e0e0;
+        border-left: 6px solid #4CAF50;
+        border-radius: 8px;
+        padding: 15px 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        background-color: #ffffff;
+        transition: all 0.2s ease;
+        flex-wrap: wrap; 
     }
-    .date-item:last-child { margin-bottom: 0; }
-    .date-label {
-        font-weight: 600;
-        width: 140px; /* **CRUCIAL FIX:** Ensures 'Expected Return:' and icon fit */
-        white-space: nowrap; /* Prevents text from wrapping */
-    }
-    .date-value {
-        font-weight: 500;
-        margin-left: 5px;
-    }
-    .expected-date.overdue .date-value {
-        color: var(--danger-dark);
-        font-weight: 700;
-    }
-    .expected-date .fa-calendar-times {
-        color: #007bff; /* Default blue for non-overdue expected date */
-    }
-    .expected-date.overdue .fa-calendar-times {
-        color: var(--danger-dark); /* Red for overdue */
+    .transaction-card.card-critical {
+        border-left-color: var(--danger-dark);
+        background-color: #fff8f8;
     }
 
-    /* Status Badge Styling */
-    .status {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        color: white; /* Default text color */
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+    /* Column Sizing for Desktop/Tablet */
+    .card-col-details { flex-basis: 35%; min-width: 200px; }
+    .card-col-dates { flex-basis: 30%; padding-left: 20px; border-left: 1px solid #eee; min-width: 180px; }
+    .card-col-status { flex-basis: 15%; text-align: center; min-width: 100px; }
+    .card-col-action { flex-basis: 20%; text-align: right; min-width: 100px; }
 
-    /* Status-specific colors (Professional palette) */
-    .status.pending, .status.reserved, .status.for_release {
-        background-color: #ffc107; /* Bootstrap Yellow/Warning */
-        color: #343a40; /* Dark text for contrast */
-    }
-    .status.approved, .status.borrowed { 
-        background-color: #28a745; /* Bootstrap Green/Success */
-    }
-    .status.returned { 
-        background-color: #6c757d; /* Grey for completed */
-    }
-    .status.checking {
-        background-color: #007bff; /* Bootstrap Blue/Primary */
-    }
-    .status.rejected, .status.overdue, .status.damaged { 
-        background-color: #dc3545; /* Bootstrap Red/Danger */
-    }
+    .app-image { width: 50px !important; height: 50px !important; object-fit: contain !important; border-radius: 4px; margin-right: 15px; border: 1px solid #ddd; padding: 4px; }
+    .trans-id-text { font-size: 1.15rem; font-weight: 700; color: #333; display: block; }
+    .trans-type-text { font-size: 0.85rem; color: #777; display: block; margin-top: -3px; }
+    .date-item { display: flex; align-items: center; margin-bottom: 4px; font-size: 0.9rem; color: #555; }
+    .date-label { font-weight: 600; width: 140px; white-space: nowrap; }
+    .date-value { font-weight: 500; margin-left: 5px; }
+    .status { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .status.pending, .status.reserved, .status.for_release { background-color: #ffc107; color: #343a40; }
+    .status.approved, .status.borrowed { background-color: #28a745; }
+    .status.rejected, .status.overdue, .status.damaged { background-color: #dc3545; }
+    .btn-view-items { background: var(--msu-red); color: white; padding: 8px 16px; font-size: 0.9rem; border-radius: 6px; border: none; }
 
-    /* FIX: View Button Color and Size */
-    .btn-view-items {
-        background: var(--msu-red); /* Keep Red for View Button */
-        color: white;
-        padding: 8px 16px; /* Reduced button size */
-        font-size: 0.9rem;
-        border-radius: 6px;
-        text-decoration: none; /* Make sure it looks like a button */
-        border: none;
-    }
-    .btn-view-items:hover { background: var(--msu-red-dark); color: white; }
 
-    /* Responsive adjustments */
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 992px) {
+        /* Mobile Sidebar Toggle */
+        .menu-toggle { display: block; }
+        .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
+        .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
+
+        /* Main Content and Header Adjustments */
+        .main-wrapper { margin-left: 0; padding-left: 15px; padding-right: 15px; }
+        .top-header-bar { left: 0; padding-left: 70px; }
+        .container { padding: 25px; }
+    }
+    
     @media (max-width: 768px) {
+        /* Content stacking for transaction cards */
         .transaction-card {
             flex-direction: column;
             align-items: flex-start;
@@ -514,10 +416,42 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         .card-col-action {
             text-align: left;
         }
+        .card-col-action .btn-view-items {
+            width: 100%; 
+            text-align: center;
+        }
+        .date-label {
+            width: 150px; 
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* Adjust header spacing on smallest screens */
+        .top-header-bar {
+            padding: 0 15px;
+            justify-content: flex-end;
+            padding-left: 65px;
+        }
+        .top-header-bar .notification-bell-container {
+             margin-right: 15px;
+        }
+        
+        /* Further tighten card spacing */
+        .date-item {
+            font-size: 0.9rem;
+        }
+        .date-label {
+            font-size: 0.9rem;
+            width: 130px;
+        }
     }
 </style>
 </head>
 <body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
+    <i class="fas fa-bars"></i>
+</button>
 
 <div class="sidebar">
     <div class="sidebar-header">
@@ -692,7 +626,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- GLOBAL HANDLERS ---
+    // --- GLOBAL HANDLERS (Notification Logic Restored) ---
 
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
@@ -841,7 +775,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         });
     }
 
-
+    // --- DOMContentLoaded Execution ---
     document.addEventListener('DOMContentLoaded', () => {
         // ... (Sidebar activation logic) ...
         const path = window.location.pathname.split('/').pop() || 'student_dashboard.php';
@@ -862,6 +796,40 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         
         // Poll the server every 30 seconds for new alerts
         setInterval(fetchStudentAlerts, 30000); 
+
+        // New Mobile Toggle Logic
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainWrapper = document.querySelector('.main-wrapper');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                // Optional: Close sidebar when clicking outside (simple solution)
+                if (sidebar.classList.contains('active')) {
+                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                } else {
+                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                }
+            });
+            
+            // Function to close the sidebar only once after clicking outside
+            function closeSidebarOnce() {
+                 sidebar.classList.remove('active');
+                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+            }
+            
+            // Close sidebar when a nav item is clicked
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                 link.addEventListener('click', () => {
+                     // Check if we are on a mobile view before closing
+                     if (window.innerWidth <= 992) {
+                        sidebar.classList.remove('active');
+                     }
+                 });
+            });
+        }
     });
 </script>
 </body>

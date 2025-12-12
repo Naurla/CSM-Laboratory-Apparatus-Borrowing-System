@@ -16,7 +16,7 @@ $errors = [];
 $message = "";
 
 // --- Ban Check for Sidebar Logic ---
-$isBanned = false; // Placeholder
+$isBanned = $transaction->isStudentBanned($user_id); 
 // ------------------------------------
 
 // Initialize variables with current session data
@@ -123,11 +123,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Edit Profile - Student</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
     <style>
         /* --- COPYING STYLES FROM DASHBOARD --- */
         :root {
-            --msu-red: #b8312d; 
-            --msu-red-dark: #a82e2a;
+            --msu-red: #A40404; /* FIXED: Consistent Red */
+            --msu-red-dark: #820303; /* FIXED: Consistent Dark Red */
             --sidebar-width: 280px; 
             --bg-light: #f5f6fa;
             --header-height: 60px;
@@ -142,10 +143,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin: 0;
         }
 
+        /* NEW CSS for Mobile Toggle */
+        .menu-toggle {
+            display: none; /* Hidden on desktop */
+            position: fixed;
+            top: 15px;
+            left: 20px;
+            z-index: 1060; 
+            background: var(--msu-red);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
         /* --- Sidebar Styles (Unifying Look) --- */
         .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh; background-color: var(--msu-red); color: white; padding: 0; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); z-index: 1050; }
         .sidebar-header { text-align: center; padding: 20px 15px; font-size: 1.2rem; font-weight: 700; line-height: 1.15; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px; }
-        .sidebar-header img { max-width: 90px; height: auto; margin-bottom: 15px; }
+        /* FIX: Fixed logo size for consistency */
+        .sidebar-header img { width: 90px; height: 90px; object-fit: contain; margin: 0 auto 15px auto; display: block; } 
         .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
         .sidebar-nav { flex-grow: 1; }
         .sidebar .nav-link { 
@@ -155,12 +173,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             transition: background-color 0.3s; 
             border-left: none !important; 
             font-size: 1.1rem; 
+            display: flex; 
+            align-items: center;
         }
         .sidebar .nav-link:hover { background-color: var(--msu-red-dark); }
         .sidebar .nav-link.active { background-color: var(--msu-red-dark); } 
         .sidebar .nav-link.banned { background-color: #5a2624; opacity: 0.8; cursor: pointer; pointer-events: auto; }
         .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        .logout-link .nav-link { background-color: #dc3545 !important; color: white !important; }
+        /* Consistent logout button styles */
+        .logout-link .nav-link { background-color: #C62828 !important; color: white !important; } 
         .logout-link .nav-link:hover { background-color: var(--msu-red-dark) !important; }
         
         /* --- Top Header Bar Styles --- */
@@ -179,15 +200,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             padding: 0 20px;
             z-index: 1000;
         }
+        /* Notification Bell (Restored) */
+        .notification-bell-container {
+            position: relative;
+            margin-right: 25px;
+            list-style: none;
+            padding: 0;
+        }
+        .notification-bell-container .badge-counter {
+            position: absolute;
+            top: 5px;
+            right: 0px;
+            font-size: 0.7em;
+            padding: 0.35em 0.5em;
+            background-color: #ffc107;
+            color: #333;
+            font-weight: bold;
+        }
+         /* Ensure the current link looks active */
         .edit-profile-link {
             color: var(--msu-red);
-            font-weight: 600;
+            font-weight: 700;
             text-decoration: none;
             transition: color 0.2s;
+            /* Ensure the active link is highlighted even though it's the only item */
+            border-bottom: 3px solid var(--msu-red);
+            padding-bottom: 3px;
         }
         .edit-profile-link:hover {
             color: var(--msu-red-dark);
-            text-decoration: underline;
+            text-decoration: none;
         }
         /* --- END Top Header Bar Styles --- */
 
@@ -213,13 +255,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-bottom: 30px;
             padding-bottom: 15px;
             border-bottom: 2px solid var(--msu-red);
-            font-weight: 600;
-            font-size: 2rem;
+            font-weight: 700;
+            font-size: 2.2rem;
         }
         
         /* --- Form Styles (WIDER APPEARANCE FIX) --- */
         .form-container-wrapper {
             width: 95%; 
+            max-width: 800px; /* Constrain max width for better form presentation */
             margin: 0 auto; 
         }
         .form-group {
@@ -228,18 +271,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             align-items: flex-start;
         }
         .form-group label {
-            flex: 0 0 120px; 
+            flex: 0 0 160px; /* Increased label width for better alignment */
             padding-right: 20px;
             text-align: right;
             padding-top: 8px;
             font-weight: 600;
+            font-size: 1rem;
         }
         .form-control, .contact-input { 
             flex: 1;
-            padding: 8px 12px; 
-            border-radius: 4px; 
+            padding: 10px 12px; 
+            border-radius: 6px; 
             box-sizing: border-box; 
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
         
         /* --- Disabled/Read-Only Styling for Student ID --- */
@@ -249,18 +293,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             opacity: 1; 
             cursor: default;
         }
-        /* --- Focus Styling fix --- */
-        .form-control:focus, .contact-input:focus {
-            border-color: #80bdff;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-            outline: 0; 
-        }
-
-        /* Contact Field Styles (Simplified) */
-        .contact-input { 
-            width: 100%;
-        }
-
+        
         /* Centering the Form Actions */
         .form-actions {
             padding-left: 0; 
@@ -269,67 +302,111 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .error {
             color: var(--msu-red);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             margin-top: -15px; 
             margin-bottom: 20px; 
-            padding-left: 140px; 
+            padding-left: 180px; /* Adjusted padding to align with input field */
             font-weight: 600;
             display: block;
         }
         
         .alert-custom {
             margin-bottom: 20px;
-            padding: 10px;
+            padding: 15px;
             font-weight: bold;
+            border-radius: 8px;
+            font-size: 1.05rem;
         }
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border-color: #c3e6cb;
-        }
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border-color: #f5c6cb;
+        /* Button styling */
+        .btn-custom-ok {
+            background-color: var(--msu-red);
+            border-color: var(--msu-red);
+            color: white;
+            font-weight: bold;
         }
 
-        /* Custom Modal Styling - Updated for size and center */
-        #confirmationModal .modal-content {
-            background-color: #343a40; /* Dark background */
-            color: white;
-            border-radius: 8px;
-            border: none;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+
+        /* --- RESPONSIVE ADJUSTMENTS --- */
+        @media (max-width: 992px) {
+            /* Mobile Sidebar */
+            .menu-toggle {
+                display: block;
+            }
+            .sidebar {
+                left: calc(var(--sidebar-width) * -1); 
+                transition: left 0.3s ease;
+                box-shadow: none;
+                --sidebar-width: 250px; 
+            }
+            .sidebar.active {
+                left: 0; 
+                box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+            }
+            .main-wrapper {
+                margin-left: 0;
+            }
+            .top-header-bar {
+                left: 0;
+                padding-left: 70px; /* Space for hamburger icon */
+                justify-content: flex-end;
+            }
         }
-        #confirmationModal .modal-body {
-            padding: 20px;
-            font-size: 1.1rem; /* Slightly larger text */
+        
+        @media (max-width: 768px) {
+            .content-area {
+                padding: 20px 15px;
+            }
+            .page-header {
+                font-size: 2rem;
+            }
+            /* Stack form elements */
+            .form-group {
+                flex-direction: column;
+                margin-bottom: 10px;
+            }
+            .form-group label {
+                flex: none;
+                text-align: left;
+                padding-right: 0;
+                padding-top: 0;
+                margin-bottom: 5px;
+            }
+            /* Adjust error messages to start from the left */
+            .error {
+                padding-left: 0;
+                margin-top: 5px;
+                margin-bottom: 15px;
+            }
+            .form-control, .contact-input {
+                 padding: 8px 10px;
+                 font-size: 0.95rem;
+            }
+            .form-actions button {
+                 width: 100%;
+            }
+            /* Align bell and profile left */
+            .top-header-bar {
+                justify-content: space-between;
+                padding-left: 70px;
+            }
         }
-        #confirmationModal .modal-footer {
-            border-top: 1px solid #495057;
-            justify-content: center; /* Center buttons */
-            padding: 15px;
-        }
-        /* Button styling remains the same for consistency */
-        #confirmationModal .btn-custom-ok {
-            background-color: #dc3545;
-            border-color: #dc3545;
-            color: white;
-            font-weight: bold;
-        }
-        #confirmationModal .btn-custom-ok:hover {
-            background-color: #a82e2a; 
-            border-color: #a82e2a;
-        }
-        #confirmationModal .btn-custom-cancel {
-            background-color: #6c757d; 
-            border-color: #6c757d;
-            color: white;
-            font-weight: bold;
+        @media (max-width: 576px) {
+             .top-header-bar {
+                padding: 0 15px;
+                justify-content: flex-end;
+                padding-left: 65px;
+            }
+            .top-header-bar .notification-bell-container {
+                 margin-right: 10px;
+            }
         }
     </style>
 </head>
 <body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
+    <i class="fas fa-bars"></i>
+</button>
 
 <div class="sidebar">
     <div class="sidebar-header">
@@ -370,7 +447,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </div>
 
 <header class="top-header-bar">
-    <a href="student_edit.php" class="edit-profile-link" style="color: var(--msu-red-dark);">
+    <ul class="navbar-nav mb-2 mb-lg-0">
+        <li class="nav-item dropdown notification-bell-container">
+            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" 
+               data-bs-toggle="dropdown" aria-expanded="false"> 
+                <i class="fas fa-bell fa-lg"></i>
+                <span class="badge rounded-pill badge-counter" id="notification-bell-badge" style="display:none;">0</span>
+            </a>
+        </li>
+    </ul>
+    <a href="student_edit.php" class="edit-profile-link" style="color: var(--msu-red);">
         <i class="fas fa-user-edit me-1"></i> Edit Profile
     </a>
 </header>
@@ -460,7 +546,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         const confirmSubmitButton = document.getElementById('confirmSubmit');
         const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
         
-        // --- Sidebar Activation Logic (Unchanged) ---
+        // --- Sidebar Activation Logic ---
         const links = document.querySelectorAll('.sidebar .nav-link');
         links.forEach(link => {
             link.classList.remove('active');
@@ -469,21 +555,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // --- 1. Track Form Changes ---
         const inputFields = form.querySelectorAll('input:not([type="hidden"])');
         
-        // Mark form as changed on any input event (typing, selection, etc.)
+        // Store initial values to compare later
+        const initialValues = {};
+        inputFields.forEach(input => {
+             initialValues[input.id] = input.value;
+        });
+        
+        // Check for changes on input/change events
         inputFields.forEach(input => {
             input.addEventListener('input', () => {
-                formChanged = true;
+                let changed = false;
+                inputFields.forEach(i => {
+                    if (initialValues[i.id] !== i.value) {
+                        changed = true;
+                    }
+                });
+                formChanged = changed;
             });
         });
 
         // --- 2. Save Confirmation Modal Logic ---
         openModalButton.addEventListener('click', () => {
-            // Only show the modal if any fields have actually changed
+            // Re-check changes immediately before showing modal
+            let changed = false;
+            inputFields.forEach(i => {
+                if (initialValues[i.id] !== i.value) {
+                    changed = true;
+                }
+            });
+            formChanged = changed;
+
             if (formChanged) {
                 confirmationModal.show();
             } else {
-                // If nothing changed, we don't need a modal, but prevent submission 
-                // as there is no data to save.
                 alert("No changes detected in your profile. Nothing to save.");
             }
         });
@@ -500,19 +604,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Check if the page is being left and the form has unsaved changes AND 
             // the user is NOT intentionally clicking the save button.
             if (formChanged && !formSubmitting) {
-                // Cancel the event
                 e.preventDefault(); 
-                // The browser shows a standard confirmation message (usually "Changes you made may not be saved.")
                 return e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
             }
         });
         
         // --- Reset formSubmitting flag if successful (from PHP session flag) ---
-        // This is necessary if the user hits the back button immediately after a successful save.
-        // PHP sets a flag via sessionStorage on success. We check for it and clear it.
         if (sessionStorage.getItem("formSubmitted") === "true") {
             formChanged = false;
             sessionStorage.removeItem("formSubmitted");
+        }
+
+        // New Mobile Toggle Logic
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainWrapper = document.querySelector('.main-wrapper');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                } else {
+                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                }
+            });
+            
+            function closeSidebarOnce() {
+                 sidebar.classList.remove('active');
+                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+            }
+            
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                 link.addEventListener('click', () => {
+                     if (window.innerWidth <= 992) {
+                        sidebar.classList.remove('active');
+                     }
+                 });
+            });
         }
     });
 </script>

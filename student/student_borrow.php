@@ -287,6 +287,22 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         color: var(--main-text);
         font-size: 1.05rem;
     }
+    
+    /* NEW CSS for Mobile Toggle */
+    .menu-toggle {
+        display: none; /* Hidden on desktop */
+        position: fixed;
+        top: 15px;
+        left: 20px;
+        z-index: 1060; 
+        background: var(--msu-red);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 1.2rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
 
     /* --- Top Header Bar Styles --- */
     .top-header-bar {
@@ -379,9 +395,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
     }
     /* FIX: Set fixed height and width for the logo to prevent shifting */
     .sidebar-header img {
-        width: 90px; /* Enforce fixed width */
-        height: 90px; /* Enforce fixed height */
-        object-fit: contain; /* Prevent distortion while maintaining the box size */
+        width: 90px; 
+        height: 90px; 
+        object-fit: contain; 
         margin-bottom: 15px;
     }
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
@@ -393,18 +409,11 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         font-size: 1.1rem; 
         font-weight: 600; 
         transition: background-color 0.3s;
-        display: flex; /* Ensures alignment and consistent spacing with icon */
-        align-items: center; /* Ensures alignment and consistent spacing with icon */
+        display: flex; 
+        align-items: center; 
     }
     .sidebar .nav-link.banned { background-color: #5a2624; opacity: 0.6; cursor: not-allowed; pointer-events: none; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: var(--msu-red-dark); }
-
-    .sidebar .nav-link.history {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        margin-top: 5px;
-    }
-
-    /* Logout Link Styles - FIXED */
     .logout-link {
         margin-top: auto;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -467,14 +476,6 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         display: flex;
         flex-direction: column;
     }
-    .card-title {
-        font-size: 1.25rem;
-    }
-    .item-details {
-        font-size: 1rem;
-        margin-bottom: 12px;
-        color: #6c757d;
-    }
     .item-details strong {
         color: var(--msu-red-dark);
         font-size: 1.2rem;
@@ -514,25 +515,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         transition: background-color 0.2s;
         font-weight: bold;
     }
-    .btn-add-request:hover {
-        background-color: var(--msu-red-dark);
-    }
     .out-of-stock-card { opacity: 0.7; background-color: #fdf6f6; }
-    .remove-btn {
-        color: var(--msu-red);
-        border: none;
-        background: none;
-        font-size: 1.1rem;
-        padding: 0 5px;
-    }
-    .request-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 5px;
-        border-bottom: 1px dashed #eee;
-        font-size: 1.1rem;
-    }
 
     /* VISUAL TYPE SELECTION STYLES */
     .type-selection { display: flex; gap: 15px; margin-bottom: 15px; }
@@ -555,67 +538,6 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         color: white;
         border-color: var(--msu-red);
     }
-    .type-btn:hover:not(.selected):not([disabled]) {
-        background-color: #f0f0f0;
-        border-color: var(--msu-red);
-        color: var(--main-text);
-    }
-
-    /* Pagination Styles */
-    .pagination .page-item.active .page-link {
-        background-color: var(--msu-red);
-        border-color: var(--msu-red);
-        color: white;
-    }
-    .pagination .page-link {
-        color: var(--msu-red-dark);
-        font-size: 1rem;
-        padding: 0.5rem 1rem;
-    }
-    /* Date Input Specific UI improvements */
-    .date-input-group {
-        position: relative;
-    }
-    .date-input-group input[type="date"]::-webkit-calendar-picker-indicator {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-        cursor: pointer;
-        opacity: 0;
-    }
-    .date-input-group .input-group-text {
-        background: #fcfcfc;
-        border-left: none;
-        color: var(--main-text);
-    }
-    .date-input-group input[type="date"] {
-        color: #666;
-        font-weight: 600;
-        font-size: 1.05rem;
-        height: 40px;
-    }
-    input[type="date"]:valid {
-        color: var(--main-text);
-    }
-    input[type="date"]:not([value]) {
-        color: transparent;
-    }
-    input[type="date"]:not([value]):before {
-        content: attr(placeholder);
-        color: #999;
-        position: absolute;
-    }
-    input[type="date"]::-webkit-datetime-edit {
-        color: var(--main-text);
-    }
-    /* Expected Return Display Fix */
-    #expected_return_date_display {
-        font-weight: 600;
-        background-color: #f9f9f9;
-        font-size: 1.05rem;
-    }
     .btn-submit {
         background-color: var(--msu-red);
         border: 1px solid var(--msu-red-dark);
@@ -626,55 +548,78 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         border-radius: 8px;
         transition: background-color 0.2s;
     }
-    .btn-submit:hover:not([disabled]) {
-        background-color: var(--msu-red-dark);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 992px) {
+        /* Mobile Sidebar Toggle */
+        .menu-toggle { display: block; }
+        .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
+        .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
+        .main-wrapper { margin-left: 0; padding-left: 15px; padding-right: 15px; }
+        .top-header-bar { left: 0; padding-left: 70px; }
     }
 
-    /* --- SEARCH & FILTER STYLES --- */
-    .filter-container {
-        padding: 20px;
-        border-radius: 10px;
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        margin-bottom: 30px;
-    }
-    .search-input-group .input-group-text {
-        background-color: var(--msu-red);
-        color: white;
-    }
-    .filter-select {
-        border-left: 1px solid #ced4da;
-        font-size: 1rem;
-        height: 40px;
-    }
-    .form-control, .form-select {
-        height: 40px;
-    }
-    .terms-check .form-check-label {
-        font-size: 1.05rem;
+    @media (max-width: 768px) {
+        /* Request Form Adjustments (Type Selection & Dates) */
+        .type-selection {
+            flex-direction: column; /* Stack Borrow/Reserve buttons */
+            gap: 10px;
+        }
+        .row > .col-md-4 {
+            margin-bottom: 15px !important;
+        }
+        /* Filter/Search stacking */
+        .filter-container .row > div {
+            width: 100% !important;
+            margin-bottom: 10px;
+        }
+        .filter-container .row > div:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Apparatus Card Action Area Stacking */
+        .apparatus-card .action-area {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .apparatus-card .action-area > div:first-child {
+            margin-bottom: 5px;
+        }
+        .apparatus-card .qty-input {
+            width: 60px;
+        }
     }
 
-    /* MODAL STYLING FIX: Large Modal for Status */
-    #statusModal .modal-content {
-        border-radius: 12px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    #statusModal .modal-body {
-        font-size: 1.1rem;
-        line-height: 1.6;
-        padding: 30px;
-    }
-    #statusModal .modal-footer {
-        justify-content: center;
-    }
-    #statusModal .modal-header {
-        border-bottom: none;
+    @media (max-width: 576px) {
+        /* Adjust header spacing on smallest screens */
+        .top-header-bar {
+            padding: 0 15px;
+            justify-content: flex-end;
+            padding-left: 65px;
+        }
+        .top-header-bar .notification-bell-container {
+             margin-right: 15px;
+        }
+        .container {
+             padding: 20px;
+        }
+        /* Make filter inputs small */
+        .filter-container .row > div:nth-child(3) {
+            margin-bottom: 15px; /* Adjust spacing when filter is full width */
+        }
+        .filter-container .row > div:nth-child(4) {
+            margin-top: 0;
+        }
     }
 </style>
 
 </head>
 <body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
+    <i class="fas fa-bars"></i>
+</button>
 
 <div class="sidebar">
     <div class="sidebar-header">
@@ -1069,7 +1014,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                 <p>You are limited to a maximum of 3 active transactions (including pending approvals, reservations, and currently borrowed items) at any time.</p>
 
                 <h6>3. Liability for Loss or Damage</h6>
-                <p>You are fully responsible for the borrowed apparatus. Any damage or loss confirmed by staff will result in immediate liability and require payment for replacement or repair.</p>
+                <p>You are fully responsible for the borrowed apparatus. Any damage or loss confirmed by staff will result in an immediate liability and require payment for replacement or repair.</p>
 
                 <h6>4. Return Procedure and Penalties</h6>
                 <p>All items must be returned to laboratory staff for inspection on the expected return date. Failure to return the item on time will result in an immediate warning (1 day grace period). If the item is still not returned after the grace period, your account will be suspended from further borrowing.</p>
@@ -1331,7 +1276,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
     }
     // ----------------------
 
-    // --- DROPDOWN NOTIFICATION LOGIC (COPIED FROM DASHBOARD) ---
+    // --- DROPDOWN NOTIFICATION LOGIC (Restored) ---
 
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
@@ -1496,6 +1441,40 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                     behavior: 'smooth'
                 });
             }
+        }
+        
+        // New Mobile Toggle Logic
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainWrapper = document.querySelector('.main-wrapper');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                 // Optional: Close sidebar when clicking outside (simple solution)
+                if (sidebar.classList.contains('active')) {
+                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                } else {
+                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                }
+            });
+            
+             // Function to close the sidebar only once after clicking outside
+            function closeSidebarOnce() {
+                 sidebar.classList.remove('active');
+                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+            }
+            
+            // Close sidebar when a nav item is clicked
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                 link.addEventListener('click', () => {
+                     // Check if we are on a mobile view before closing
+                     if (window.innerWidth <= 992) {
+                        sidebar.classList.remove('active');
+                     }
+                 });
+            });
         }
     });
 </script>

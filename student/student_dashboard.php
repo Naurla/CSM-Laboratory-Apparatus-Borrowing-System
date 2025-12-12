@@ -201,7 +201,13 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         border-bottom: 1px solid rgba(255, 255, 255, 0.4);
         margin-bottom: 20px;
     }
-    .sidebar-header img { max-width: 90px; height: auto; margin-bottom: 15px; }
+    /* FIX: Set fixed height and width for the logo to prevent shifting */
+    .sidebar-header img { 
+        width: 90px; /* Enforce fixed width */
+        height: 90px; /* Enforce fixed height */
+        object-fit: contain; /* Prevent distortion while maintaining the box size */
+        margin-bottom: 15px; 
+    }
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
     .sidebar .nav-link {
         color: white;
@@ -534,7 +540,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         </li>
         <li class="nav-item">
             <a href="student_return.php" class="nav-link">
-                <i class="fas fa-undo-alt fa-fw me-2"></i> Initiate Return
+                <i class="fas fa-redo fa-fw me-2"></i> Initiate Return
             </a>
         </li>
         <li class="nav-item">

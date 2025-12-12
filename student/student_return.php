@@ -227,11 +227,17 @@ $today = date("Y-m-d");
         border-bottom: 1px solid rgba(255, 255, 255, 0.4);
         margin-bottom: 20px;
     }
-    .sidebar-header img { max-width: 90px; height: auto; margin-bottom: 15px; }
+    /* FIX: Set fixed height and width for the logo to prevent shifting */
+    .sidebar-header img { 
+        width: 90px; 
+        height: 90px;
+        object-fit: contain; 
+        margin-bottom: 15px; 
+    }
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
     .sidebar .nav-link {
         color: white;
-        padding: 18px 20px; 
+        padding: 15px 20px; /* FIX: Set padding to 15px to match dashboard and borrow */
         font-size: 1.1rem;
         font-weight: 600;
         transition: background-color 0.3s;
@@ -253,7 +259,7 @@ $today = date("Y-m-d");
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     .logout-link .nav-link { 
-        background-color: #C62828 !important; /* FIXED: To match student_dashboard.php base color */
+        background-color: #C62828 !important; 
         color: white !important;
     }
     .logout-link .nav-link:hover {
@@ -533,15 +539,15 @@ $today = date("Y-m-d");
                     $action_content = '';
                     if ($is_pending_check) {
                         $action_content = '<span class="action-message-checking">
-                                                                                 <i class="fas fa-clock me-1"></i> Pending Staff Check
-                                                                             </span>';
+                                            <i class="fas fa-clock me-1"></i> Pending Staff Check
+                                          </span>';
                     } elseif (
                         (!$is_expected_return_date_reached) && 
                         ($clean_status === 'reserved' || $clean_status === 'approved')
                     ) {
                         $action_content = '<span class="action-message-checking bg-info text-white">
-                                                                                 <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
-                                                                             </span>';
+                                            <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
+                                          </span>';
                     } else {
                         $overdue_warning = '';
                         if ($is_overdue) {
@@ -701,25 +707,25 @@ $today = date("Y-m-d");
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
                     $placeholder.append(`
-                           <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                             href="${link}" 
-                             data-id="${notif.id}"
-                             data-is-read="${notif.is_read}"
-                             onclick="window.markSingleAlertAndGo(event, this)">
-                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                             <div class="flex-grow-1">
-                                 <div class="small text-gray-500">${datePart}</div>
-                                 <span class="d-block">${cleanMessage}</span>
-                             </div>
-                             ${notif.is_read == 0 ? 
-                                 `<button type="button" class="mark-read-hover-btn" 
-                                             title="Mark as Read" 
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                     <i class="fas fa-check-circle"></i>
-                                 </button>` : ''}
-                           </a>
-                      `);
+                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                                href="${link}" 
+                                data-id="${notif.id}"
+                                data-is-read="${notif.is_read}"
+                                onclick="window.markSingleAlertAndGo(event, this)">
+                                <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                <div class="flex-grow-1">
+                                    <div class="small text-gray-500">${datePart}</div>
+                                    <span class="d-block">${cleanMessage}</span>
+                                </div>
+                                ${notif.is_read == 0 ? 
+                                    `<button type="button" class="mark-read-hover-btn" 
+                                                title="Mark as Read" 
+                                                data-id="${notif.id}"
+                                                onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>` : ''}
+                            </a>
+                    `);
                 });
             } else {
                 $placeholder.html(`

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once "../vendor/autoload.php";
 require_once "../classes/Transaction.php";
 require_once "../classes/Database.php";
 
@@ -52,15 +53,15 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
     <style>
     /* Custom Variables and Base Layout (MSU Theme) */
     :root {
-        --msu-red: #A40404; /* CHANGED FROM #b8312d */
-        --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
+        --msu-red: #A40404; 
+        --msu-red-dark: #820303; 
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --header-bg: #e9ecef;
         --danger-light: #fbe6e7;
         --danger-dark: #8b0000;
         --main-text: #333;
-        --header-height: 60px; /* Defined for Top Bar reference */
+        --header-height: 60px; 
         
         /* Define solid colors based on staff_dashboard.php */
         --status-returned-solid: #198754; 
@@ -197,22 +198,26 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
         margin-bottom: 20px;
     }
     
+    /* FIX: Set fixed height and width for the logo to prevent shifting */
     .sidebar-header img { 
-        max-width: 90px; 
-        height: auto; 
+        width: 90px; /* FIXED WIDTH */
+        height: 90px; /* FIXED HEIGHT */
+        object-fit: contain; 
         margin: 0 auto 15px auto; 
         display: block; 
     }
     
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
 
-    /* INCREASED SIDEBAR LINK PADDING/SIZE */
+    /* FIX: Set consistent padding (15px) and enforce flex for consistent icon spacing */
     .sidebar .nav-link {
         color: white;
-        padding: 18px 20px; 
+        padding: 15px 20px; /* FIXED: from 18px */
         font-size: 1.1rem;
         font-weight: 600;
         transition: background-color 0.3s;
+        display: flex; /* Added for text/icon spacing consistency */
+        align-items: center; /* Added for vertical alignment */
     }
     .sidebar .nav-link:hover, .sidebar .nav-link.active {
         background-color: var(--msu-red-dark);
@@ -221,13 +226,9 @@ $webRootURL = "/wd123/uploads/apparatus_images/";
         background-color: #5a2624; 
         opacity: 0.8; 
     }
-    .sidebar .nav-link.history {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        margin-top: 5px;
-    }
     .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .logout-link .nav-link { 
-        background-color: #C62828 !important; /* FIXED: To match student_dashboard/return base color */
+        background-color: #C62828 !important; 
         color: white !important;
     }
     .logout-link .nav-link:hover {

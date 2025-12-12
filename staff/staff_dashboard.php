@@ -18,12 +18,11 @@ $apparatusList = $transaction->getAllApparatus();
 // Count summary stats
 $totalForms = count($allForms);
 $totalApparatus = count($apparatusList); 
-$pendingForms = count(array_filter($allForms, fn($f) => $f['status'] === 'waiting_for_approval' || $f['status'] === 'checking')); // Added 'checking' to pending
+$pendingForms = count(array_filter($allForms, fn($f) => $f['status'] === 'waiting_for_approval' || $f['status'] === 'checking'));
 $reservedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'approved' || $f['status'] === 'reserved')); 
 $borrowedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'borrowed')); 
 $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'returned'));
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,10 +36,9 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
     
     <style>
-        /* ... (CSS styles remain unchanged except for the two below) ... */
         :root {
-            --msu-red: #A40404;  /* CHANGED FROM #b8312d */
-            --msu-red-dark: #820303; /* CHANGED FROM #a82e2a */
+            --msu-red: #A40404; 
+            --msu-red-dark: #820303; 
             --msu-blue: #007bff;
             --sidebar-width: 280px;
             --bg-light: #f5f6fa;
@@ -48,10 +46,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             --danger-solid: #dc3545;
             --status-returned-solid: #28a745; 
             --status-overdue-solid: #dc3545;
-            --student-logout-red: #dc3545;
             --main-text: #333;
-            /* NEW: Increased base font size for main content */
-            --base-font-size: 16px; 
         }
         
         body { 
@@ -61,10 +56,10 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             display: flex; 
             padding: 0;
             margin: 0;
-            font-size: var(--base-font-size); /* Apply increased base font */
+            font-size: 1.05rem;
         }
         
-        /* --- Top Header Bar Styles (Adjusted for Bell Placement) --- */
+        /* --- Top Header Bar Styles --- */
         .top-header-bar {
             position: fixed;
             top: 0;
@@ -77,15 +72,13 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             display: flex;
             align-items: center;
             justify-content: flex-end; 
-            padding: 0 30px; /* Increased padding */
+            padding: 0 30px; 
             z-index: 1000;
         }
-        /* REMOVED .edit-profile-link STYLES */
         
-        /* ADDED: Bell badge container style */
+        /* Bell badge container style */
         .notification-bell-container {
             position: relative;
-            /* Removed the fixed margin to let default list/nav spacing apply, or you can use margin-left: auto; on an item before it if needed */
             list-style: none; 
             padding: 0;
         }
@@ -97,13 +90,14 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             position: absolute;
             top: 5px; 
             right: 0px;
-            font-size: 0.8em; /* Slightly larger badge font */
+            font-size: 0.8em; 
             padding: 0.35em 0.5em;
             background-color: #ffc107; 
             color: var(--main-text);
             font-weight: bold;
         }
-        /* --- Sidebar Styles --- */
+        
+        /* --- Sidebar Styles (Fixed for Consistency) --- */
         .sidebar {
             width: var(--sidebar-width);
             min-width: var(--sidebar-width);
@@ -120,25 +114,35 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         }
         .sidebar-header {
             text-align: center;
-            padding: 25px 15px; /* Increased padding */
-            font-size: 1.4rem; /* Increased font size */
+            padding: 25px 15px; 
+            font-size: 1.3rem; 
             font-weight: 700;
             line-height: 1.2; 
             color: #fff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.4); 
-            margin-bottom: 25px; /* Increased margin */
+            margin-bottom: 25px; 
         }
-        .sidebar-header img { max-width: 100px; height: auto; margin-bottom: 15px; } /* Increased logo size */
-        .sidebar-header .title { font-size: 1.5rem; line-height: 1.1; } /* Increased title size */
+        /* FIX 1: Set fixed size for the logo (100px to match larger look of staff_pending) */
+        .sidebar-header img { 
+            width: 100px; /* Fixed width */
+            height: 100px; /* Fixed height */
+            object-fit: contain; 
+            margin-bottom: 15px; 
+            max-width: 100px;
+        }
+        .sidebar-header .title { font-size: 1.4rem; line-height: 1.1; }
         
         .sidebar-nav { flex-grow: 1; }
 
+        /* FIX 2: Set consistent padding (18px 25px) from staff_pending */
         .sidebar-nav .nav-link {
             color: white;
-            padding: 18px 25px; /* Increased padding/size */
-            font-size: 1.1rem; /* Increased font size */
+            padding: 18px 25px; /* Synchronized padding */
+            font-size: 1.1rem;
             font-weight: 600;
             transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
         }
         .sidebar-nav .nav-link:hover, .sidebar-nav .nav-link.active { 
             background-color: var(--msu-red-dark); 
@@ -152,15 +156,16 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             background-color: var(--msu-red); 
         }
         .logout-link .nav-link { 
-            background-color: #C62828 !important; /* FIXED to match consistent base logout color */
+            background-color: #C62828 !important; 
             color: white !important;
-            padding: 18px 25px; 
+            padding: 18px 25px; /* Synchronized padding */
             border-radius: 0; 
             text-decoration: none;
-            font-size: 1.1rem; /* Increased font size */
+            font-size: 1.1rem; 
+            font-weight: 600; /* FIX 3: Ensure Logout text is bold */
         }
         .logout-link .nav-link:hover {
-            background-color: var(--msu-red-dark) !important; /* FIXED to use consistent dark hover color */
+            background-color: var(--msu-red-dark) !important; 
         }
         
         .main-content {
@@ -172,7 +177,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         .content-area {
             background: #fff;
             border-radius: 12px; 
-            padding: 30px; /* Reduced side padding slightly for more width */
+            padding: 30px; 
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         .page-header {
@@ -181,12 +186,12 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             padding-bottom: 15px;
             border-bottom: 2px solid var(--msu-red);
             font-weight: 600;
-            font-size: 2.2rem; /* Increased font size */
+            font-size: 2.2rem; 
         }
 
         /* --- STAT CARD STYLES --- */
         .stat-card {
-            padding: 25px; /* Increased padding */
+            padding: 25px; 
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             text-align: center;
@@ -200,21 +205,21 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         }
 
         .stat-card h3 { 
-            font-size: 1.1rem; /* Increased font size */
+            font-size: 1.1rem; 
             color: #6c757d; 
             margin-bottom: 8px; 
             text-transform: uppercase; 
             font-weight: 600; 
         }
         .stat-card p { 
-            font-size: 3.5rem; /* Significantly increased font size */
+            font-size: 3.5rem; 
             font-weight: 800; 
             color: var(--msu-red); 
             margin-bottom: 0; 
             line-height: 1; 
         }
         .stat-icon-wrapper { 
-            font-size: 4.5rem; /* Significantly increased icon size */
+            font-size: 4.5rem; 
             display: block; 
             margin-bottom: 10px; 
         }
@@ -230,26 +235,26 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         .table thead th { 
             background: var(--msu-red); 
             color: white; 
-            font-weight: 700; /* Bolder headers */
+            font-weight: 700;
             vertical-align: middle; 
             text-align: center; 
-            font-size: 1rem; /* Increased header font size */
-            padding: 12px; /* Increased header padding */
+            font-size: 1rem; 
+            padding: 12px; 
         }
         .table tbody td { 
             vertical-align: middle; 
-            font-size: 1rem; /* Increased body font size */
-            padding: 10px; /* Increased cell padding */
+            font-size: 1rem; 
+            padding: 10px; 
             text-align: center; 
         }
         
         .status-tag {
             display: inline-block; 
-            padding: 6px 14px; /* Increased padding */
+            padding: 6px 14px; 
             border-radius: 18px; 
             font-weight: 700; 
             text-transform: capitalize; 
-            font-size: 0.9rem; /* Increased tag font size */
+            font-size: 0.9rem; 
             line-height: 1.2; 
             white-space: nowrap;
         }
@@ -263,32 +268,6 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         .status-tag.damaged { background-color: #343a40; color: white; border: 1px solid #212529; }
         
         .status-tag.returned-late { background-color: var(--status-overdue-solid); color: white; } 
-        
-        /* Dropdown Menu Styles */
-        .dropdown-menu {
-            min-width: 300px;
-            padding: 0;
-        }
-        .dropdown-item {
-            padding: 10px 15px;
-            white-space: normal;
-            transition: background-color 0.1s;
-        }
-        .dropdown-item:hover {
-            background-color: #f5f5f5;
-        }
-        .dropdown-item.fw-bold {
-            font-weight: 600;
-        }
-        .mark-all-link {
-            cursor: pointer;
-            color: var(--msu-red);
-            font-weight: 600;
-            padding: 8px 15px;
-            display: block;
-            text-align: center;
-            border-top: 1px solid #eee;
-        }
     </style>
 </head>
 <body>
@@ -491,7 +470,6 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
 
     // 3. Function to fetch the count and populate the dropdown
     function fetchStaffNotifications() {
-        // NOTE: Uses the generalized API endpoint
         const apiPath = '../api/get_notifications.php'; 
 
         $.getJSON(apiPath, function(response) { 
@@ -523,16 +501,16 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                     
                     let iconClass = 'fas fa-info-circle text-info'; 
                     if (notif.type.includes('form_pending')) {
-                         iconClass = 'fas fa-hourglass-half text-warning';
+                           iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                         iconClass = 'fas fa-redo text-primary';
+                           iconClass = 'fas fa-redo text-primary';
                     }
                     
                     const is_read = notif.is_read == 1;
                     const itemClass = is_read ? 'text-muted' : 'fw-bold'; // Highlight unread
 
                     $placeholder.append(`
-                        <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
                             href="${notif.link}"
                             data-id="${notif.id}"
                             onclick="handleNotificationClick(event, this, ${notif.id})">
@@ -553,11 +531,10 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             
             // Re-append the Mark All link and View All link in order
             if (unreadCount > 0) {
-                   $dropdown.append($markAllLink);
+                        $dropdown.append($markAllLink);
             }
             $dropdown.append($viewAllLink);
             
-
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching staff notifications:", textStatus, errorThrown);
             // Ensure the badge is hidden on failure

@@ -1609,43 +1609,203 @@ public function addApparatus($name, $type, $size, $material, $description, $tota
 
     // File: classes/Transaction.php
 
-public function updateApparatusDetailsAndStock($id, $name, $type, $size, $material, $description, $total_stock, $damaged_stock, $lost_stock, $image) {
+// File: classes/Transaction.php
+
+/**
+ * Updates the apparatus details and synchronizes individual units in apparatus_unit
+ * to match the new total, damaged, and lost stock counts.
+ */
+public function updateApparatusDetailsAndStock($id, $name, $type, $size, $material, $description, $new_total_stock, $new_damaged_stock, $new_lost_stock, $image)
+{
     $conn = $this->connect();
     $conn->beginTransaction();
 
     try {
-        $currently_out = $this->getCurrentlyOutCount($id, $conn); 
-        $pending_quantity = $this->getPendingQuantity($id, $conn); 
+        // 1. Fetch current stock and unit counts, and lock the row
+        $stmt_current = $conn->prepare("
+            SELECT total_stock, damaged_stock, lost_stock, status 
+            FROM apparatus_type 
+            WHERE id = :id FOR UPDATE
+        ");
+        $stmt_current->execute([':id' => $id]);
+        $current_data = $stmt_current->fetch(PDO::FETCH_ASSOC);
 
-        $available_physical_stock = $total_stock - $damaged_stock - $lost_stock;
-        
-        $new_available_stock = $available_physical_stock - $currently_out - $pending_quantity; 
-        
-        if ($new_available_stock < 0) {
+        if (!$current_data) {
             $conn->rollBack();
-            return 'stock_too_low'; 
+            return false;
         }
 
-        $item_condition = ($damaged_stock > 0 || $lost_stock > 0) ? 'mixed' : 'good';
-        $status = ($new_available_stock > 0) ? 'available' : 'unavailable';
+        $current_total_stock = $current_data['total_stock'];
+        $current_damaged_stock = $current_data['damaged_stock'];
+        $current_lost_stock = $current_data['lost_stock'];
+        
+        $current_physical_available = $current_total_stock - $current_damaged_stock - $current_lost_stock;
+        
+        $currently_out = $this->getCurrentlyOutCount($id, $conn);
+        $pending_quantity = $this->getPendingQuantity($id, $conn);
+
+
+        // --- VALIDATION (Should be done by controller, but repeating for safety) ---
+        $new_available_physical = $new_total_stock - $new_damaged_stock - $new_lost_stock;
+        
+        if ($new_available_physical < 0) {
+            $conn->rollBack();
+            return 'stock_math_error';
+        }
+        if ($new_available_physical < $currently_out) {
+            $conn->rollBack();
+            return 'stock_too_low';
+        }
+
+        // --- 2. UNIT RECONCILIATION LOGIC ---
+
+        // A. Handle Total Stock Change (Creation/Deletion of units)
+        $total_diff = $new_total_stock - $current_total_stock;
+        
+        if ($total_diff > 0) {
+            // Add New Units (always start as good/available)
+            $stmt_insert = $conn->prepare("INSERT INTO apparatus_unit (type_id, current_condition, current_status) VALUES (:type_id, 'good', 'available')");
+            for ($i = 0; $i < $total_diff; $i++) {
+                $stmt_insert->execute([':type_id' => $id]);
+            }
+        } elseif ($total_diff < 0) {
+            // Delete Units (units MUST NOT be in 'borrowed', 'checking', 'damaged', or 'lost' state)
+            $units_to_delete_count = abs($total_diff);
+            
+            // Find units in 'available' status to delete
+            $stmt_delete = $conn->prepare("
+                SELECT unit_id FROM apparatus_unit 
+                WHERE type_id = :type_id AND current_status = 'available' AND current_condition = 'good'
+                ORDER BY unit_id DESC LIMIT :limit
+            ");
+            $stmt_delete->bindValue(':type_id', $id, PDO::PARAM_INT);
+            $stmt_delete->bindValue(':limit', $units_to_delete_count, PDO::PARAM_INT);
+            $stmt_delete->execute();
+            $delete_unit_ids = $stmt_delete->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($delete_unit_ids) !== $units_to_delete_count) {
+                // This means there aren't enough available units to fulfill the deletion. This should not happen 
+                // if the total stock validation passed, but is a fail-safe.
+                $conn->rollBack();
+                return 'delete_unit_fail'; 
+            }
+            
+            $placeholders = implode(',', array_fill(0, count($delete_unit_ids), '?'));
+            $conn->prepare("DELETE FROM apparatus_unit WHERE unit_id IN ({$placeholders})")->execute($delete_unit_ids);
+        }
+
+        // B. Handle Damaged Stock Change
+        $damaged_diff = $new_damaged_stock - $current_damaged_stock;
+        
+        if ($damaged_diff > 0) {
+            // Mark existing 'good/available' units as 'damaged/unavailable'
+            $stmt_mark_damaged = $conn->prepare("
+                SELECT unit_id FROM apparatus_unit 
+                WHERE type_id = :type_id AND current_condition = 'good' AND current_status = 'available' 
+                ORDER BY unit_id ASC LIMIT :limit
+            ");
+            $stmt_mark_damaged->bindValue(':type_id', $id, PDO::PARAM_INT);
+            $stmt_mark_damaged->bindValue(':limit', $damaged_diff, PDO::PARAM_INT);
+            $stmt_mark_damaged->execute();
+            $damaged_unit_ids = $stmt_mark_damaged->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($damaged_unit_ids) !== $damaged_diff) {
+                $conn->rollBack();
+                return 'mark_damaged_fail'; // Cannot mark damaged due to insufficient good stock
+            }
+            
+            $placeholders = implode(',', array_fill(0, count($damaged_unit_ids), '?'));
+            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'damaged', current_status = 'unavailable' WHERE unit_id IN ({$placeholders})")->execute($damaged_unit_ids);
+        
+        } elseif ($damaged_diff < 0) {
+            // Mark existing 'damaged/unavailable' units as 'good/available' (Restoration)
+            $units_to_restore_count = abs($damaged_diff);
+            $stmt_restore_damaged = $conn->prepare("
+                SELECT unit_id FROM apparatus_unit 
+                WHERE type_id = :type_id AND current_condition = 'damaged' AND current_status = 'unavailable'
+                ORDER BY unit_id DESC LIMIT :limit
+            ");
+            $stmt_restore_damaged->bindValue(':type_id', $id, PDO::PARAM_INT);
+            $stmt_restore_damaged->bindValue(':limit', $units_to_restore_count, PDO::PARAM_INT);
+            $stmt_restore_damaged->execute();
+            $restore_unit_ids = $stmt_restore_damaged->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($restore_unit_ids) !== $units_to_restore_count) {
+                $conn->rollBack();
+                return 'restore_damaged_fail';
+            }
+            
+            $placeholders = implode(',', array_fill(0, count($restore_unit_ids), '?'));
+            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'good', current_status = 'available' WHERE unit_id IN ({$placeholders})")->execute($restore_unit_ids);
+        }
+
+        // C. Handle Lost Stock Change (Same logic as Damaged, but targeting 'lost' condition)
+        $lost_diff = $new_lost_stock - $current_lost_stock;
+        
+        if ($lost_diff > 0) {
+            // Mark existing 'good/available' units as 'lost/unavailable'
+            $stmt_mark_lost = $conn->prepare("
+                SELECT unit_id FROM apparatus_unit 
+                WHERE type_id = :type_id AND current_condition = 'good' AND current_status = 'available'
+                ORDER BY unit_id ASC LIMIT :limit
+            ");
+            $stmt_mark_lost->bindValue(':type_id', $id, PDO::PARAM_INT);
+            $stmt_mark_lost->bindValue(':limit', $lost_diff, PDO::PARAM_INT);
+            $stmt_mark_lost->execute();
+            $lost_unit_ids = $stmt_mark_lost->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($lost_unit_ids) !== $lost_diff) {
+                $conn->rollBack();
+                return 'mark_lost_fail'; // Cannot mark lost due to insufficient good stock
+            }
+            
+            $placeholders = implode(',', array_fill(0, count($lost_unit_ids), '?'));
+            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'lost', current_status = 'unavailable' WHERE unit_id IN ({$placeholders})")->execute($lost_unit_ids);
+        
+        } elseif ($lost_diff < 0) {
+            // Mark existing 'lost/unavailable' units as 'good/available' (Recovery)
+            $units_to_recover_count = abs($lost_diff);
+            $stmt_recover_lost = $conn->prepare("
+                SELECT unit_id FROM apparatus_unit 
+                WHERE type_id = :type_id AND current_condition = 'lost' AND current_status = 'unavailable'
+                ORDER BY unit_id DESC LIMIT :limit
+            ");
+            $stmt_recover_lost->bindValue(':type_id', $id, PDO::PARAM_INT);
+            $stmt_recover_lost->bindValue(':limit', $units_to_recover_count, PDO::PARAM_INT);
+            $stmt_recover_lost->execute();
+            $recover_unit_ids = $stmt_recover_lost->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($recover_unit_ids) !== $units_to_recover_count) {
+                $conn->rollBack();
+                return 'recover_lost_fail';
+            }
+            
+            $placeholders = implode(',', array_fill(0, count($recover_unit_ids), '?'));
+            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'good', current_status = 'available' WHERE unit_id IN ({$placeholders})")->execute($recover_unit_ids);
+        }
+
+        // --- 3. FINAL APPARATUS_TYPE UPDATE (Non-Stock fields & final summary columns) ---
+
+        $item_condition = ($new_damaged_stock > 0 || $new_lost_stock > 0) ? 'mixed' : 'good';
+        $status = ($new_available_physical > $currently_out + $pending_quantity) ? 'available' : 'unavailable';
         
         $sql = "
-                UPDATE apparatus_type 
-                SET name = :name, apparatus_type = :type, size = :size, material = :material, 
-                    description = :description, total_stock = :total_stock, 
-                    available_stock = :available_stock, damaged_stock = :damaged_stock,
-                    lost_stock = :lost_stock, item_condition = :condition, status = :status,
-                    image = :image
-                WHERE id = :id
+            UPDATE apparatus_type 
+            SET name = :name, apparatus_type = :type, size = :size, material = :material, 
+                description = :description, total_stock = :total_stock, 
+                damaged_stock = :damaged_stock, lost_stock = :lost_stock,
+                available_stock = :available_stock, item_condition = :condition, status = :status,
+                image = :image
+            WHERE id = :id
         ";
 
         $stmt = $conn->prepare($sql);
 
         $stmt->execute([
             ":name" => $name, ":type" => $type, ":size" => $size, ":material" => $material, 
-            ":description" => $description, ":total_stock" => $total_stock, 
-            ":available_stock" => max(0, $new_available_stock), 
-            ":damaged_stock" => $damaged_stock, ":lost_stock" => $lost_stock, 
+            ":description" => $description, ":total_stock" => $new_total_stock, 
+            ":damaged_stock" => $new_damaged_stock, ":lost_stock" => $new_lost_stock, 
+            ":available_stock" => max(0, $new_available_physical - $currently_out - $pending_quantity), 
             ":condition" => $item_condition, ":status" => $status, 
             ":image" => $image, ":id" => $id
         ]);
@@ -1655,11 +1815,10 @@ public function updateApparatusDetailsAndStock($id, $name, $type, $size, $materi
         
     } catch (Exception $e) {
         $conn->rollBack();
-        error_log("Update Apparatus Details Failed: " . $e->getMessage());
-        return false;
+        error_log("Update Apparatus Details Failed (ID: {$id}): " . $e->getMessage());
+        return "Database Error: " . $e->getMessage();
     }
 }
-
     public function getAllFormsFiltered($filter = 'all', $search = '') {
         $conn = $this->connect();
         

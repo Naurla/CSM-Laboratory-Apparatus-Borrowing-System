@@ -57,9 +57,10 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             padding: 0;
             margin: 0;
             font-size: 1.05rem;
+            overflow-x: hidden; /* Prevent horizontal scrollbar on body */
         }
         
-        /* NEW CSS for Mobile Toggle */
+        /* NEW CSS for Mobile Toggle and Backdrop */
         .menu-toggle {
             display: none; /* Hidden on desktop */
             position: fixed;
@@ -73,23 +74,46 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             border-radius: 6px;
             font-size: 1.2rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            width: 44px;  
+            height: 44px;  
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+        
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar.active ~ .sidebar-backdrop {
+            display: block;
+            opacity: 1;
+        }
+
 
         /* --- Top Header Bar Styles --- */
         .top-header-bar {
             position: fixed;
             top: 0;
-            left: var(--sidebar-width);
+            left: var(--sidebar-width); /* Default desktop position */
             right: 0;
             height: var(--header-height);
-            background-color: #fff;
+            background-color: #fcfcfc; /* Lighter background for consistency */
             border-bottom: 1px solid #ddd;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
             justify-content: flex-end; 
             padding: 0 30px; 
-            z-index: 1000;
+            z-index: 1050; /* Ensure it's above content */
         }
         
         /* Bell badge container style */
@@ -127,7 +151,8 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             left: 0;
             display: flex;
             flex-direction: column;
-            z-index: 1050; /* Added z-index for mobile overlap */
+            z-index: 1010; 
+            transition: left 0.3s ease; /* Added for mobile transition */
         }
         .sidebar-header {
             text-align: center;
@@ -139,10 +164,10 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             border-bottom: 1px solid rgba(255, 255, 255, 0.4); 
             margin-bottom: 25px; 
         }
-        /* FIX 1: Set fixed size for the logo (100px to match larger look of staff_pending) */
+        /* FIX: Set consistent size for the logo */
         .sidebar-header img { 
-            width: 100px; /* Fixed width */
-            height: 100px; /* Fixed height */
+            width: 100px; 
+            height: 100px;
             object-fit: contain; 
             margin-bottom: 15px; 
             max-width: 100px;
@@ -151,18 +176,23 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         
         .sidebar-nav { flex-grow: 1; }
 
-        /* FIX 2: Set consistent padding (18px 25px) from staff_pending */
         .sidebar-nav .nav-link {
             color: white;
-            padding: 18px 25px; /* Synchronized padding */
-            font-size: 1.1rem;
+            padding: 18px 25px; 
+            font-size: 1.05rem;
             font-weight: 600;
             transition: background-color 0.2s;
             display: flex;
             align-items: center;
         }
-        .sidebar-nav .nav-link:hover, .sidebar-nav .nav-link.active { 
+        .sidebar-nav .nav-link:hover { 
             background-color: var(--msu-red-dark); 
+        }
+        /* REMOVED: Gold active link border for consistency with student side */
+        .sidebar-nav .nav-link.active {
+            background-color: var(--msu-red-dark);
+            /* border-left: 5px solid #ffc107; */ 
+            /* padding-left: 25px; // Reset padding as border is gone */
         }
         
         .logout-link {
@@ -175,11 +205,11 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         .logout-link .nav-link { 
             background-color: #C62828 !important; 
             color: white !important;
-            padding: 18px 25px; /* Synchronized padding */
+            padding: 18px 25px; 
             border-radius: 0; 
             text-decoration: none;
-            font-size: 1.1rem; 
-            font-weight: 600; /* FIX 3: Ensure Logout text is bold */
+            font-size: 1.05rem; 
+            font-weight: 600; 
         }
         .logout-link .nav-link:hover {
             background-color: var(--msu-red-dark) !important; 
@@ -191,6 +221,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             flex-grow: 1;
             padding: 30px;
             padding-top: calc(var(--header-height) + 30px); 
+            transition: margin-left 0.3s ease; /* Added for mobile/desktop toggle */
         }
         .content-area {
             background: #fff;
@@ -198,13 +229,14 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             padding: 30px; 
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
+        /* Themed Page Header */
         .page-header {
             color: #333; 
             margin-bottom: 30px;
             padding-bottom: 15px;
-            border-bottom: 2px solid var(--msu-red);
+            border-bottom: 2px solid var(--msu-red); /* MSU Red underline */
             font-weight: 600;
-            font-size: 2.2rem; 
+            font-size: 2rem; /* Adjusted for better hierarchy */
         }
 
         /* --- STAT CARD STYLES --- */
@@ -242,26 +274,26 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             margin-bottom: 10px; 
         }
 
-        /* Status-specific Colors */
+        /* Status-specific Colors (Matching theme colors) */
         .stat-card.total p, .stat-card.total .stat-icon-wrapper i { color: #333; } 
-        .stat-card.pending p, .stat-card.pending .stat-icon-wrapper i { color: #ffc107; } 
-        .stat-card.reserved p, .stat-card.reserved .stat-icon-wrapper i { color: #198754; } 
-        .stat-card.borrowed p, .stat-card.borrowed .stat-icon-wrapper i { color: #0d6efd; } 
+        .stat-card.pending p, .stat-card.pending .stat-icon-wrapper i { color: #ffc107; } /* Warning/Yellow */
+        .stat-card.reserved p, .stat-card.reserved .stat-icon-wrapper i { color: #198754; } /* Success/Green */
+        .stat-card.borrowed p, .stat-card.borrowed .stat-icon-wrapper i { color: #0d6efd; } /* Primary/Blue */
         
         /* Table Styles */
         .table-container { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 25px; }
         .table thead th { 
-            background: var(--msu-red); 
+            background: var(--msu-red); /* MSU Red Table Header */
             color: white; 
             font-weight: 700;
             vertical-align: middle; 
             text-align: center; 
-            font-size: 1rem; 
-            padding: 12px; 
+            font-size: 0.95rem; /* Slightly smaller font */
+            padding: 10px 12px; /* Tighter padding */
         }
         .table tbody td { 
             vertical-align: middle; 
-            font-size: 1rem; 
+            font-size: 0.95rem; 
             padding: 10px; 
             text-align: center; 
         }
@@ -272,26 +304,29 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             border-radius: 18px; 
             font-weight: 700; 
             text-transform: capitalize; 
-            font-size: 0.9rem; 
+            font-size: 0.85rem; /* Smaller status font */
             line-height: 1.2; 
             white-space: nowrap;
         }
         /* Status Tags with solid color backgrounds for better visibility */
-        .status-tag.waiting_for_approval { background-color: #ffc107; color: #333; }
-        .status-tag.approved { background-color: #198754; color: white; }
+        .status-tag.waiting_for_approval, .status-tag.checking { background-color: #ffc107; color: #333; }
+        .status-tag.approved, .status-tag.reserved { background-color: #198754; color: white; }
         .status-tag.rejected { background-color: #dc3545; color: white; }
         .status-tag.borrowed { background-color: #0d6efd; color: white; }
         .status-tag.returned { background-color: var(--status-returned-solid); color: white; } 
-        .status-tag.overdue { background-color: var(--status-overdue-solid); color: white; } 
         .status-tag.damaged { background-color: #343a40; color: white; border: 1px solid #212529; }
         
-        .status-tag.returned-late { background-color: var(--status-overdue-solid); color: white; } 
+        /* Highlight for Overdue/Late returns */
+        .status-tag.overdue, .status-tag.returned-late { 
+            background-color: var(--danger-solid); /* Use the defined danger color */
+            color: white; 
+        } 
 
-        /* --- RESPONSIVE ADJUSTMENTS --- (Copied and adjusted from student_dashboard.php) */
+        /* --- RESPONSIVE ADJUSTMENTS --- */
         @media (max-width: 992px) {
-            /* Mobile Sidebar Toggle */
-            .menu-toggle { display: block; }
-            /* Set a smaller default width for mobile sidebar */
+            /* Mobile Sidebar Toggle: Ensure it's displayed and positioned for mobile */
+            .menu-toggle { display: flex; }
+            /* Hide sidebar by default on mobile, prepare for overlay */
             .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; } 
             .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
 
@@ -300,25 +335,20 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                 margin-left: 0; 
                 padding-left: 15px; 
                 padding-right: 15px;
-                padding-top: calc(var(--header-height) + 15px); /* Adjusted top padding */ 
+                padding-top: calc(var(--header-height) + 15px); 
             }
             .top-header-bar { 
                 left: 0; 
                 padding-left: 70px; /* Space for the menu toggle button */
                 padding-right: 15px;
             }
-            .content-area { padding: 25px; } /* Adjust padding for smaller screens */
+            .content-area { padding: 25px; } 
             .page-header { font-size: 1.8rem; }
-            .stat-card h3 { font-size: 1rem; }
-            .stat-card p { font-size: 3rem; }
-            .stat-icon-wrapper { font-size: 4rem; }
-        }
-        
-        @media (max-width: 768px) {
-            /* Stat cards will stack vertically due to Bootstrap's col-lg-3 col-md-6 */
-            .table thead { display: none; } /* Hide table headers for mobile */
+            
+            /* Table mobile stacking rules (Keep logic from original file) */
+            .table thead { display: none; } 
             .table tbody, .table tr, .table td { display: block; width: 100%; }
-            .table tr { margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; }
+            .table tr { margin-bottom: 10px; border: 1px solid #ddd; border-left: 4px solid var(--msu-red); border-radius: 8px; }
             .table td { 
                 text-align: right !important; 
                 padding-left: 50% !important;
@@ -337,29 +367,8 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                 font-weight: 600;
                 color: #555;
             }
-             .table tbody tr:last-child { border-bottom: none; }
-
-            /* Define data-labels for table cells */
-            .table td:nth-of-type(1)::before { content: "Form ID:"; }
-            .table td:nth-of-type(2)::before { content: "Student ID:"; }
-            .table td:nth-of-type(3)::before { content: "Type:"; }
-            .table td:nth-of-type(4)::before { content: "Status:"; }
-            .table td:nth-of-type(5)::before { content: "Borrow Date:"; }
-            .table td:nth-of-type(6)::before { content: "Expected Return:"; }
-
+            .table tbody tr:last-child { border-bottom: none; }
             .status-tag { margin: 0 auto; display: block; width: fit-content; }
-        }
-
-        @media (max-width: 576px) {
-            /* Adjust header spacing on smallest screens */
-            .top-header-bar {
-                padding: 0 15px;
-                justify-content: flex-end;
-                padding-left: 65px;
-            }
-            .top-header-bar .notification-bell-container {
-                 margin-right: 15px;
-            }
         }
     </style>
 </head>
@@ -402,6 +411,8 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
     </div>
 </div>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
 <header class="top-header-bar">
     <ul class="navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown notification-bell-container">
@@ -417,10 +428,6 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                 <div class="dynamic-notif-placeholder">
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
                 </div>
-                
-                <a class="dropdown-item text-center small text-muted mark-all-link" onclick="markAllStaffAsRead()">
-                    <i class="fas fa-check-double me-1"></i> Mark All as Read
-                </a>
                 
                 <a class="dropdown-item text-center small text-muted" href="staff_pending.php">View All Pending Requests</a>
             </div>
@@ -527,14 +534,14 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- JAVASCRIPT FOR SYSTEM NOTIFICATION (Bell Alert) - FIXED ---
+    // --- JAVASCRIPT FOR SYSTEM NOTIFICATION (Bell Alert) ---
 
-    // 1. New global function to handle marking ALL staff notifications as read
+    // 1. New global function to handle marking ALL staff notifications as read (MODIFIED to reload)
     window.markAllStaffAsRead = function() {
-        // We use the generalized API endpoint for staff batch read
+        // Use the generalized API endpoint for staff batch read
         $.post('../api/mark_notification_as_read.php', { mark_all: true, role: 'staff' }, function(response) {
             if (response.success) {
-                // Reload the page to clear the badge and update the list
+                // Reload the page to refresh the badge and dropdown content
                 window.location.reload(); 
             } else {
                 console.error("Failed to mark all staff notifications as read.");
@@ -545,11 +552,16 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         });
     };
     
-    // 2. New global function to handle single notification click (Mark as read + navigate)
+    // 2. New global function to handle single notification click (Mark as read + navigate) (FIXED in previous turn)
     window.handleNotificationClick = function(event, element, notificationId) {
         event.preventDefault(); 
         const linkHref = element.getAttribute('href');
 
+        // Explicitly close the Bootstrap Dropdown
+        const $dropdownToggle = $('#alertsDropdown');
+        const dropdownInstance = bootstrap.Dropdown.getInstance($dropdownToggle[0]);
+        if (dropdownInstance) { dropdownInstance.hide(); }
+        
         // Use the generalized API endpoint to mark the single alert as read
         $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
             if (response.success) {
@@ -565,7 +577,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         });
     };
 
-    // 3. Function to fetch the count and populate the dropdown
+    // 3. Function to fetch the count and populate the dropdown (UPDATED for dynamic Mark All)
     function fetchStaffNotifications() {
         const apiPath = '../api/get_notifications.php'; 
 
@@ -577,13 +589,12 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
             
-            // Find static elements
-            const $header = $dropdown.find('.dropdown-header');
-            const $markAllLink = $dropdown.find('.mark-all-link').detach();
+            // Find and detach the static 'View All' link
             const $viewAllLink = $dropdown.find('a[href="staff_pending.php"]').detach();
-
-            // Clear previous dynamic items
+            
+            // Clear previous dynamic items and dynamic Mark All link
             $dropdown.find('.dynamic-notif-item').remove(); 
+            $dropdown.find('.mark-all-link-wrapper').remove(); 
             
             // 1. Update the Badge Count
             $badge.text(unreadCount);
@@ -593,31 +604,41 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
             
             if (notifications.length > 0) {
-
+                
+                // *** DYNAMIC MARK ALL BUTTON CREATION ***
+                if (unreadCount > 0) {
+                    $placeholder.append(`
+                        <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-link-wrapper" href="#" 
+                            onclick="event.preventDefault(); window.markAllStaffAsRead();">
+                            <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                        </a>
+                    `);
+                }
+                
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-info'; 
                     if (notif.type.includes('form_pending')) {
-                           iconClass = 'fas fa-hourglass-half text-warning';
+                            iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                           iconClass = 'fas fa-redo text-primary';
+                            iconClass = 'fas fa-redo text-primary';
                     }
                     
                     const is_read = notif.is_read == 1;
                     const itemClass = is_read ? 'text-muted' : 'fw-bold'; // Highlight unread
 
                     $placeholder.append(`
-                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
-                            href="${notif.link}"
-                            data-id="${notif.id}"
-                            onclick="handleNotificationClick(event, this, ${notif.id})">
-                            <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                            <div>
-                                <div class="small text-gray-500">${notif.created_at.split(' ')[0]}</div>
-                                <span class="d-block">${notif.message}</span>
-                            </div>
-                        </a>
-                    `);
+                             <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
+                                 href="${notif.link}"
+                                 data-id="${notif.id}"
+                                 onclick="handleNotificationClick(event, this, ${notif.id})">
+                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                 <div>
+                                     <div class="small text-gray-500">${notif.created_at.split(' ')[0]}</div>
+                                     <span class="d-block ${itemClass}">${notif.message}</span>
+                                 </div>
+                             </a>
+                     `);
                 });
             } else {
                 // Display a "No Alerts" message
@@ -626,10 +647,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                 `);
             }
             
-            // Re-append the Mark All link and View All link in order
-            if (unreadCount > 0) {
-                        $dropdown.append($markAllLink);
-            }
+            // Re-append the View All link at the bottom
             $dropdown.append($viewAllLink);
             
         }).fail(function(jqXHR, textStatus, errorThrown) {
@@ -655,40 +673,75 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             }
         });
         
-        // New Mobile Toggle Logic
+        // --- NEW DESKTOP/MOBILE COLLAPSE LOGIC (Matching staff_apparatus.php) ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content'); 
-
-        if (menuToggle && sidebar) {
-            menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('active');
-                // Optional: Close sidebar when clicking outside (simple solution)
-                if (sidebar.classList.contains('active')) {
-                     mainContent.addEventListener('click', closeSidebarOnce);
-                } else {
-                     mainContent.removeEventListener('click', closeSidebarOnce);
-                }
-            });
-            
-            // Function to close the sidebar only once after clicking outside
-            function closeSidebarOnce() {
-                 sidebar.classList.remove('active');
-                 mainContent.removeEventListener('click', closeSidebarOnce);
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop'); 
+        
+        // Function to set the initial state (open on desktop, closed on mobile)
+        function setInitialState() {
+            if (window.innerWidth > 992) {
+                // Desktop: Default is permanently OPEN
+                sidebar.classList.remove('active');
+                if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
+                if (menuToggle) menuToggle.style.display = 'none';  
+            } else {
+                // Mobile: Default is hidden
+                sidebar.classList.remove('active');
+                if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
+                if (menuToggle) menuToggle.style.display = 'flex'; 
             }
-            
-            // Close sidebar when a nav item is clicked
-            const navLinks = sidebar.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                 link.addEventListener('click', () => {
-                     // Check if we are on a mobile view before closing
-                     if (window.innerWidth <= 992) {
-                        sidebar.classList.remove('active');
-                     }
-                 });
-            });
         }
         
+        // Function to toggle the state of the sidebar and layout
+        function toggleSidebar() {
+            if (window.innerWidth <= 992) {
+                // Mobile behavior: Toggle 'active' class for overlay/menu
+                sidebar.classList.toggle('active');
+                if (sidebarBackdrop) {
+                    const isActive = sidebar.classList.contains('active');
+                    sidebarBackdrop.style.display = isActive ? 'block' : 'none';
+                    sidebarBackdrop.style.opacity = isActive ? '1' : '0';
+                }
+            }
+        }
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', toggleSidebar);
+            
+            // Backdrop click handler (only for mobile overlay)
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', () => {
+                    sidebar.classList.remove('active'); 
+                    sidebarBackdrop.style.display = 'none';
+                    sidebarBackdrop.style.opacity = '0';
+                });
+            }
+            
+            // Hide mobile overlay when navigating
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) {
+                        setTimeout(() => {
+                           sidebar.classList.remove('active');
+                           if (sidebarBackdrop) {
+                               sidebarBackdrop.style.display = 'none';
+                               sidebarBackdrop.style.opacity = '0';
+                           }
+                        }, 100);
+                    }
+                });
+            });
+
+            // Handle window resize (switching between mobile/desktop layouts)
+            window.addEventListener('resize', setInitialState);
+
+            // Set initial state on load
+            setInitialState();
+        }
+        // --- END NEW DESKTOP/MOBILE COLLAPSE LOGIC ---
+
         // Initial fetch on page load
         fetchStaffNotifications();
         

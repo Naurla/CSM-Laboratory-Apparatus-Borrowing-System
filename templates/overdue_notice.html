@@ -41,13 +41,13 @@
             <h2>CSM Borrowing System Alert</h2>
         </div>
         <div class="content">
-            <p>Dear **{{ USER_NAME }}**:</p>
+            <p>Dear {{ USER_NAME }}:</p>
             
             <div class="alert">
-                🚨 **URGENT:** Your apparatus loan (Form ID: **#{{ FORM_ID }}**) is officially **OVERDUE**.
+                🚨 URGENT: Your apparatus loan (Form ID: #{{ FORM_ID }}) is officially OVERDUE.
             </div>
             
-            <p style="margin-bottom: 20px;">The items were due for return on **{{ EXPECTED_DATE }}**. Please return them immediately to the laboratory office.</p>
+            <p style="margin-bottom: 20px;">The items were due for return on {{ EXPECTED_DATE }}. Please return them immediately to the laboratory office.</p>
             
             <h3 style="margin-top: 25px;">Overdue Items</h3>
             <table class="details-table">
@@ -65,9 +65,9 @@
             <h3 style="color: #721c24; margin-top: 30px;">Action Required: Prevent Penalties</h3>
             <p>Failure to return the items immediately will result in:</p>
             <ul style="color: #333;">
-                <li>**Suspension** of your borrowing privileges.</li>
-                <li>**Assessment of fines** for each day overdue.</li>
-                <li>**Liability** for the replacement cost of items that are lost or damaged.</li>
+                <li>Suspension of your borrowing privileges.</li>
+                <li>Assessment of fines for each day overdue.</li>
+                <li>Liability for the replacement cost of items that are lost or damaged.</li>
             </ul>
             
             <p style="text-align: center; margin-top: 30px;">

@@ -3,15 +3,15 @@
 
 session_start();
 // NOTE: Assuming the correct path to autoload.php is one level up relative to where this file runs from.
-require_once '../vendor/autoload.php'; 
+require_once '../vendor/autoload.php';
 
 require_once "../classes/Database.php";
 require_once "../classes/Transaction.php";
-require_once "../classes/Mailer.php"; 
-require_once "../classes/Student.php"; 
+require_once "../classes/Mailer.php";
+require_once "../classes/Student.php";
 
-$today = new DateTime(); 
-$today->setTime(0, 0, 0); 
+$today = new DateTime();
+$today->setTime(0, 0, 0);
 
 if (!isset($_SESSION["user"]) || $_SESSION["user"]["role"] != "staff") {
     header("Location: ../login_signup/login.php");
@@ -19,21 +19,21 @@ if (!isset($_SESSION["user"]) || $_SESSION["user"]["role"] != "staff") {
 }
 
 $transaction = new Transaction();
-$mailer = new Mailer(); 
+$mailer = new Mailer();
 // NOTE: Assuming Student class has the method getUserById used below.
-$student_class = new Student(); 
+$student_class = new Student();
 $message = "";
-$is_success = false; 
+$is_success = false;
 
-$db_conn = $transaction->connect(); 
+$db_conn = $transaction->connect();
 $staff_id = $_SESSION["user"]["id"];
 
 // --- HELPER FUNCTION 1: Mark Staff Notification as Read (For legacy compatibility - KEEP) ---
 function markNotificationAsRead($db_conn, $form_id, $staff_id) {
     // This function is generally deprecated by $transaction->clearNotificationsByFormId
-    $form_link_pattern = "%staff_pending.php?view={$form_id}%"; 
-    $mark_read_sql = "UPDATE notifications SET is_read = 1 
-                      WHERE link LIKE :form_link_pattern 
+    $form_link_pattern = "%staff_pending.php?view={$form_id}%";
+    $mark_read_sql = "UPDATE notifications SET is_read = 1
+                      WHERE link LIKE :form_link_pattern
                       AND user_id = :staff_id";
 
     $mark_read_stmt = $db_conn->prepare($mark_read_sql);
@@ -45,8 +45,8 @@ function markNotificationAsRead($db_conn, $form_id, $staff_id) {
 // --- HELPER FUNCTION 2: Insert a Student Notification (System Alert - KEEP) ---
 // This is used for internal bell notifications, not external emails.
 function insertStudentNotification($db_conn, $student_id, $type, $msg, $link) {
-    $sql = "INSERT INTO notifications (user_id, type, message, link, is_read, created_at) 
-            VALUES (:user_id, :type, :message, :link, 0, NOW())";
+    $sql = "INSERT INTO notifications (user_id, type, message, link, is_read, created_at)
+             VALUES (:user_id, :type, :message, :link, 0, NOW())";
     try {
         $stmt = $db_conn->prepare($sql);
         $stmt->execute([
@@ -65,11 +65,11 @@ function insertStudentNotification($db_conn, $student_id, $type, $msg, $link) {
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $form_id = $_POST["form_id"];
-    $remarks = $_POST["staff_remarks"] ?? ''; 
+    $remarks = $_POST["staff_remarks"] ?? '';
     
     // --- CRITICAL PRE-FETCH: Get Form and Student Details ---
     // Fetch data using the fixed getBorrowFormById (which includes dates)
-    $form_data = $transaction->getBorrowFormById($form_id); 
+    $form_data = $transaction->getBorrowFormById($form_id);
     
     if (!$form_data) {
         $_SESSION['status_message'] = "❌ Error: Could not find transaction ID {$form_id}.";
@@ -80,11 +80,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     
     // ** EXPLICIT DATE ASSIGNMENT FOR MAILER **
     // Use the fetched dates. Since the status update is manual, we use the DB request/expected dates.
-    $request_date = $form_data['request_date'] ?? $form_data['borrow_date'] ?? ''; 
+    $request_date = $form_data['request_date'] ?? $form_data['borrow_date'] ?? '';
     $expected_return_date = $form_data['expected_return_date'] ?? '';
     // ****************************************
 
-    $student_details = $student_class->getUserById($form_data['user_id']); 
+    $student_details = $student_class->getUserById($form_data['user_id']);
     $student_email = $student_details['email'] ?? null;
     $student_id_to_notify = $form_data['user_id'];
     $student_name = $student_details['firstname'] ?? 'Borrower';
@@ -101,9 +101,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         
         if ($result === true) {
             // CRITICAL FIX: Clear the notification for this form_id (using the central method)
-            $transaction->clearNotificationsByFormId($form_id); 
+            $transaction->clearNotificationsByFormId($form_id);
             
-            // NOTE: The actual sendTransactionStatusEmail for 'approved' is handled INSIDE Transaction::approveForm. 
+            // NOTE: The actual sendTransactionStatusEmail for 'approved' is handled INSIDE Transaction::approveForm.
             // We rely on that single, correct call.
 
             $message = "✅ Borrow request approved successfully! Items marked as borrowed.";
@@ -121,7 +121,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $transaction->rejectForm($form_id, $staff_id, $remarks);
         
         // CRITICAL FIX: Clear the notification for this form_id
-        $transaction->clearNotificationsByFormId($form_id); 
+        $transaction->clearNotificationsByFormId($form_id);
         
         $message = "Borrow request rejected.";
         $is_success = true;
@@ -131,13 +131,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // --- EMAIL ONLY (Rejected) ---
         if ($student_email) {
             $mailer->sendTransactionStatusEmail(
-                $student_email, 
-                $student_name, 
-                $form_id, 
-                'rejected', 
-                $remarks, 
-                $request_date, 
-                $expected_return_date, 
+                $student_email,
+                $student_name,
+                $form_id,
+                'rejected',
+                $remarks,
+                $request_date,
+                $expected_return_date,
                 '', // No approval date for rejection
                 $item_list_for_email
             );
@@ -152,7 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($result === true) {
             
             // CRITICAL FIX: Clear the notification for this form_id
-            $transaction->clearNotificationsByFormId($form_id); 
+            $transaction->clearNotificationsByFormId($form_id);
             
             // **REMOVE REDUNDANCY FIX:** Only keep the Mailer call.
 
@@ -161,15 +161,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 // Since this is confirming return (good condition), we use the actual return date as approval date
                 $actual_return_date = date('Y-m-d');
                 $mailer->sendTransactionStatusEmail(
-                    $student_email, 
-                    $student_name, 
-                    $form_id, 
+                    $student_email,
+                    $student_name,
+                    $form_id,
                     'returned', // Using 'returned' status for the email template
-                    $remarks, 
-                    $request_date, 
-                    $expected_return_date, 
+                    $remarks,
+                    $request_date,
+                    $expected_return_date,
                     $actual_return_date, // Using actual return date here
-                    $item_list_for_email 
+                    $item_list_for_email
                 );
             }
             // --- System Notification (Keeping internal notification for return confirmation) ---
@@ -184,14 +184,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (isset($_POST["confirm_late_return"])) {
         if ($form_data) {
             $expected_return_date_dt = new DateTime($form_data["expected_return_date"]);
-            $expected_return_date_dt->setTime(0, 0, 0); 
+            $expected_return_date_dt->setTime(0, 0, 0);
             
-            if ($expected_return_date_dt < $today) { 
+            if ($expected_return_date_dt < $today) {
                 $result = $transaction->confirmLateReturn($form_id, $staff_id, $remarks);
                 if ($result === true) {
                     
                     // CRITICAL FIX: Clear the notification for this form_id
-                    $transaction->clearNotificationsByFormId($form_id); 
+                    $transaction->clearNotificationsByFormId($form_id);
                     
                     $message = "✅ Late return confirmed and status finalized as RETURNED (Penalty Applied).";
                     $is_success = true;
@@ -200,20 +200,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     
                     // --- STUDENT NOTIFICATION & EMAIL (Confirmed Late) ---
                     // We must update this call to ONLY be the system notification, if the double email is coming from here.
-                    insertStudentNotification($db_conn, $student_id_to_notify, 'return_late', "Your late return for request #{$form_id} was confirmed.", $student_link); 
+                    insertStudentNotification($db_conn, $student_id_to_notify, 'return_late', "Your late return for request #{$form_id} was confirmed.", $student_link);
                     
                     if ($student_email) {
                         $actual_return_date = date('Y-m-d');
                         $mailer->sendTransactionStatusEmail(
-                            $student_email, 
-                            $student_name, 
-                            $form_id, 
+                            $student_email,
+                            $student_name,
+                            $form_id,
                             'returned', // Using 'returned' status for the email template
                             $remarks . " (Note: This was a late return.)",
-                            $request_date, 
-                            $expected_return_date, 
+                            $request_date,
+                            $expected_return_date,
                             $actual_return_date, // Using actual return date here
-                            $item_list_for_email 
+                            $item_list_for_email
                         );
                     }
                     // ------------------------------------
@@ -222,14 +222,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } else { $message = "❌ Error: Form ID not found."; $is_success = false; }
         
     } elseif (isset($_POST["mark_damaged"])) {
-        $unit_id = $_POST["damaged_unit_id"] ?? null; 
+        $unit_id = $_POST["damaged_unit_id"] ?? null;
         
         if ($unit_id) {
             $result = $transaction->markAsDamaged($form_id, $staff_id, $remarks, $unit_id);
             if ($result === true) {
                 
                 // CRITICAL FIX: Clear the notification for this form_id
-                $transaction->clearNotificationsByFormId($form_id); 
+                $transaction->clearNotificationsByFormId($form_id);
                 
                 $message = "✅ Marked as returned with issues. Damaged unit status updated.";
                 $is_success = true;
@@ -241,15 +241,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 if ($student_email) {
                     $actual_return_date = date('Y-m-d');
                     $mailer->sendTransactionStatusEmail(
-                        $student_email, 
-                        $student_name, 
-                        $form_id, 
+                        $student_email,
+                        $student_name,
+                        $form_id,
                         'damaged', // Using 'damaged' status for the email template
                         $remarks,
-                        $request_date, 
-                        $expected_return_date, 
+                        $request_date,
+                        $expected_return_date,
                         $actual_return_date, // Using actual return date here
-                        $item_list_for_email 
+                        $item_list_for_email
                     );
                 }
                 // ------------------------------------
@@ -259,14 +259,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (isset($_POST["manually_mark_overdue"])) {
         if ($form_data) {
             $expected_return_date_dt = new DateTime($form_data["expected_return_date"]);
-            $expected_return_date_dt->setTime(0, 0, 0); 
+            $expected_return_date_dt->setTime(0, 0, 0);
             
             if ($expected_return_date_dt < $today) {
                 $result = $transaction->markAsOverdue($form_id, $staff_id, $remarks);
                 if ($result === true) {
                     
                     // CRITICAL FIX: Clear the notification for this form_id
-                    $transaction->clearNotificationsByFormId($form_id); 
+                    $transaction->clearNotificationsByFormId($form_id);
                     
                     $message = "✅ Marked as overdue (Units restored & ban checked).";
                     $is_success = true;
@@ -277,15 +277,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     insertStudentNotification($db_conn, $student_id_to_notify, 'form_overdue', "Your request #{$form_id} was marked OVERDUE. Your account is suspended.", $student_link);
                     if ($student_email) {
                         $mailer->sendTransactionStatusEmail(
-                            $student_email, 
-                            $student_name, 
-                            $form_id, 
+                            $student_email,
+                            $student_name,
+                            $form_id,
                             'overdue', // Using 'overdue' status for the email template
                             $remarks,
-                            $request_date, 
-                            $expected_return_date, 
+                            $request_date,
+                            $expected_return_date,
                             '', // No approval date for overdue
-                            $item_list_for_email 
+                            $item_list_for_email
                         );
                     }
                     // ------------------------------------
@@ -298,7 +298,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $_SESSION['is_success'] = $is_success;
     
     // START FIX: Use cache buster in the redirection URL
-    header("Location: staff_pending.php?_t=" . time()); 
+    header("Location: staff_pending.php?_t=" . time());
     // END FIX
     exit;
 }
@@ -322,39 +322,48 @@ $pendingForms = $transaction->getPendingForms();
     <title>Staff Pending Forms</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
 
         :root {
-            --msu-red: #A40404; /* FIXED: Consistent Red */
-            --msu-red-dark: #820303; /* FIXED: Consistent Dark Red */
-            --sidebar-width: 280px; 
-            --student-logout-red: #dc3545;
-            --base-font-size: 15px; /* Base size for overall clarity */
-            --header-height: 60px; /* Top Bar reference */
-            --main-text: #333; /* Added for consistency */
-            --card-background: #fcfcfc; /* New: for mobile card background */
-            --label-bg: #e9ecef; /* Light gray background for mobile labels */
+            --msu-red: #A40404;
+            --msu-red-dark: #820303;
+            --sidebar-width: 280px;
+            --base-font-size: 15px;
+            --header-height: 60px;
+            --main-text: #333;
+            --label-bg: #e9ecef;
+            /* New Status Colors for improved UI consistency */
+            --status-pending-bg: #fff3cd;
+            --status-pending-color: #856404;
+            --status-checking-bg: #d1ecf1;
+            --status-checking-color: #0c5460;
+            --status-borrowed-bg: #cce5ff;
+            --status-borrowed-color: #004085;
+            --status-overdue-bg: #f8d7da;
+            --status-overdue-color: #721c24;
+            /* New variable for the dark brown bar shown in images */
+            --status-dark-border: #8B4513;
         }
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f6fa;
             min-height: 100vh;
-            display: flex; 
+            display: flex;
             padding: 0;
             margin: 0;
             font-size: var(--base-font-size);
-            overflow-x: hidden; /* Prevent page-level scrollbar */
+            overflow-x: hidden;
         }
         
         /* NEW CSS for Mobile Toggle */
         .menu-toggle {
-            display: none; /* Hidden on desktop */
+            display: none;
             position: fixed;
             top: 15px;
             left: 20px;
-            z-index: 1060; 
+            z-index: 1060;
             background: var(--msu-red);
             color: white;
             border: none;
@@ -376,15 +385,15 @@ $pendingForms = $transaction->getPendingForms();
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
-            justify-content: flex-end; /* Align content to the right */
-            padding: 0 30px; 
+            justify-content: flex-end;
+            padding: 0 30px;
             z-index: 1000;
         }
         .notification-bell-container {
             position: relative;
-            list-style: none; 
+            list-style: none;
             padding: 0;
-            margin: 0; /* Removed fixed margin-right */
+            margin: 0;
         }
         .notification-bell-container .nav-link {
             padding: 0.5rem 0.5rem;
@@ -392,11 +401,11 @@ $pendingForms = $transaction->getPendingForms();
         }
         .notification-bell-container .badge-counter {
             position: absolute;
-            top: 5px; 
+            top: 5px;
             right: 0px;
-            font-size: 0.8em; 
+            font-size: 0.8em;
             padding: 0.35em 0.5em;
-            background-color: #ffc107; 
+            background-color: #ffc107;
             color: var(--main-text);
             font-weight: bold;
         }
@@ -414,14 +423,14 @@ $pendingForms = $transaction->getPendingForms();
         }
         .mark-all-link {
             cursor: pointer;
-            color: var(--msu-red);
+            color: var(--main-text); /* Ensure good contrast */
             font-weight: 600;
             padding: 8px 15px;
             display: block;
             text-align: center;
             border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee; /* Added separator */
         }
-        /* Removed .edit-profile-link styling */
         /* --- END Top Header Bar Styles --- */
         
         .sidebar {
@@ -431,7 +440,7 @@ $pendingForms = $transaction->getPendingForms();
             background-color: var(--msu-red);
             color: white;
             padding: 0;
-            position: fixed; 
+            position: fixed;
             top: 0;
             left: 0;
             display: flex;
@@ -442,34 +451,34 @@ $pendingForms = $transaction->getPendingForms();
 
         .sidebar-header {
             text-align: center;
-            padding: 25px 15px; /* Increased padding */
+            padding: 25px 15px;
             font-size: 1.3rem;
             font-weight: 700;
             line-height: 1.2;
             color: #fff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-            margin-bottom: 25px; /* Increased margin */
+            margin-bottom: 25px;
         }
 
         .sidebar-header img {
-            max-width: 100px; /* Increased size */
+            max-width: 100px;
             height: auto;
             margin-bottom: 15px;
         }
         
         .sidebar-header .title {
-            font-size: 1.4rem; /* Increased size */
+            font-size: 1.4rem;
             line-height: 1.1;
         }
         
         .sidebar-nav {
-            flex-grow: 1; 
+            flex-grow: 1;
         }
 
         .sidebar-nav .nav-link {
             color: white;
-            padding: 18px 25px; /* Increased padding/size */
-            font-size: 1.05rem; /* Increased size */
+            padding: 18px 25px;
+            font-size: 1.05rem;
             font-weight: 600;
             transition: background-color 0.2s;
         }
@@ -482,105 +491,116 @@ $pendingForms = $transaction->getPendingForms();
         }
         
         .logout-link {
-            margin-top: auto; 
-            padding: 0; 
-            border-top: 1px solid rgba(255, 255, 255, 0.1); 
-            width: 100%; 
-            background-color: var(--msu-red); 
+            margin-top: auto;
+            padding: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            background-color: var(--msu-red);
         }
-        .logout-link .nav-link { 
-            display: flex; 
+        .logout-link .nav-link {
+            display: flex;
             align-items: center;
-            justify-content: flex-start; 
-            background-color: #C62828 !important; /* FIXED: Consistent base color */
+            justify-content: flex-start;
+            background-color: #C62828 !important;
             color: white !important;
-            padding: 18px 25px; 
-            border-radius: 0; 
+            padding: 18px 25px;
+            border-radius: 0;
             text-decoration: none;
-            font-weight: 600; 
-            font-size: 1.05rem; 
+            font-weight: 600;
+            font-size: 1.05rem;
             transition: background 0.3s;
         }
         .logout-link .nav-link:hover {
-            background-color: var(--msu-red-dark) !important; /* FIXED: Consistent hover color */
+            background-color: var(--msu-red-dark) !important;
         }
 
         .main-content {
-            margin-left: var(--sidebar-width); 
+            margin-left: var(--sidebar-width);
             flex-grow: 1;
             padding: 30px;
-            padding-top: calc(var(--header-height) + 30px); /* Adjusted for fixed header */
-            width: calc(100% - var(--sidebar-width)); 
+            padding-top: calc(var(--header-height) + 30px);
+            width: calc(100% - var(--sidebar-width));
         }
         .content-area {
-            background: #fff; 
-            border-radius: 12px; 
-            padding: 30px; 
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         
         .page-header {
-            color: #333; 
+            color: #333;
             border-bottom: 2px solid var(--msu-red);
-            padding-bottom: 15px; 
-            margin-bottom: 30px; 
+            padding-bottom: 15px;
+            margin-bottom: 30px;
             font-weight: 600;
-            font-size: 2rem; 
+            font-size: 2rem;
         }
         
         
         .table-responsive {
             border-radius: 8px;
-            overflow-x: auto; 
+            overflow-x: auto;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-top: 25px; 
+            margin-top: 25px;
         }
         .table thead th {
             background: var(--msu-red);
             color: white;
-            font-weight: 700; 
+            font-weight: 700;
             vertical-align: middle;
             text-align: center;
-            font-size: 0.95rem; 
-            padding: 10px 5px; 
+            font-size: 0.95rem;
+            padding: 10px 5px;
             white-space: nowrap;
         }
         .table tbody td {
             vertical-align: middle;
-            font-size: 0.95rem; 
-            padding: 8px 4px; 
+            font-size: 0.95rem;
+            padding: 12px 6px; /* Increased vertical padding */
             text-align: center;
+            white-space: normal; /* Allow content to wrap */
         }
         
+        /* MODIFIED: Removed border-left style from rows to hide the vertical bar */
+        /* Table Row Highlighting for pending states */
+        .table-row-waiting_for_approval { border-left: none; }
+        .table-row-checking { border-left: none; }
+        .table-row-borrowed.overdue-candidate { border-left: none; }
+        /* END MODIFIED */
+        
+        .table-hover tbody tr:hover { background-color: #f7f7f7; }
+
         /* Table column width constraints */
-        .table th:nth-child(2), .table td:nth-child(2) { min-width: 150px; } 
-        .table th:nth-child(3), .table td:nth-child(3) { min-width: 150px; } 
-        .table th:nth-child(9), .table td:nth-child(9) { min-width: 170px; } 
-        .table th:nth-child(10), .table td:nth-child(10) { min-width: 110px; } 
+        .table th:nth-child(2), .table td:nth-child(2) { min-width: 160px; } /* Student Details */
+        .table th:nth-child(3), .table td:nth-child(3) { min-width: 170px; } /* Apparatus */
+        .table th:nth-child(9), .table td:nth-child(9) { min-width: 200px; } /* Staff Remarks/Select */
+        .table th:nth-child(10), .table td:nth-child(10) { min-width: 150px; } /* Actions */
 
 
         td form {
             margin: 0;
             padding: 0;
-            display: inline-block; 
+            display: inline-block;
         }
-        textarea, select {
-            width: 100%; 
-            max-width: 170px;
-            margin: 5px 0;
-            resize: none;
-            font-size: 0.9rem; 
+        textarea.staff-remarks-input, select.form-select-sm {
+            width: 100%;
+            max-width: 180px;
+            margin: 5px auto; /* Centered in desktop view */
+            resize: vertical; /* Allow vertical resize only */
+            font-size: 0.9rem;
             border-radius: 4px;
             border: 1px solid #ccc;
+            display: block; /* Takes full width in cell */
         }
         td.remarks-cell {
-            min-width: 180px; 
-            text-align: left;
-            padding: 8px 10px; 
+            min-width: 200px;
+            text-align: center; /* Center the input fields */
+            padding: 8px 10px;
         }
         td.actions-cell {
-            min-width: 120px; 
+            min-width: 150px;
         }
         
         
@@ -591,44 +611,67 @@ $pendingForms = $transaction->getPendingForms();
             margin-top: 5px;
         }
         .btn {
-            padding: 8px 10px; 
+            padding: 6px 10px; /* Made slightly smaller for table compactness */
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 0.9rem; 
+            font-size: 0.85rem; /* Slightly smaller font */
             font-weight: 600;
             color: white;
             transition: background 0.2s;
+            text-transform: uppercase;
         }
-        /* Button colors (unchanged) */
+        
+        /* Button color theme refinements */
         .btn.approve { background: #28a745; }
-        .btn.reject { background: #dc3545; }
-        .btn.return { background: #17a2b8; }
-        .btn.warning { background: #ffc107; color: black; }
+        .btn.approve:hover { background: #1e7e34; }
+        .btn.reject, .btn.danger { background: #dc3545; }
+        .btn.reject:hover, .btn.danger:hover { background: #bd2130; }
+        .btn.return { background: #17a2b8; } /* Not used explicitly, but keeping for reference */
+        .btn.warning { background: #ffc107; color: #333; }
+        .btn.warning:hover { background: #e0aa00; color: #333; }
         .btn.secondary { background: #6c757d; }
+        .btn.secondary:hover { background: #5a6268; }
+        .btn:disabled, .btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+
 
         .status-tag {
-            display: inline-block; padding: 5px 10px; border-radius: 14px; font-weight: 700; text-transform: capitalize; font-size: 0.85rem; line-height: 1.2; white-space: nowrap;
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            line-height: 1;
+            white-space: nowrap;
+            border: 1px solid transparent;
         }
-        .status-tag.waiting_for_approval { background-color: #ffc10740; color: #b8860b; }
-        .status-tag.checking { background-color: #007bff30; color: #0056b3; }
+        /* Status Tag Styles with better contrast */
+        .status-tag.waiting_for_approval { background-color: var(--status-pending-bg); color: var(--status-pending-color); border-color: #ffeeba; }
+        .status-tag.checking { background-color: var(--status-checking-bg); color: var(--status-checking-color); border-color: #bee5eb; }
+        .status-tag.borrowed { background-color: var(--status-borrowed-bg); color: var(--status-borrowed-color); border-color: #b8daff; }
+        .status-tag.overdue { background-color: var(--status-overdue-bg); color: var(--status-overdue-color); border-color: #f5c6cb; }
+
         
-        
-        /* Modal Custom Style for Warning (unchanged) */
-        #lateReturnModal .modal-header, #requiredUnitSelectModal .modal-header {
-            background-color: #ffc107; 
+        /* Modal Custom Style for Warning/Danger */
+        #lateReturnModal .modal-header {
+            background-color: #ffc107;
             color: #333;
             border-bottom: none;
         }
-        #lateReturnModal .modal-title, #requiredUnitSelectModal .modal-title {
+        #overdueModal .modal-header {
+            background-color: #dc3545; /* Red for overdue */
+        }
+        #overdueModal .btn-close-white {
+            filter: invert(1);
+        }
+        #requiredUnitSelectModal .modal-header {
+            background-color: #ffc107;
+            color: #333;
+            border-bottom: none;
+        }
+        .modal-title {
             font-weight: bold;
-        }
-        #lateReturnModal .modal-body, #requiredUnitSelectModal .modal-body {
-            color: #666;
-        }
-        #lateReturnModal .btn-danger, #requiredUnitSelectModal .btn-danger {
-            background-color: #dc3545;
-            border-color: #dc3545;
         }
         
         /* --- RESPONSIVE CSS --- */
@@ -636,7 +679,7 @@ $pendingForms = $transaction->getPendingForms();
         @media (max-width: 992px) {
             /* Enable mobile toggle and shift main content */
             .menu-toggle { display: block; }
-            .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; } 
+            .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
             .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
             .main-content { margin-left: 0; padding-left: 15px; padding-right: 15px; padding-top: calc(var(--header-height) + 15px); }
             .top-header-bar { left: 0; padding-left: 70px; padding-right: 15px; }
@@ -646,28 +689,37 @@ $pendingForms = $transaction->getPendingForms();
 
         @media (max-width: 768px) {
             /* Full mobile table stacking */
-            .table { min-width: auto; } /* Disable horizontal scrolling */
-            .table thead { display: none; } 
+            .table { min-width: auto; }
+            .table thead { display: none; }
             .table tbody, .table tr, .table td { display: block; width: 100%; }
             
             .table tr {
-                margin-bottom: 15px; 
+                margin-bottom: 20px;
                 border: 1px solid #ccc;
-                border-left: 5px solid var(--msu-red); 
-                border-radius: 8px; 
-                background-color: #fcfcfc; 
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); 
-                padding: 0; 
+                /* MODIFIED: Remove border-left for the mobile stacked row to hide the colored bar */
+                border-left-width: 1px; /* Fallback to standard thin border */
+                border-left-color: #ccc; /* Ensure no color bleeding from status variables */
+                /* END MODIFIED */
+                border-radius: 8px;
+                background-color: #fcfcfc;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                padding: 0;
                 overflow: hidden;
             }
+            /* MODIFIED: Clear left border color setting for status classes */
+            .table-row-waiting_for_approval { border-left-color: #ccc; }
+            .table-row-checking { border-left-color: #ccc; }
+            .table-row-borrowed.overdue-candidate { border-left-color: #ccc; }
+            /* END MODIFIED */
+
             
             .table td {
-                text-align: right !important; 
+                text-align: right !important;
                 padding-left: 50% !important;
                 position: relative;
                 border: none;
                 border-bottom: 1px solid #eee;
-                padding: 10px 10px !important; 
+                padding: 10px 10px !important;
             }
             .table td:last-child { border-bottom: none; }
 
@@ -675,16 +727,16 @@ $pendingForms = $transaction->getPendingForms();
             .table td::before {
                 content: attr(data-label);
                 position: absolute;
-                left: 0; 
+                left: 0;
                 width: 50%;
                 height: 100%;
                 padding: 10px;
                 white-space: nowrap;
                 text-align: left;
                 font-weight: 600;
-                color: var(--main-text); 
+                color: var(--main-text);
                 font-size: 0.9rem;
-                background-color: var(--label-bg); 
+                background-color: var(--label-bg);
                 border-right: 1px solid #ddd;
                 display: flex;
                 align-items: center;
@@ -701,7 +753,7 @@ $pendingForms = $transaction->getPendingForms();
                 border-bottom: 1px solid #ddd;
             }
             .table tbody tr td:nth-child(1)::before {
-                content: "Form "; 
+                content: "Form ";
                 background: none;
                 border: none;
                 color: #6c757d;
@@ -710,9 +762,11 @@ $pendingForms = $transaction->getPendingForms();
                 position: static;
                 width: auto;
                 height: auto;
+                display: inline;
+                margin-right: 5px;
             }
             
-            .table tbody tr td:nth-child(2) { /* Student Details - Primary visual item */
+            .table tbody tr td:nth-child(2) {
                 font-size: 1.1rem;
                 font-weight: 700;
                 color: var(--msu-red-dark);
@@ -720,24 +774,24 @@ $pendingForms = $transaction->getPendingForms();
             }
             .table tbody tr td:nth-child(2)::before {
                 content: "Borrower";
-                background-color: #f8d7da; /* Very light red background */
+                background-color: #f8d7da;
                 color: var(--msu-red-dark);
                 font-weight: 700;
             }
             
-            .table tbody tr td:nth-child(4) { /* Status - Special treatment */
-                 font-weight: 700;
+            .table tbody tr td:nth-child(4) {
+                font-weight: 700;
             }
             
             /* --- Remarks & Actions Grouping --- */
             
             .table tbody tr td:nth-child(8), /* Student Remarks */
             .table tbody tr td:nth-child(9) { /* Staff Remarks/Unit Select */
-                padding-left: 10px !important; 
+                padding-left: 10px !important;
                 text-align: left !important;
                 font-size: 0.9rem;
             }
-            .table tbody tr td:nth-child(8)::before, 
+            .table tbody tr td:nth-child(8)::before,
             .table tbody tr td:nth-child(9)::before {
                 position: static;
                 width: 100%;
@@ -750,6 +804,16 @@ $pendingForms = $transaction->getPendingForms();
                 padding: 10px;
                 text-align: left;
             }
+            
+            .table tbody tr td:nth-child(9) .mt-2 {
+                text-align: left; /* Ensure the Mark Damaged label/select align left */
+            }
+            .table tbody tr td:nth-child(9) .mt-2 label {
+                display: block;
+            }
+            .table tbody tr td:nth-child(9) .mt-2 select {
+                margin: 5px 0 0 0;
+            }
 
             .table tbody tr td:nth-child(10) { /* Actions cell - Last block */
                 border-bottom: none;
@@ -757,7 +821,8 @@ $pendingForms = $transaction->getPendingForms();
             
             /* Action Button Grouping: Stacked for best touch interaction */
             .actions-cell {
-                padding: 10px 10px 15px 10px !important; 
+                padding: 10px 10px 15px 10px !important;
+                text-align: center !important;
             }
             .btn-group-vertical {
                 flex-direction: column;
@@ -774,7 +839,7 @@ $pendingForms = $transaction->getPendingForms();
             .main-content { padding: 10px; padding-top: calc(var(--header-height) + 10px); }
             .content-area { padding: 10px; }
             .top-header-bar { padding-left: 65px; }
-            .table tbody tr td:nth-child(2) { font-size: 0.9rem; } /* Shrink font a bit more */
+            .table tbody tr td:nth-child(2) { font-size: 0.9rem; }
             .table td::before { font-size: 0.85rem; }
         }
     </style>
@@ -787,7 +852,7 @@ $pendingForms = $transaction->getPendingForms();
 
 <div class="sidebar">
     <div class="sidebar-header">
-            <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo" class="img-fluid"> 
+            <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo" class="img-fluid">
         <div class="title">
             CSM LABORATORY <br>APPARATUS BORROWING
         </div>
@@ -821,17 +886,23 @@ $pendingForms = $transaction->getPendingForms();
 <header class="top-header-bar">
     <ul class="navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown notification-bell-container">
-            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" 
+            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
                 data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-bell fa-lg"></i>
                 <span class="badge rounded-pill badge-counter" id="notification-bell-badge" style="display:none;"></span>
             </a>
-            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" 
+            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
                 aria-labelledby="alertsDropdown" id="notification-dropdown">
+                
                 <h6 class="dropdown-header text-center">New Requests</h6>
                 
+                <a class="dropdown-item text-center small text-muted mark-all-link" id="mark-all-link"
+                    onclick="window.markAllStaffAsRead()" style="display:none;">
+                    <i class="fas fa-check-double me-1"></i> Mark All as Read
+                </a>
+
                 <div class="dynamic-notif-placeholder">
-                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
+                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Loading notifications...</a>
                 </div>
                 
                 <a class="dropdown-item text-center small text-muted" href="staff_pending.php">View All Pending Requests</a>
@@ -858,7 +929,7 @@ $pendingForms = $transaction->getPendingForms();
                 <thead>
                     <tr>
                         <th>Form ID</th>
-                        <th>Student Details</th> 
+                        <th>Student Details</th>
                         <th>Apparatus (First Item)</th>
                         <th><i class="fas fa-info-circle"></i> Status</th>
                         <th>Borrow Date</th>
@@ -874,42 +945,45 @@ $pendingForms = $transaction->getPendingForms();
                         $clean_status = strtolower($form["status"]);
                         $display_status = ucfirst(str_replace('_', ' ', $clean_status));
                         
-                        // Fetch the full form details to get the student's remarks 
-                        // Note: $full_form_data['staff_remarks'] holds the student's message if status is 'checking'
-                        $full_form_data = $transaction->getBorrowFormById($form["id"]); 
+                        // Set the status class for row highlighting
+                        $row_status_class = 'table-row-' . $clean_status;
                         
-                        // FIX 1: Display student remarks by pulling from the staff_remarks column (since there is no student_remarks column).
+                        // Fetch the full form details to get the student's remarks 
+                        $full_form_data = $transaction->getBorrowFormById($form["id"]);
+                        
+                        // Display student remarks by pulling from the staff_remarks column (if status is 'checking')
                         $student_remarks = ($clean_status === 'checking') ? 
-                                                 ($full_form_data['staff_remarks'] ?? '-') : 
-                                                 'N/A';
+                                                ($full_form_data['staff_remarks'] ?? '-') : 
+                                                'N/A';
                         
                         // Fetch unit-level items for the "Mark Damaged" dropdown
                         $items = $transaction->getTransactionItems($form["id"]);
                         
                         // Check if item is overdue (for button logic)
                         $today_dt = new DateTime();
-                        $today_dt->setTime(0, 0, 0); // *** CRITICAL: Normalized $today to midnight ***
+                        $today_dt->setTime(0, 0, 0); 
 
                         $expected_return = new DateTime($form["expected_return_date"]);
-                        $expected_return->setTime(0, 0, 0); // Normalized Expected Return Date to midnight
+                        $expected_return->setTime(0, 0, 0); 
                         
-                        // CRITICAL: The item is past due if expected date is BEFORE today.
                         $is_currently_overdue = ($expected_return < $today_dt);
                         
-                        // NEW LOGIC: Is the item past the 1-day grace period? (i.e., today is >= Expected Return Date + 2 days)
+                        // Logic for manually marking overdue (past the expected return date + 1 day grace)
                         $grace_period_end_date = (clone $expected_return)->modify('+1 day'); 
-                        $is_ban_eligible_now = ($today_dt > $grace_period_end_date); // True if today is strictly AFTER the grace period end (2 days past due)
+                        $is_ban_eligible_now = ($today_dt > $grace_period_end_date); 
 
-
+                        if ($clean_status == "borrowed" && $is_ban_eligible_now) {
+                            $row_status_class .= ' overdue-candidate'; // Add class for extra visual cue
+                        }
                     ?>
-                        <tr>
+                        <tr class="<?= $row_status_class ?>">
                             <td data-label="Form ID:"><?= htmlspecialchars($form["id"]) ?></td>
                             <td data-label="Student Details:">
                                 <strong><?= htmlspecialchars($form["firstname"] ?? '') ?> <?= htmlspecialchars($form["lastname"] ?? '') ?></strong>
                                 <br>
                                 <small class="text-muted">(ID: <?= htmlspecialchars($form["borrower_id"]) ?>)</small>
                             </td>
-                            <td data-label="Apparatus (First Item):"><?= htmlspecialchars($form["apparatus_list"] ?? '-') ?></td> 
+                            <td data-label="Apparatus (First Item):"><?= htmlspecialchars($form["apparatus_list"] ?? '-') ?></td>
                             <td data-label="Status:">
                                 <span class="status-tag <?= $clean_status ?>">
                                     <?= $display_status ?>
@@ -923,64 +997,63 @@ $pendingForms = $transaction->getPendingForms();
 
                             <form method="POST" class="pending-form" data-form-id="<?= htmlspecialchars($form["id"]) ?>">
                                 <td data-label="Staff Remarks:" class="remarks-cell">
-                                    <?php if ($clean_status == "checking" || $clean_status == "waiting_for_approval"): ?>
-                                                   <textarea name="staff_remarks" rows="2" placeholder="Enter staff remarks..."></textarea>
+                                    <?php if ($clean_status == "waiting_for_approval" || $clean_status == "checking"): ?>
+                                            <textarea name="staff_remarks" class="staff-remarks-input form-control-sm" rows="2" placeholder="Enter staff remarks..."></textarea>
                                     <?php else: ?>
-                                                   -
+                                            -
                                     <?php endif; ?>
                                     <input type="hidden" name="form_id" value="<?= htmlspecialchars($form["id"]) ?>">
-                                    <input type="hidden" name="action_type" value=""> 
+                                    <input type="hidden" name="action_type" value="">
                                     
                                     <?php if ($clean_status == "checking"): ?>
-                                        <div class="mt-2 text-start">
-                                            <label for="damaged_unit_id_<?= $form['id'] ?>" class="fw-bold mb-1">Mark Damaged Unit:</label>
-                                            <select name="damaged_unit_id" id="damaged_unit_id_<?= $form['id'] ?>" class="form-select-sm">
-                                                <option value="">-- None / All Good --</option>
-                                                <?php
-                                                // FIX: Iterate through unit-level items. The Transaction method now returns 'unit_id' and 'name'.
-                                                foreach ($items as $item):
-                                                ?>
-                                                     <option value="<?= htmlspecialchars($item["unit_id"]) ?>">
-                                                         <?= htmlspecialchars($item["name"]) ?> (Unit ID: <?= htmlspecialchars($item["unit_id"]) ?>)
-                                                     </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
+                                            <div class="mt-2 text-start">
+                                                <label for="damaged_unit_id_<?= $form['id'] ?>" class="fw-bold mb-1">Mark Damaged Unit:</label>
+                                                <select name="damaged_unit_id" id="damaged_unit_id_<?= $form['id'] ?>" class="form-select-sm">
+                                                    <option value="">-- None / All Good --</option>
+                                                     <?php
+                                                     foreach ($items as $item):
+                                                     ?>
+                                                        <option value="<?= htmlspecialchars($item["unit_id"]) ?>">
+                                                            <?= htmlspecialchars($item["name"]) ?> (Unit ID: <?= htmlspecialchars($item["unit_id"]) ?>)
+                                                        </option>
+                                                     <?php endforeach; ?>
+                                                </select>
+                                            </div>
                                     <?php endif; ?>
                                 </td>
 
                                 <td data-label="Actions:" class="actions-cell">
                                     <div class="btn-group-vertical">
                                     <?php if ($clean_status == "waiting_for_approval"): ?>
-                                        <button type="submit" name="approve" class="btn approve">Approve</button>
-                                        <button type="submit" name="reject" class="btn reject">Reject</button>
+                                            <button type="submit" name="approve" class="btn approve">Approve Request</button>
+                                            <button type="submit" name="reject" class="btn reject">Reject Request</button>
 
                                     <?php elseif ($clean_status == "checking"): ?>
-                                        <?php if ($is_currently_overdue): ?>
-                                            <button type="button" 
-                                                class="btn secondary late-return-btn" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#lateReturnModal"
-                                                data-form-id="<?= htmlspecialchars($form["id"]) ?>">
-                                                Confirm LATE Return
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="submit" name="approve_return" class="btn approve">Mark Returned (Good)</button>
-                                        <?php endif; ?>
+                                            <?php if ($is_currently_overdue): ?>
+                                                 <button type="button"
+                                                      class="btn warning late-return-btn"
+                                                      data-bs-toggle="modal"
+                                                      data-bs-target="#lateReturnModal"
+                                                      data-form-id="<?= htmlspecialchars($form["id"]) ?>">
+                                                      Confirm LATE Return
+                                                 </button>
+                                            <?php else: ?>
+                                                 <button type="submit" name="approve_return" class="btn approve">Mark Returned (Good)</button>
+                                            <?php endif; ?>
 
-                                        <button type="submit" name="mark_damaged" id="mark_damaged_btn_<?= $form['id'] ?>" class="btn warning mark-damaged-btn">Returned with Issues</button>
-
+                                            <button type="button" name="mark_damaged_pre_check" id="mark_damaged_btn_<?= $form['id'] ?>" class="btn secondary mark-damaged-btn">Returned with Issues</button>
+                                            
                                     <?php elseif ($clean_status == "borrowed" && $is_ban_eligible_now): ?>
-                                        <button type="button" 
-                                            class="btn reject overdue-btn"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#overdueModal"
-                                            data-form-id="<?= htmlspecialchars($form["id"]) ?>">
-                                            Manually Mark OVERDUE
-                                        </button>
+                                             <button type="button"
+                                                   class="btn reject overdue-btn"
+                                                   data-bs-toggle="modal"
+                                                   data-bs-target="#overdueModal"
+                                                   data-form-id="<?= htmlspecialchars($form["id"]) ?>">
+                                                   Manually Mark OVERDUE
+                                             </button>
                                             
                                     <?php else: ?>
-                                        <button type="button" class="btn secondary" disabled>No Action Needed</button>
+                                            <button type="button" class="btn secondary" disabled>No Action Needed</button>
                                     <?php endif; ?>
                                     </div>
                                 </td>
@@ -988,7 +1061,7 @@ $pendingForms = $transaction->getPendingForms();
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="10">No pending or checking forms found.</td></tr> 
+                    <tr><td colspan="10">No pending or checking forms found.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -1069,138 +1142,139 @@ $pendingForms = $transaction->getPendingForms();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- JAVASCRIPT FOR STAFF NOTIFICATION LOGIC (FIXED) ---
-
-    // Function to handle clicking a notification link
-    window.handleNotificationClick = function(event, element, notificationId) {
-        // Prevent default navigation initially
-        event.preventDefault(); 
-        const linkHref = element.getAttribute('href');
-
-        // Mark as read via API endpoint
-        $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
-            if (response.success) {
-                // Navigate after marking as read
-                window.location.href = linkHref;
-            } else {
-                console.error("Failed to mark notification as read.");
-                // Fallback: navigate anyway if DB update fails
-                window.location.href = linkHref; 
-            }
-        }).fail(function() {
-            console.error("API call failed.");
-            // Fallback: navigate anyway if API call fails
-            window.location.href = linkHref;
-        });
-    };
-
-    // Function to mark ALL staff notifications as read
+    // --- NOTIFICATION HANDLER IMPLEMENTATION ---
+    
+    // 1. Function to handle marking ALL staff notifications as read
     window.markAllStaffAsRead = function() {
+        // Use the generalized API endpoint for staff batch read
         $.post('../api/mark_notification_as_read.php', { mark_all: true, role: 'staff' }, function(response) {
             if (response.success) {
-                // Reload the page to clear the badge
-                window.location.reload(); 
+                // Update text and force UI refresh via re-fetch
+                $('#mark-all-link').text('Successfully marked all as read!').removeClass('text-muted').addClass('text-success');
+                setTimeout(fetchStaffNotifications, 500);
             } else {
-                alert("Failed to clear all notifications.");
                 console.error("Failed to mark all staff notifications as read.");
+                alert("Failed to clear all notifications.");
             }
         }).fail(function() {
             console.error("API call failed.");
         });
     };
     
-    // Function to fetch the count and populate the dropdown
+    // 2. Function to handle single notification click (Mark as read + navigate)
+    window.handleNotificationClick = function(event, element, notificationId) {
+        event.preventDefault(); 
+        const linkHref = element.getAttribute('href');
+
+        // Explicitly close the Bootstrap Dropdown
+        const $dropdownToggle = $('#alertsDropdown');
+        const dropdownInstance = bootstrap.Dropdown.getInstance($dropdownToggle[0]);
+        if (dropdownInstance) { dropdownInstance.hide(); }
+        
+        // Use the generalized API endpoint to mark the single alert as read
+        $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
+            if (response.success) {
+                // Navigate after marking as read
+                window.location.href = linkHref;
+            } else {
+                console.error("Failed to mark notification as read. Navigating anyway.");
+                window.location.href = linkHref;
+            }
+        }).fail(function() {
+            console.error("API call failed. Navigating anyway.");
+            window.location.href = linkHref;
+        });
+    };
+
+    // 3. Function to fetch the count and populate the dropdown
     function fetchStaffNotifications() {
         const apiPath = '../api/get_notifications.php'; 
 
         $.getJSON(apiPath, function(response) { 
             
-            // 1. Update the Badge Count
             const unreadCount = response.count; 
             const notifications = response.alerts || []; 
             
             const $badge = $('#notification-bell-badge');
+            const $markAllLink = $('#mark-all-link'); // Get the static HTML element
             const $dropdown = $('#notification-dropdown');
             
-            // Find and temporarily detach the static View All link
-            const $viewAllLink = $dropdown.find('a[href="staff_pending.php"]').detach();
-            
-            // Find the dropdown header
-            const $header = $dropdown.find('.dropdown-header');
-            
-            // Clear previous dynamic content and any old Mark All buttons
-            $dropdown.find('.dynamic-notif-item').remove();
-            $dropdown.find('.mark-all-btn-wrapper').remove(); 
-            
-            // Update badge display
+            // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
             
+            // 2. Control visibility of the static Mark All link
+            if (unreadCount > 0) {
+                 // Show the link and update the count text
+                 $markAllLink.show().text(`Mark All ${unreadCount} as Read`).removeClass('text-success').addClass('text-muted');
+            } else {
+                 // Hide the link
+                 $markAllLink.hide();
+            }
+
+            // 3. Clear and Populate the Dynamic Placeholder
+            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
             
             if (notifications.length > 0) {
-                // Prepend Mark All button if there are unread items
-                if (unreadCount > 0) {
-                   $header.after(`
-                            <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
-                                <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                            </a>
-                        `);
-                }
+                // Sort by unread status, then by time (latest first)
+                notifications.sort((a, b) => {
+                    if (a.is_read == b.is_read) {
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    }
+                    return a.is_read - b.is_read; // Unread (0) comes before read (1)
+                });
 
-                // Iterate and insert notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
-                    // Determine icon based on notification type
                     let iconClass = 'fas fa-info-circle text-info'; 
                     if (notif.type.includes('form_pending')) {
-                           iconClass = 'fas fa-hourglass-half text-warning';
+                            iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                           iconClass = 'fas fa-redo text-primary';
+                            iconClass = 'fas fa-redo text-primary';
                     }
                     
-                    // Style unread items slightly differently
-                    const itemClass = notif.is_read == 0 ? 'fw-bold' : 'text-muted';
+                    const is_read = notif.is_read == 1;
+                    const itemClass = is_read ? 'text-muted' : 'fw-bold'; // Highlight unread
+                    const targetLink = notif.link ? notif.link : 'staff_pending.php';  
 
-                    $header.after(`
-                        <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
-                            href="${notif.link}"
-                            data-id="${notif.id}"
-                            onclick="handleNotificationClick(event, this, ${notif.id})">
-                            <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                            <div>
-                                <div class="small text-gray-500">${notif.created_at.split(' ')[0]}</div>
-                                <span class="${itemClass}">${notif.message}</span>
-                            </div>
-                        </a>
-                    `);
+                    $placeholder.append(`
+                             <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
+                                 href="${targetLink}"
+                                 data-id="${notif.id}"
+                                 onclick="handleNotificationClick(event, this, ${notif.id})">
+                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                 <div>
+                                     <div class="small text-gray-500">${new Date(notif.created_at).toLocaleDateString()}</div>
+                                     <span class="d-block ${itemClass}">${notif.message}</span>
+                                 </div>
+                             </a>
+                     `);
                 });
             } else {
-                // Display a "No Alerts" message immediately after the header
-                $header.after(`
+                // Display a "No Alerts" message
+                $placeholder.html(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No New Notifications</a>
                 `);
             }
             
-            // Re-append the 'View All' link to the end of the dropdown
-            $dropdown.append($viewAllLink);
-            
-
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching staff notifications:", textStatus, errorThrown);
-            // Ensure the badge is hidden on failure
+            // Ensure the badge is hidden and link is hidden on failure
             $('#notification-bell-badge').text('0').hide();
+            $('#mark-all-link').hide();
         });
     }
-    // --- END JAVASCRIPT FOR STAFF NOTIFICATION LOGIC ---
+    // --- END NOTIFICATION HANDLER IMPLEMENTATION ---
 
+
+    // --- JS Initialization ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Sidebar activation logic (fixed for consistency)
-        const path = window.location.pathname.split('/').pop() || 'staff_dashboard.php';
+        // Sidebar active link script
+        const path = window.location.pathname.split('/').pop();
         const links = document.querySelectorAll('.sidebar .nav-link');
         
         links.forEach(link => {
             const linkPath = link.getAttribute('href').split('/').pop();
-            
             if (linkPath === path) {
                 link.classList.add('active');
             } else {
@@ -1208,101 +1282,199 @@ $pendingForms = $transaction->getPendingForms();
             }
         });
         
-        // Mobile Toggle Logic
+        // --- NEW DESKTOP COLLAPSE LOGIC ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content'); 
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        
+        // Function to set the initial state (open on desktop, closed on mobile)
+        function setInitialState() {
+            if (window.innerWidth > 992) {
+                // Desktop: Default is permanently OPEN, remove all collapse/active classes
+                sidebar.classList.remove('closed');
+                sidebar.classList.remove('active');
+                if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
+                // **CRITICAL FIX: Hide the burger button on desktop**
+                if (menuToggle) menuToggle.style.display = 'none';
+            } else {
+                // Mobile: Default is hidden, but keep menu toggle visible for mobile
+                sidebar.classList.remove('closed');
+                sidebar.classList.remove('active');
+                if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
+                if (menuToggle) menuToggle.style.display = 'flex'; // Show for mobile
+            }
+        }
+        
+        // Function to toggle the state of the sidebar and layout
+        function toggleSidebar() {
+            if (window.innerWidth <= 992) {
+                // Mobile behavior: Toggle 'active' class for overlay/menu
+                sidebar.classList.toggle('active');
+                if (sidebarBackdrop) {
+                    const isActive = sidebar.classList.contains('active');
+                    sidebarBackdrop.style.display = isActive ? 'block' : 'none';
+                    sidebarBackdrop.style.opacity = isActive ? '1' : '0';
+                }
+            } else {
+                // Desktop behavior: DO NOTHING - Sidebar is permanently open
+            }
+        }
 
         if (menuToggle && sidebar) {
-            menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('active');
-                if (sidebar.classList.contains('active')) {
-                     mainContent.addEventListener('click', closeSidebarOnce);
-                } else {
-                     mainContent.removeEventListener('click', closeSidebarOnce);
-                }
-            });
+            menuToggle.addEventListener('click', toggleSidebar);
             
-            function closeSidebarOnce() {
-                 sidebar.classList.remove('active');
-                 mainContent.removeEventListener('click', closeSidebarOnce);
+            // Backdrop click handler (only for mobile overlay)
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', () => {
+                    sidebar.classList.remove('active'); // Close mobile overlay
+                    sidebarBackdrop.style.display = 'none';
+                });
             }
             
+            // Hide mobile overlay when navigating
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
-                 link.addEventListener('click', () => {
-                     if (window.innerWidth <= 992) {
-                         sidebar.classList.remove('active');
-                     }
-                 });
-            });
-        }
-        
-        
-        // Initial fetch on page load
-        fetchStaffNotifications();
-        
-        // Poll the server every 30 seconds for new alerts
-        setInterval(fetchStaffNotifications, 30000); 
-
-        // --- Modal Logic for LATE RETURN ---
-        const lateReturnModal = document.getElementById('lateReturnModal');
-        if (lateReturnModal) {
-            lateReturnModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget;
-                const formId = button.getAttribute('data-form-id');
-                const modalFormIdInput = lateReturnModal.querySelector('#modal_late_return_form_id');
-                modalFormIdInput.value = formId;
-            });
-            
-            // *** CRITICAL FIX: Ensure the correct form is submitted with the action flag ***
-            $('#confirmLateReturnBtn').on('click', function() {
-                const formId = $('#modal_late_return_form_id').val();
-                const $formToSubmit = $(`form.pending-form[data-form-id="${formId}"]`);
-                
-                if ($formToSubmit.length) {
-                    // 1. Add the action flag input to the form
-                    if ($formToSubmit.find('input[name="confirm_late_return"]').length === 0) {
-                        $formToSubmit.append('<input type="hidden" name="confirm_late_return" value="1">');
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) {
+                        setTimeout(() => {
+                            sidebar.classList.remove('active');
+                            sidebarBackdrop.style.display = 'none';
+                        }, 100);
                     }
-                    
-                    // 2. Submit the form using the native DOM submit method for reliability
-                    $formToSubmit[0].submit();
-                    
-                    // 3. Hide the modal immediately after submit is triggered
-                    $('#lateReturnModal').modal('hide'); 
-                } else {
-                    console.error(`Form with ID ${formId} not found for late return submission.`);
-                     $('#lateReturnModal').modal('hide'); 
-                }
+                });
             });
+
+            // Handle window resize (switching between mobile/desktop layouts)
+            window.addEventListener('resize', setInitialState);
+
+            // Set initial state on load
+            setInitialState();
+        }
+        // --- END NEW DESKTOP COLLAPSE LOGIC ---
+        
+        // --- MODAL AND POPOVER INITIALIZATION ---
+        
+        // Delete Modal Handler (Existing - kept for completeness)
+        const deleteModal = document.getElementById('deleteApparatusModal');
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const id = button.getAttribute('data-id');
+                const name = button.getAttribute('data-name');
+                const image = button.getAttribute('data-image');
+                
+                deleteModal.querySelector('#apparatusName').textContent = name;
+                deleteModal.querySelector('#apparatusId').textContent = id;
+                deleteModal.querySelector('#modalApparatusId').value = id;
+                deleteModal.querySelector('#modalApparatusImage').value = image;
+            });
+        }
+
+        // Popover Initialization (Existing - kept for completeness)
+        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+        [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+
+        // --- AUTOHIDE LOGIC ---
+        const statusAlert = document.getElementById('status-alert');
+        if (statusAlert) {
+            if (statusAlert.classList.contains('alert-success') || statusAlert.classList.contains('alert-danger')) {
+                setTimeout(() => {
+                    const bsAlert = bootstrap.Alert.getInstance(statusAlert) || new bootstrap.Alert(statusAlert);
+                    bsAlert.close();
+                }, 4000); // 4000 milliseconds = 4 seconds
+            }
         }
         
-        // --- Modal Logic for MANUAL OVERDUE ---
-        const overdueModal = document.getElementById('overdueModal');
-        if (overdueModal) {
-            overdueModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget;
-                const formId = button.getAttribute('data-form-id');
-                const modalFormIdInput = overdueModal.querySelector('#modal_overdue_form_id');
-                modalFormIdInput.value = formId;
-            });
+        // NEW: Initial fetch on page load and polling for notifications
+        fetchStaffNotifications();
+        setInterval(fetchStaffNotifications, 30000); // Poll every 30 seconds
+        
+        // --- Transaction Action Modals (Late Return, Overdue, Damaged Unit Check) ---
+        
+        // 1. Late Return Modal Handler
+        $('#lateReturnModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const formId = button.data('form-id');
+            $('#modal_late_return_form_id').val(formId);
+        });
+
+        $('#confirmLateReturnBtn').on('click', function() {
+            const formId = $('#modal_late_return_form_id').val();
+            const formElement = $(`.pending-form[data-form-id="${formId}"]`);
+            const remarks = formElement.find('textarea[name="staff_remarks"]').val();
+
+            // Set the necessary fields in the hidden form and submit it
+            const submissionForm = document.createElement('form');
+            submissionForm.method = 'POST';
+            submissionForm.action = 'staff_pending.php';
             
-            document.getElementById('confirmOverdueBtn').addEventListener('click', function() {
-                const formId = document.getElementById('modal_overdue_form_id').value;
-                const formToSubmit = document.querySelector(`form.pending-form[data-form-id="${formId}"]`);
-                
-                if (formToSubmit) {
-                    const overdueActionInput = document.createElement('input');
-                    overdueActionInput.type = 'hidden';
-                    overdueActionInput.name = 'manually_mark_overdue';
-                    overdueActionInput.value = '1';
-                    formToSubmit.appendChild(overdueActionInput);
-                    
-                    formToSubmit.submit();
-                }
-            });
-        }
+            $(submissionForm).append('<input type="hidden" name="form_id" value="' + formId + '">');
+            $(submissionForm).append('<input type="hidden" name="staff_remarks" value="' + remarks + '">');
+            $(submissionForm).append('<input type="hidden" name="confirm_late_return" value="1">'); // Action trigger
+            
+            document.body.appendChild(submissionForm);
+            submissionForm.submit();
+        });
+
+        // 2. Overdue Modal Handler
+        $('#overdueModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const formId = button.data('form-id');
+            $('#modal_overdue_form_id').val(formId);
+        });
+
+        $('#confirmOverdueBtn').on('click', function() {
+            const formId = $('#modal_overdue_form_id').val();
+            const formElement = $(`.pending-form[data-form-id="${formId}"]`);
+            const remarks = formElement.find('textarea[name="staff_remarks"]').val();
+
+            // Set the necessary fields in the hidden form and submit it
+            const submissionForm = document.createElement('form');
+            submissionForm.method = 'POST';
+            submissionForm.action = 'staff_pending.php';
+            
+            $(submissionForm).append('<input type="hidden" name="form_id" value="' + formId + '">');
+            $(submissionForm).append('<input type="hidden" name="staff_remarks" value="' + remarks + '">');
+            $(submissionForm).append('<input type="hidden" name="manually_mark_overdue" value="1">'); // Action trigger
+            
+            document.body.appendChild(submissionForm);
+            submissionForm.submit();
+        });
+        
+        // 3. Mark Damaged Pre-Check Handler
+        $('.mark-damaged-btn').on('click', function(e) {
+            e.preventDefault();
+            const formId = $(this).closest('form').data('form-id');
+            const formElement = $(`.pending-form[data-form-id="${formId}"]`);
+            const unitSelect = formElement.find(`#damaged_unit_id_${formId}`);
+            const selectedUnit = unitSelect.val();
+
+            if (!selectedUnit || selectedUnit === "") {
+                // If no unit is selected, show the warning modal
+                const modal = new bootstrap.Modal(document.getElementById('requiredUnitSelectModal'));
+                modal.show();
+                // Store the form ID so the user can go back and fix it
+                $('#form_to_submit_after_error_fix').val(formId);
+                return;
+            }
+
+            // If a unit IS selected, create a hidden form and submit the damaged action directly
+            const remarks = formElement.find('textarea[name="staff_remarks"]').val();
+            
+            const submissionForm = document.createElement('form');
+            submissionForm.method = 'POST';
+            submissionForm.action = 'staff_pending.php';
+
+            $(submissionForm).append('<input type="hidden" name="form_id" value="' + formId + '">');
+            $(submissionForm).append('<input type="hidden" name="staff_remarks" value="' + remarks + '">');
+            $(submissionForm).append('<input type="hidden" name="damaged_unit_id" value="' + selectedUnit + '">');
+            $(submissionForm).append('<input type="hidden" name="mark_damaged" value="1">'); // Action trigger
+            
+            document.body.appendChild(submissionForm);
+            submissionForm.submit();
+        });
+        
     });
 </script>
 </body>

@@ -37,8 +37,17 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
             --student-logout-red: #C62828;
             --base-font-size: 15px; 
             --main-text: #333;
-            --card-background: #fcfcfc;
             --label-bg: #e9ecef;
+
+            /* Standardized Status Colors */
+            --status-pending-bg: #ffc10730;
+            --status-pending-color: #b8860b;
+            --status-borrowed-bg: #cce5ff;
+            --status-borrowed-color: #004085;
+            --status-overdue-bg: #f8d7da;
+            --status-overdue-color: #721c24;
+            --status-rejected-bg: #6c757d30;
+            --status-rejected-color: #6c757d;
         }
 
         body { 
@@ -118,12 +127,13 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
         }
         .mark-all-link {
             cursor: pointer;
-            color: var(--msu-red);
+            color: var(--main-text); 
             font-weight: 600;
             padding: 8px 15px;
             display: block;
             text-align: center;
             border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
         }
         /* --- END Top Header Bar Styles --- */
         
@@ -238,7 +248,6 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
         /* Ensure the table is wide enough to contain content and trigger scroll */
         .table {
              min-width: 1350px;
-             /* Allow for cleaner borders when not using rowspan */
              border-collapse: separate; 
         }
         
@@ -295,40 +304,34 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
         /* --- STATUS TAGS & COLORS (PROFESSIONAL FIX) --- */
         .status-tag {
             display: inline-block;
-            padding: 4px 10px; 
-            border-radius: 14px;
+            padding: 4px 8px; 
+            border-radius: 4px;
             font-weight: 700;
-            text-transform: capitalize;
+            text-transform: uppercase;
             font-size: 0.8rem; 
+            line-height: 1;
             white-space: nowrap;
+            border: 1px solid transparent;
         }
 
-        /* ******************************************************************* */
-        /* --- DAMAGED Tag Styles (Matching Student View: Solid Red) --- */
+        /* Dedicated status styles for item status table */
+        .status-tag.returned { 
+             background-color: #e9ecef; 
+             color: #333; 
+             border-color: #ddd; 
+             font-weight: 600;
+        }
         .status-tag.damaged { 
-            background-color: #dc3545 !important;
-            color: white !important; 
-            font-weight: 800; 
-            padding: 2px 7px;
-            font-size: 0.75rem; 
+             background-color: #dc3545 !important;
+             color: white !important; 
+             font-weight: 800; 
         }
         
-        /* --- Returned Tag Styles (Matching Student View: Gray) --- */
-        .status-tag.returned {
-            background-color: #e9ecef !important;
-            color: #333 !important;
-            font-weight: 600;
-            padding: 2px 7px;
-            font-size: 0.75rem; 
-        }
-        /* ******************************************************************* */
-
-
         /* Standard Colors (Lighter background, dark text for better contrast) */
-        .status-tag.waiting_for_approval, .status-tag.pending { background-color: #ffc10730; color: #b8860b; }
-        .status-tag.approved, .status-tag.borrowed, .status-tag.checking { background-color: #007bff30; color: #007bff; }
-        .status-tag.rejected { background-color: #6c757d30; color: #6c757d; }
-        .status-tag.overdue, .status-tag.returned-late { background-color: #dc354530; color: #dc3545; border: 1px solid #dc3545; }
+        .status-tag.waiting_for_approval, .status-tag.pending, .status-tag.reserved { background-color: var(--status-pending-bg); color: var(--status-pending-color); border-color: #ffeeba; }
+        .status-tag.approved, .status-tag.borrowed, .status-tag.checking { background-color: var(--status-borrowed-bg); color: var(--status-borrowed-color); border-color: #b8daff; }
+        .status-tag.rejected { background-color: var(--status-rejected-bg); color: var(--status-rejected-color); border-color: #ccc; }
+        .status-tag.overdue, .status-tag.returned-late { background-color: var(--status-overdue-bg); color: var(--status-overdue-color); border-color: #f5c6cb; }
         
         
         /* --- RESPONSIVE CSS --- */
@@ -351,6 +354,7 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
 
         @media (max-width: 768px) {
              /* When using the no-rowspan method, standard mobile stacking works better */
+             .table { min-width: auto; }
              .table thead { display: none; }
              .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
              
@@ -363,7 +367,7 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
              }
              
              .table tbody tr.item-row.first-item-of-group td {
-                 border-top: 1px solid #ddd; /* Reset from desktop style */
+                 border-top: 1px solid #ddd !important; /* Reset from desktop style */
              }
 
              .table td {
@@ -375,6 +379,11 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
                  white-space: normal;
              }
              
+             /* Remove bottom border on the last cell of each mobile row to clean up spacing */
+             .table tbody tr td:last-child {
+                 border-bottom: none !important;
+             }
+             
              .table td::before {
                  content: attr(data-label);
                  position: absolute;
@@ -384,22 +393,59 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
                  white-space: nowrap;
                  font-weight: 600;
                  text-align: left;
-                 color: #333;
+                 color: var(--main-text);
+                 background-color: transparent;
              }
              
-             .table tbody tr:last-child {
-                 margin-bottom: 0; /* Remove margin on last row */
+             .table tbody tr:first-child.item-row.first-item-of-group {
+                 margin-top: 0; 
              }
              
              .table tbody tr.item-row.first-item-of-group {
-                 margin-top: 15px; /* Add margin to first item row of a group to separate from previous form group */
+                 /* Separate visual form groups with space in mobile view */
+                 margin-top: 20px; 
+             }
+
+             /* Special Mobile Styling for key cells (Form ID / Student Details) */
+             .table tbody tr td:nth-child(1) { /* Form ID - Use full width label, no separator on its own line */
+                 font-size: 1rem;
+                 font-weight: 700;
+                 text-align: left !important;
+                 color: var(--msu-red-dark);
+                 border-bottom: 1px solid #ddd !important;
+             }
+             .table tbody tr td:nth-child(1)::before {
+                 content: "Form "; 
+                 position: static;
+                 display: inline;
+                 color: #6c757d;
+                 font-size: 0.9rem;
+                 font-weight: 600;
+             }
+             .table tbody tr td:nth-child(2) { /* Student Details */
+                 font-size: 1.05rem;
+                 font-weight: 700;
+                 color: var(--main-text);
+                 border-bottom: 2px solid var(--msu-red) !important;
+             }
+             .table tbody tr td:nth-child(2)::before {
+                 font-weight: 700;
+                 color: var(--msu-red-dark);
+                 background-color: #f8d7da; /* Light red background */
+                 padding-left: 0;
+                 left: 0;
+                 width: 50%;
+                 text-align: center;
+                 display: flex;
+                 align-items: center;
+                 justify-content: center;
              }
         }
 
         @media (max-width: 576px) {
-              .main-content { padding: 10px; padding-top: calc(var(--header-height) + 10px); }
-              .content-area { padding: 10px; }
-              .top-header-bar { padding-left: 65px; }
+             .main-content { padding: 10px; padding-top: calc(var(--header-height) + 10px); }
+             .content-area { padding: 10px; }
+             .top-header-bar { padding-left: 65px; }
         }
     </style>
 </head>
@@ -452,9 +498,10 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
             </a>
             <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" 
                 aria-labelledby="alertsDropdown" id="notification-dropdown">
+                
                 <h6 class="dropdown-header text-center">New Requests</h6>
                 
-                <div class="dynamic-notif-placeholder">
+                <div class="dynamic-content-area">
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
                 </div>
                 
@@ -470,20 +517,20 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
             <i class="fas fa-list-alt fa-fw me-2 text-secondary"></i> All Transactions History
         </h2>
 
-        <form method="GET" class="mb-3" id="transactionFilterForm">
+        <form method="GET" class="mb-4" id="transactionFilterForm">
             <div class="d-flex flex-wrap align-items-center justify-content-between">
                 
-                <div class="d-flex align-items-center mb-2 mb-md-0">
-                    <label class="form-label me-2 mb-0 fw-bold text-secondary">Filter by Status:</label>
+                <div class="d-flex align-items-center mb-2 mb-md-0 me-md-3">
+                    <label for="statusFilter" class="form-label me-2 mb-0 fw-bold text-secondary text-nowrap">Filter by Status:</label>
                     <select name="filter" id="statusFilter" class="form-select form-select-sm w-auto">
                         <option value="all" <?= $filter === 'all' ? 'selected' : '' ?>>All</option>
                         <option value="waiting_for_approval" <?= $filter === 'waiting_for_approval' ? 'selected' : '' ?>>Waiting for Approval</option>
-                        <option value="borrowed" <?= $filter === 'borrowed' ? 'selected' : '' ?>>Borrowed</option>
+                        <option value="borrowed" <?= $filter === 'borrowed' ? 'selected' : '' ?>>Borrowed (Approved)</option>
                         <option value="reserved" <?= $filter === 'reserved' ? 'selected' : '' ?>>Reserved</option>
-                        <option value="returned" <?= $filter === 'returned' ? 'selected' : '' ?>>Returned</option>
+                        <option value="returned" <?= $filter === 'returned' ? 'selected' : '' ?>>Returned (Completed)</option>
                         <option value="overdue" <?= $filter === 'overdue' ? 'selected' : '' ?>>Overdue</option>
                         <option value="rejected" <?= $filter === 'rejected' ? 'selected' : '' ?>>Rejected</option>
-                        <option value="damaged" <?= $filter === 'damaged' ? 'selected' : '' ?>>Damaged</option>
+                        <option value="damaged" <?= $filter === 'damaged' ? 'selected' : '' ?>>Damaged Unit</option>
                     </select>
                 </div>
 
@@ -503,11 +550,11 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
                     <tr>
                         <th>Form ID</th>
                         <th>Student Details</th> <th>Type</th>
-                        <th>Status</th>
+                        <th>Item Status</th>
                         <th>Borrow Date</th>
                         <th>Expected Return</th>
                         <th>Actual Return</th>
-                        <th>Apparatus (Item)</th> <th>Staff Remarks</th>
+                        <th>Apparatus (Name & Unit)</th> <th>Staff Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -517,10 +564,11 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
                             
                             $transactions_with_items = []; 
 
-                            // First pass: Prepare data for display (no more row spanning needed)
+                            // First pass: Prepare data for display
                             foreach ($transactions as $trans) {
                                 $form_id = $trans['id'];
-                                // IMPORTANT: Assuming getFormItems returns an array of individual item units
+                                // IMPORTANT: Assuming getFormItems returns an array of individual item units, 
+                                // including item_status and is_late_return flags.
                                 $detailed_items = $transaction->getFormItems($form_id); 
                                 
                                 // If the form has no items (e.g., rejected early), ensure we loop once
@@ -539,72 +587,72 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
                                 $trans = $data['form'];
                                 $detailed_items = $data['items'];
 
-                                // Determine the main form status/class (for date/remark columns if needed)
+                                // Determine the main form status/class 
                                 $form_status = strtolower($trans['status']);
 
                                 // Loop through the items for this single form
                                 foreach ($detailed_items as $index => $unit):
                                     
-                                    // Item status logic
-                                    $name = htmlspecialchars($unit['name'] ?? '-');
+                                    // Item status logic: falls back to form status if item status is missing
+                                    $name = htmlspecialchars($unit['name'] ?? 'N/A');
+                                    $unit_tag = (isset($unit['unit_id'])) ? ' (Unit ' . htmlspecialchars($unit['unit_id']) . ')' : '';
                                     
-                                    // --- CRITICAL FIX 1: Use Item Status for the Status column
+                                    // CRITICAL: Use Item Status for the Status column
                                     $item_status = strtolower($unit['item_status'] ?? $form_status);
                                     
                                     $item_tag_class = $item_status;
                                     $item_tag_text = ucfirst(str_replace('_', ' ', $item_status));
                                     
                                     if ($item_status === 'returned' && (isset($unit['is_late_return']) && $unit['is_late_return'] == 1)) {
-                                         // NOTE: is_late_return must be derived from item return vs expected date if item return date is present
                                          $item_tag_class = 'returned-late';
-                                         $item_tag_text = 'Returned (LATE)';
+                                         $item_tag_text = 'Returned (Late)';
                                     } elseif ($item_status === 'damaged') {
-                                        $item_tag_class = 'damaged';
-                                        $item_tag_text = 'Damaged';
-                                    } elseif ($item_status === 'returned') {
-                                        $item_tag_class = 'returned'; 
-                                        $item_tag_text = 'Returned';
+                                         $item_tag_class = 'damaged';
+                                         $item_tag_text = 'Damaged';
+                                    } elseif ($item_status === 'overdue') {
+                                         $item_tag_class = 'overdue';
+                                         $item_tag_text = 'Overdue';
                                     }
                                     
                                     // Add a visual class if this is the first item of a new form group
                                     $row_classes = 'item-row';
                                     if ($previous_form_id !== $form_id) {
-                                        $row_classes .= ' first-item-of-group';
-                                        $previous_form_id = $form_id; // Update tracker
+                                         $row_classes .= ' first-item-of-group';
+                                         $previous_form_id = $form_id; // Update tracker
                                     }
 
-                        ?>
-                        <tr class="<?= $row_classes ?>">
-                            <td data-label="Form ID:"><?= $trans['id'] ?></td>
-                            <td data-label="Student Details:">
-                                <strong><?= htmlspecialchars($trans['firstname'] ?? '') ?> <?= htmlspecialchars($trans['lastname'] ?? '') ?></strong>
-                                <br>
-                                <small class="text-muted">(ID: <?= htmlspecialchars($trans['user_id']) ?>)</small>
-                            </td>
-                            <td data-label="Type:"><?= ucfirst($trans['form_type']) ?></td>
-                            
-                            <td data-label="Status:">
-                                <span class="status-tag <?= $item_tag_class ?>">
-                                    <?= $item_tag_text ?>
-                                </span>
-                            </td>
-                            
-                            <td data-label="Borrow Date:"><?= $trans['borrow_date'] ?: '-' ?></td>
-                            <td data-label="Expected Return:"><?= $trans['expected_return_date'] ?: '-' ?></td>
-                            <td data-label="Actual Return:"><?= $trans['actual_return_date'] ?: '-' ?></td>
-                            
-                            <td data-label="Apparatus (Item):" class="item-cell">
-                                <div class="d-flex align-items-center justify-content-start p-0">
-                                    <span><?= $name ?> (x<?= $unit['quantity'] ?? 1 ?>)</span>
-                                </div>
-                            </td>
-                            
-                            <td data-label="Staff Remarks:"><?= htmlspecialchars($trans['staff_remarks'] ?? '-') ?></td>
-                        </tr>
-                        <?php 
-                                endforeach; // End item loop
-                            endforeach; // End form loop 
-                        ?>
+                                 ?>
+                                 <tr class="<?= $row_classes ?>">
+                                     <td data-label="Form ID:"><?= $trans['id'] ?></td>
+                                     <td data-label="Student Details:">
+                                         <strong><?= htmlspecialchars($trans['firstname'] ?? '') ?> <?= htmlspecialchars($trans['lastname'] ?? '') ?></strong>
+                                         <br>
+                                         <small class="text-muted">(ID: <?= htmlspecialchars($trans['user_id']) ?>)</small>
+                                     </td>
+                                     <td data-label="Type:"><?= ucfirst($trans['form_type']) ?></td>
+                                     
+                                     <td data-label="Status:">
+                                         <span class="status-tag <?= $item_tag_class ?>">
+                                             <?= $item_tag_text ?>
+                                         </span>
+                                     </td>
+                                     
+                                     <td data-label="Borrow Date:"><?= $trans['borrow_date'] ?: '-' ?></td>
+                                     <td data-label="Expected Return:"><?= $trans['expected_return_date'] ?: '-' ?></td>
+                                     <td data-label="Actual Return:"><?= $trans['actual_return_date'] ?: '-' ?></td>
+                                     
+                                     <td data-label="Apparatus (Item):" class="item-cell">
+                                         <div class="p-0">
+                                             <span><?= $name ?> (x<?= $unit['quantity'] ?? 1 ?>)<?= $unit_tag ?></span>
+                                         </div>
+                                     </td>
+                                     
+                                     <td data-label="Staff Remarks:"><?= htmlspecialchars($trans['staff_remarks'] ?? '-') ?></td>
+                                 </tr>
+                                 <?php 
+                                         endforeach; // End item loop
+                                     endforeach; // End form loop 
+                                 ?>
                     <?php else: ?>
                         <tr><td colspan="9" class="text-muted py-3">No transactions found matching the selected filter or search term.</td></tr>
                     <?php endif; ?>
@@ -616,26 +664,21 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- JAVASCRIPT FOR STAFF NOTIFICATION LOGIC (COPIED) ---
+    // --- JAVASCRIPT FOR STAFF NOTIFICATION LOGIC ---
     // Function to handle clicking a notification link
     window.handleNotificationClick = function(event, element, notificationId) {
-        // Prevent default navigation initially
         event.preventDefault(); 
         const linkHref = element.getAttribute('href');
 
-        // Mark as read via API endpoint
         $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
             if (response.success) {
-                // Navigate after marking as read
                 window.location.href = linkHref;
             } else {
                 console.error("Failed to mark notification as read.");
-                // Fallback: navigate anyway if DB update fails
                 window.location.href = linkHref; 
             }
         }).fail(function() {
             console.error("API call failed.");
-            // Fallback: navigate anyway if API call fails
             window.location.href = linkHref;
         });
     };
@@ -644,7 +687,6 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
     window.markAllStaffAsRead = function() {
         $.post('../api/mark_notification_as_read.php', { mark_all: true, role: 'staff' }, function(response) {
             if (response.success) {
-                // Reload the page to clear the badge
                 window.location.reload(); 
             } else {
                 alert("Failed to clear all notifications.");
@@ -661,53 +703,56 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
 
         $.getJSON(apiPath, function(response) { 
             
-            // 1. Update the Badge Count
             const unreadCount = response.count; 
             const notifications = response.alerts || []; 
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
+            const $header = $dropdown.find('.dropdown-header');
             
             // Find and temporarily detach the static View All link
             const $viewAllLink = $dropdown.find('a[href="staff_pending.php"]').detach();
             
-            // Find the dropdown header
-            const $header = $dropdown.find('.dropdown-header');
-            
-            // Clear previous dynamic content and any old Mark All buttons
-            $dropdown.find('.dynamic-notif-item').remove();
-            $dropdown.find('.mark-all-btn-wrapper').remove(); 
+            // Clear previous dynamic content
+            $dropdown.children('.dynamic-notif-item').remove();
+            $dropdown.children('.mark-all-btn-wrapper').remove(); 
             
             // Update badge display
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
             
             
-            if (notifications.length > 0) {
-                // Prepend Mark All button if there are unread items
-                if (unreadCount > 0) {
-                     $header.after(`
-                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
-                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                             </a>
-                         `);
-                }
+            // Clear the obsolete placeholder content
+            $dropdown.find('.dynamic-content-area').remove();
 
-                // Iterate and insert notifications
+            // Create a new area for dynamic content (notifications and mark-all)
+            const $dynamicArea = $('<div>').addClass('dynamic-content-area');
+            let contentToInsert = [];
+            
+            if (notifications.length > 0) {
+                
+                // 1. Mark All button (Must be inserted before notifications)
+                if (unreadCount > 0) {
+                     contentToInsert.push(`
+                            <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
+                                <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                            </a>
+                        `);
+                }
+                
+                // 2. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
-                    // Determine icon based on notification type
                     let iconClass = 'fas fa-info-circle text-info'; 
                     if (notif.type.includes('form_pending')) {
-                         iconClass = 'fas fa-hourglass-half text-warning';
+                            iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                         iconClass = 'fas fa-redo text-primary';
+                            iconClass = 'fas fa-redo text-primary';
                     }
                     
-                    // Style unread items slightly differently
                     const itemClass = notif.is_read == 0 ? 'fw-bold' : 'text-muted';
 
-                    $header.after(`
+                    contentToInsert.push(`
                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
                             href="${notif.link}"
                             data-id="${notif.id}"
@@ -720,20 +765,24 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
                         </a>
                     `);
                 });
+                
             } else {
-                // Display a "No Alerts" message immediately after the header
-                $header.after(`
+                // Display a "No Alerts" message
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No New Notifications</a>
                 `);
             }
             
-            // Re-append the 'View All' link to the end of the dropdown
+            // 3. Insert the entire dynamic content block after the header
+            $dynamicArea.html(contentToInsert.join(''));
+            $header.after($dynamicArea);
+            
+            // 4. Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
             
 
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching staff notifications:", textStatus, errorThrown);
-            // Ensure the badge is hidden on failure
             $('#notification-bell-badge').text('0').hide();
         });
     }
@@ -756,7 +805,7 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
             }
         });
         
-        // --- Mobile Toggle Logic ---
+        // --- Mobile Toggle Logic (Simplified for brevity as it's repetitive) ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const mainContent = document.querySelector('.main-content'); 
@@ -764,25 +813,31 @@ $transactions = $transaction->getAllFormsFiltered($filter, $search);
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
-                if (sidebar.classList.contains('active')) {
-                     mainContent.addEventListener('click', closeSidebarOnce);
-                } else {
-                     mainContent.removeEventListener('click', closeSidebarOnce);
+                // Simple backdrop effect on mobile
+                if (window.innerWidth <= 992) {
+                    const isActive = sidebar.classList.contains('active');
+                    if (isActive) {
+                        mainContent.style.pointerEvents = 'none';
+                        mainContent.style.opacity = '0.5';
+                    } else {
+                        mainContent.style.pointerEvents = 'auto';
+                        mainContent.style.opacity = '1';
+                    }
                 }
             });
             
-            function closeSidebarOnce() {
-                 sidebar.classList.remove('active');
-                 mainContent.removeEventListener('click', closeSidebarOnce);
-            }
+            // Hide sidebar if content is clicked (mobile view)
+            mainContent.addEventListener('click', () => {
+                if (sidebar.classList.contains('active') && window.innerWidth <= 992) {
+                    sidebar.classList.remove('active');
+                    mainContent.style.pointerEvents = 'auto';
+                    mainContent.style.opacity = '1';
+                }
+            });
             
-            const navLinks = sidebar.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                 link.addEventListener('click', () => {
-                     if (window.innerWidth <= 992) {
-                         sidebar.classList.remove('active');
-                     }
-                 });
+            // Prevent sidebar closing when clicking inside itself
+            sidebar.addEventListener('click', (e) => {
+                e.stopPropagation();
             });
         }
         

@@ -1,6 +1,5 @@
 <?php
 session_start();
-// Include the Transaction class (now BCNF-compliant)
 require_once "../classes/Transaction.php";
 
 if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'staff') {
@@ -10,11 +9,8 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'staff') {
 
 $transaction = new Transaction();
 
-// --- Determine Mode and Report Type ---
 $mode = $_GET['mode'] ?? 'hub';
 $report_view_type = $_GET['report_view_type'] ?? 'all';
-
-// --- Helper Functions ---
 
 function isOverdue($expected_return_date) {
     if (!$expected_return_date) return false;
@@ -23,10 +19,6 @@ function isOverdue($expected_return_date) {
     return $expected_date->format('Y-m-d') < $today->format('Y-m-d');
 }
 
-/**
- * Helper to generate status badge for history table.
- * This now handles ITEM status display in the new layout.
- */
 function getStatusBadgeForItem(string $status, bool $is_late_return = false) {
     $clean_status = strtolower(str_replace(' ', '_', $status));
     $display_status = ucfirst(str_replace('_', ' ', $clean_status));
@@ -34,7 +26,7 @@ function getStatusBadgeForItem(string $status, bool $is_late_return = false) {
     $color_map = [
         'returned' => 'success', 'approved' => 'info', 'borrowed' => 'primary',
         'overdue' => 'danger', 'damaged' => 'danger', 'rejected' => 'secondary',
-        'waiting_for_approval' => 'warning', 'lost' => 'dark'
+        'waiting_for_approval' => 'warning', 'lost' => 'dark', 'checking' => 'info'
     ];
     $color = $color_map[$clean_status] ?? 'secondary';
     
@@ -47,13 +39,9 @@ function getStatusBadgeForItem(string $status, bool $is_late_return = false) {
         $display_status = 'Rejected';
     }
 
-    // This badge HTML is what we need to style differently in mobile CSS
     return '<span class="badge bg-' . $color . '">' . $display_status . '</span>';
 }
 
-/**
- * NEW FUNCTION: Flattens the forms into item-rows for the Detailed History Table.
- */
 function getDetailedItemRows(array $forms, $transaction) {
     $rows = [];
     foreach ($forms as $form) {
@@ -61,23 +49,19 @@ function getDetailedItemRows(array $forms, $transaction) {
         $detailed_items = $transaction->getFormItems($form_id);
 
         if (empty($detailed_items)) {
-            // Handle early rejected/pending forms that have no items attached yet (or item data is missing)
             $detailed_items = [
                 ['name' => '-',
                 'quantity' => 1,
-                'item_status' => $form['status'], // Use form status as fallback
+                'item_status' => $form['status'], 
                 'is_late_return' => $form['is_late_return'] ?? 0]
             ];
         }
 
-        // Loop through the items (or the single placeholder if empty)
         foreach ($detailed_items as $index => $item) {
             
-            // Determine the Item-Specific Status
             $item_status = strtolower($item['item_status'] ?? $form['status']);
             $is_late_return = $item['is_late_return'] ?? ($form['is_late_return'] ?? 0);
             
-            // Build the table row data based on item details
             $row = [
                 'form_id' => $form['id'],
                 'student_id' => $form['user_id'],
@@ -101,8 +85,6 @@ function getDetailedItemRows(array $forms, $transaction) {
 }
 
 
-// --- Data Retrieval and Filtering Logic ---
-
 $allApparatus = $transaction->getAllApparatus();
 $allForms = $transaction->getAllForms();
 
@@ -111,22 +93,18 @@ $start_date = $_GET['start_date'] ?? '';
 $end_date = $_GET['end_date'] ?? '';
 $status_filter = $_GET['status_filter'] ?? '';
 $form_type_filter = $_GET['form_type_filter'] ?? '';
-$type_filter = $_GET['type_filter'] ?? ''; // Apparatus Type Filter
+$type_filter = $_GET['type_filter'] ?? '';
 
 $filteredForms = $allForms;
-$filteredApparatus = $allApparatus; // Initialize apparatus filter
+$filteredApparatus = $allApparatus;
 
-// Apply Apparatus Filtering Logic (for the detailed inventory list)
 if ($type_filter) {
     $type_filter_lower = strtolower($type_filter);
     $filteredApparatus = array_filter($filteredApparatus, fn($a) =>
-        // CORRECTED: Checking for 'apparatus_type' instead of 'type'
         isset($a['apparatus_type']) && strtolower(trim($a['apparatus_type'])) === $type_filter_lower
     );
 }
 
-
-// Apply Filtering Logic for Forms
 if ($start_date) {
     $start_dt = new DateTime($start_date);
     $filteredForms = array_filter($filteredForms, fn($f) => (new DateTime($f['created_at']))->format('Y-m-d') >= $start_dt->format('Y-m-d'));
@@ -168,10 +146,6 @@ if ($status_filter) {
     }
 }
 
-
-// --- Data Assignments for Hub View ---
-
-// Flatten the filtered forms into item-rows for the detailed report display
 $detailedItemRows = getDetailedItemRows($filteredForms, $transaction);
 
 $totalForms = count($allForms);
@@ -191,19 +165,15 @@ $availableApparatusCount = 0;
 $damagedApparatusCount = 0;
 $lostApparatusCount = 0;
 foreach ($allApparatus as $app) {
-    $totalApparatusCount += (int)$app['total_stock'];
-    $availableApparatusCount += (int)$app['available_stock'];
-    $damagedApparatusCount += (int)$app['damaged_stock'];
-    $lostApparatusCount += (int)$app['lost_stock'];
+    $totalApparatusCount += (int)($app['total_stock'] ?? 0);
+    $availableApparatusCount += (int)($app['available_stock'] ?? 0);
+    $damagedApparatusCount += (int)($app['damaged_stock'] ?? 0);
+    $lostApparatusCount += (int)($app['lost_stock'] ?? 0);
 }
 
-// Get unique apparatus types for the filter dropdown
-// CORRECTED: Getting unique values from 'apparatus_type' column
 $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type'));
 
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -214,877 +184,157 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        
-        :root {
-            --msu-red: #A40404;
-            --msu-red-dark: #820303;
-            --msu-blue: #007bff;
-            --sidebar-width: 280px;
-            --header-height: 60px;
-            --student-logout-red: #C62828;
-            --base-font-size: 15px;
-            --main-text: #333;
-            --label-bg: #e9ecef;
-            --card-background: #fcfcfc;
+        :root{--msu-red:#A40404;--msu-red-dark:#820303;--msu-blue:#007bff;--sidebar-width:280px;--header-height:60px;--student-logout-red:#C62828;--base-font-size:15px;--main-text:#333;--label-bg:#e9ecef;--card-background:#fcfcfc}
+        body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f5f6fa;min-height:100vh;display:flex;padding:0;margin:0;font-size:var(--base-font-size);overflow-x:hidden}
+        .menu-toggle{position:fixed;top:15px;left:calc(var(--sidebar-width) + 20px);z-index:1060;background:var(--msu-red);color:white;border:none;border-radius:6px;font-size:1.2rem;box-shadow:0 2px 5px rgba(0,0,0,0.2);transition:left .3s ease;display:flex;justify-content:center;align-items:center;width:44px;height:44px}
+        .sidebar.closed{left:calc(var(--sidebar-width) * -1)}
+        .sidebar.closed~.menu-toggle{left:20px}
+        .sidebar.closed~.top-header-bar{left:0}
+        .sidebar.closed~.main-content{margin-left:0;width:100%}
+        .sidebar-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background-color:rgba(0,0,0,0.5);z-index:1000;display:none;opacity:0;transition:opacity .3s ease}
+        .sidebar.active~.sidebar-backdrop{display:block;opacity:1}
+        .top-header-bar{position:fixed;top:0;left:var(--sidebar-width);right:0;height:var(--header-height);background-color:#fff;border-bottom:1px solid #ddd;box-shadow:0 2px 5px rgba(0,0,0,0.05);display:flex;align-items:center;justify-content:flex-end;padding:0 30px;z-index:1000;transition:left .3s ease}
+        .notification-bell-container{position:relative;list-style:none;padding:0;margin:0}
+        .notification-bell-container .nav-link{padding:.5rem .5rem;color:var(--main-text)}
+        .notification-bell-container .badge-counter{position:absolute;top:5px;right:0;font-size:.8em;padding:.35em .5em;background-color:#ffc107;color:var(--main-text);font-weight:bold}
+        .dropdown-menu{min-width:320px;/* Increased width for readability */ padding:0}
+        .dropdown-item{padding:10px 15px;white-space:normal;transition:background-color .1s}
+        .dropdown-item:hover{background-color:#f5f5f5}
+        .mark-all-link{cursor:pointer;color:var(--main-text);font-weight:600;padding:8px 15px;display:block;text-align:center;border-top:1px solid #eee;border-bottom:1px solid #eee}
+        .sidebar{width:var(--sidebar-width);min-width:var(--sidebar-width);height:100vh;background-color:var(--msu-red);color:white;padding:0;box-shadow:2px 0 5px rgba(0,0,0,0.2);position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:1010;transition:left .3s ease}
+        .sidebar-header{text-align:center;padding:25px 15px;font-size:1.3rem;font-weight:700;line-height:1.2;color:#fff;border-bottom:1px solid rgba(255,255,255,0.4);margin-bottom:25px}
+        .sidebar-header img{max-width:100px;height:auto;margin-bottom:15px}
+        .sidebar-header .title{font-size:1.4rem;line-height:1.1}
+        .sidebar-nav{flex-grow:1}
+        .sidebar-nav .nav-link{color:white;padding:18px 25px;font-size:1.05rem;font-weight:600;transition:background-color .2s;border-left:none!important}
+        .sidebar-nav .nav-link:hover{background-color:var(--msu-red-dark)}
+        .sidebar-nav .nav-link.active{background-color:var(--msu-red-dark)}
+        .logout-link{margin-top:auto;border-top:1px solid rgba(255,255,255,0.1);width:100%;background-color:var(--msu-red)}
+        .logout-link .nav-link{display:flex;align-items:center;justify-content:flex-start;background-color:var(--student-logout-red)!important;color:white!important;padding:18px 25px;border-radius:0;text-decoration:none;font-weight:600;font-size:1.05rem;transition:background .3s}
+        .logout-link .nav-link:hover{background-color:var(--msu-red-dark)!important}
+        .main-content{margin-left:var(--sidebar-width);flex-grow:1;padding:30px;padding-top:calc(var(--header-height) + 30px);width:calc(100% - var(--sidebar-width));transition:margin-left .3s ease,width .3s ease}
+        .content-area{background:#fff;border-radius:12px;padding:30px 40px;box-shadow:0 5px 15px rgba(0,0,0,0.1)}
+        .page-header{color:#333;border-bottom:2px solid var(--msu-red);padding-bottom:15px;margin-bottom:30px;font-weight:600;font-size:2rem}
+        .report-section{border:1px solid #e0e0e0;border-radius:8px;padding:25px;margin-bottom:35px;background:#fff;box-shadow:0 5px 15px rgba(0,0,0,0.05)}
+        .report-section h3{color:var(--msu-red);padding-bottom:10px;border-bottom:1px dashed #ddd;margin-bottom:25px;font-weight:600;font-size:1.5rem}
+        .stat-card{display:flex;align-items:center;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:15px 20px;box-shadow:0 2px 4px rgba(0,0,0,0.05);transition:all .2s;height:100%}
+        .stat-icon{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;font-size:1.4rem;color:white;margin-right:15px;flex-shrink:0}
+        .stat-value{font-size:1.6rem;font-weight:700;line-height:1.1;margin-bottom:3px}
+        .stat-label{font-size:.9rem;color:#6c757d;font-weight:500;white-space:normal;overflow:hidden;text-overflow:ellipsis}
+        .bg-light-gray{background-color:#f9f9f9!important}
+        .border-danger{border-left:5px solid var(--student-logout-red)!important}
+        .bg-dark-monochrome{background-color:#343a40}
+        .print-stat-table-container{display:none}
+        .table-responsive{border-radius:8px;overflow-x:auto;box-shadow:0 2px 10px rgba(0,0,0,0.05);margin-top:25px}
+        .table{min-width:1200px;border-collapse:separate}
+        .table thead th{background-color:var(--msu-red);color:white;font-weight:700;vertical-align:middle;font-size:1rem;padding:10px 5px;white-space:normal;text-align:center}
+        .table tbody td{vertical-align:top;padding:8px 4px;font-size:.95rem;text-align:center;border-bottom:1px solid #e9ecef}
+        .table tbody tr.first-item-of-group td{border-top:2px solid #ccc}
+        .table tbody tr:first-child.first-item-of-group td{border-top:0}
+        .detailed-items-cell{white-space:normal!important;word-break:break-word;overflow:visible;text-align:left!important;padding-left:10px!important}
+        .detailed-inventory-table{min-width:1000px}
+        .table tbody td .badge{display:inline-block;padding:4px 8px;border-radius:4px;font-weight:700;text-transform:uppercase;font-size:.8rem;line-height:1;white-space:nowrap;border:1px solid transparent}
+        .detailed-inventory-table tbody td .badge{background-color:transparent!important;color:var(--main-text)!important;font-weight:500!important;padding:0!important;border-radius:0!important;border:none!important}
+        .print-header{display:none}
+        .wmsu-logo-print{display:none}
+        @media print{
+            body{margin:0!important;padding:0!important;background:white!important;color:#000}
+            .sidebar,.page-header,.filter-form,.print-summary-footer,.top-header-bar{display:none!important}
+            @page{size:A4 portrait;margin:.7cm}
+            .print-header{display:flex!important;flex-direction:column;align-items:center;text-align:center;padding-bottom:15px;margin-bottom:25px;border-bottom:3px solid #000}
+            .wmsu-logo-print{display:block!important;width:70px;height:auto;margin-bottom:5px}
+            .print-header .logo{font-size:.9rem;font-weight:600;margin-bottom:2px;color:#555}
+            .print-header h1{font-size:1.5rem;font-weight:700;margin:0;color:#000}
+            .report-section{border:none!important;box-shadow:none!important;padding:0;margin-bottom:25px}
+            .report-section h3{color:#333!important;border-bottom:1px solid #ccc!important;padding-bottom:5px;margin-bottom:15px;font-size:1.4rem;font-weight:600;page-break-after:avoid;text-align:left}
+            .report-section .row{display:none!important}
+            .print-stat-table-container{display:block!important;margin-bottom:30px}
+            .print-stat-table{width:100%;border-collapse:collapse!important;font-size:.9rem}
+            .print-stat-table th,.print-stat-table td{border:1px solid #000!important;padding:8px 10px!important;vertical-align:middle;color:#000;font-size:.9rem;line-height:1.2}
+            .print-stat-table th{background-color:#eee!important;font-weight:700;width:70%;text-align:left!important}
+            .print-stat-table td{text-align:center;font-weight:700;width:30%;color:#000!important}
+            .print-stat-table tr:nth-child(even) td{background-color:#f9f9f9!important}
+            body[data-print-view="detailed"] @page{size:A4 landscape}
+            .table thead th,.table tbody td{border:1px solid #000!important;padding:6px!important;color:#000!important;vertical-align:top!important;font-size:.85rem!important}
+            .table thead th{background-color:#eee!important;font-weight:700!important;white-space:normal}
+            .table tbody tr:nth-child(odd){background-color:#f9f9f9!important}
+            .table tbody tr:first-child.first-item-of-group td{border-top:1px solid #000!important}
+            .table tbody td .badge{color:#000!important;background-color:transparent!important;border:1px solid #000;-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none!important}
+            body[data-print-view="apparatus_list"] @page{size:A4 portrait}
+            .detailed-inventory-table{width:100%!important;border-collapse:collapse!important;min-width:unset!important;table-layout:fixed!important;display:table!important}
+            .detailed-inventory-table thead,.detailed-inventory-table tbody{display:table-row-group!important}
+            .detailed-inventory-table tr{display:table-row!important;border:none!important;box-shadow:none!important;margin-bottom:0!important}
+            .detailed-inventory-table thead th,.detailed-inventory-table tbody td{border:1px solid #000!important;padding:8px 6px!important;font-size:.9rem!important;text-align:center!important;vertical-align:middle!important;display:table-cell!important}
+            .detailed-inventory-table thead th{background-color:#eee!important;font-weight:700!important}
+            .detailed-inventory-table tbody tr td:first-child{text-align:left!important;font-weight:700}
+            .detailed-inventory-table tbody tr:nth-child(odd){background-color:#f9f9f9!important}
+            .detailed-inventory-table tbody tr:nth-child(even){background-color:#ffffff!important}
+            .detailed-inventory-table th:nth-child(1),.detailed-inventory-table td:nth-child(1){width:35%!important}
+            .detailed-inventory-table th:nth-child(2),.detailed-inventory-table td:nth-child(2){width:15%!important}
+            .detailed-inventory-table th:nth-child(3),.detailed-inventory-table td:nth-child(3){width:10%!important}
+            .detailed-inventory-table th:nth-child(4),.detailed-inventory-table td:nth-child(4){width:15%!important}
+            .detailed-inventory-table th:nth-child(5),.detailed-inventory-table td:nth-child(5){width:12.5%!important}
+            .detailed-inventory-table th:nth-child(6),.detailed-inventory-table td:nth-child(6){width:12.5%!important}
+            .print-target{display:none}
+            body[data-print-view="detailed"] .print-detailed,body[data-print-view="apparatus_list"] .print-detailed-inventory,body[data-print-view="summary"] .print-summary,body[data-print-view="inventory"] .print-inventory{display:block!important}
+            body[data-print-view="all"] .print-target{display:block!important}
+            .table *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            /* Start of Fix: Remove mobile labels in detailed inventory table print view */
+            body[data-print-view="apparatus_list"] .detailed-inventory-table td::before,
+            body[data-print-view="all"] .detailed-inventory-table td::before {
+                content: none !important; /* This is the key change for print view */
+            }
+            body[data-print-view="apparatus_list"] .detailed-inventory-table tbody tr td:nth-child(1)::before,
+            body[data-print-view="all"] .detailed-inventory-table tbody tr td:nth-child(1)::before {
+                content: none !important;
+            }
+            body[data-print-view="apparatus_list"] .detailed-inventory-table tbody tr td,
+            body[data-print-view="all"] .detailed-inventory-table tbody tr td {
+                text-align: center !important; /* Restore default center alignment */
+                padding-left: 6px !important; /* Restore default padding */
+            }
+            body[data-print-view="apparatus_list"] .detailed-inventory-table tbody tr td:first-child,
+            body[data-print-view="all"] .detailed-inventory-table tbody tr td:first-child {
+                text-align: left !important; /* Keep first column left-aligned */
+            }
+            /* End of Fix */
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f6fa;
-            min-height: 100vh;
-            display: flex;
-            padding: 0;
-            margin: 0;
-            font-size: var(--base-font-size);
-            overflow-x: hidden;
-        }
-
-        /* NEW CSS for Mobile Toggle */
-        .menu-toggle {
-            position: fixed;
-            top: 15px;
-            left: calc(var(--sidebar-width) + 20px);
-            z-index: 1060;
-            background: var(--msu-red);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1.2rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            transition: left 0.3s ease;
-            
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 44px;
-            height: 44px;
-        }
-        
-        /* NEW CLASS: When sidebar is closed (Desktop collapse mode) */
-        .sidebar.closed {
-            left: calc(var(--sidebar-width) * -1);
-        }
-        .sidebar.closed ~ .menu-toggle {
-            left: 20px;
-        }
-        .sidebar.closed ~ .top-header-bar {
-            left: 0;
-        }
-        .sidebar.closed ~ .main-content {
-            margin-left: 0;
-            width: 100%;
-        }
-
-        /* NEW: Backdrop for mobile sidebar */
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .sidebar.active ~ .sidebar-backdrop {
-            display: block;
-            opacity: 1;
-        }
-
-        /* --- Top Header Bar Styles --- */
-        .top-header-bar {
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            right: 0;
-            height: var(--header-height);
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0 30px;
-            z-index: 1000;
-            transition: left 0.3s ease;
-        }
-        .notification-bell-container {
-            position: relative;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .notification-bell-container .nav-link {
-            padding: 0.5rem 0.5rem;
-            color: var(--main-text);
-        }
-        .notification-bell-container .badge-counter {
-            position: absolute;
-            top: 5px;
-            right: 0px;
-            font-size: 0.8em;
-            padding: 0.35em 0.5em;
-            background-color: #ffc107;
-            color: var(--main-text);
-            font-weight: bold;
-        }
-        .dropdown-menu {
-            min-width: 300px;
-            padding: 0;
-        }
-        .dropdown-item:hover {
-            background-color: #f5f5f5;
-        }
-        .mark-all-link {
-            cursor: pointer;
-            color: var(--msu-red);
-            font-weight: 600;
-            padding: 8px 15px;
-            display: block;
-            text-align: center;
-            border-top: 1px solid #eee;
-        }
-        
-        .sidebar {
-            width: var(--sidebar-width);
-            min-width: var(--sidebar-width);
-            height: 100vh;
-            background-color: var(--msu-red);
-            color: white;
-            padding: 0;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-            position: fixed;
-            top: 0;
-            left: 0;
-            display: flex;
-            flex-direction: column;
-            z-index: 1010;
-            transition: left 0.3s ease;
-        }
-
-        .sidebar-header { text-align: center; padding: 25px 15px; font-size: 1.3rem; font-weight: 700; line-height: 1.2; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 25px; }
-        .sidebar-header img { max-width: 100px; height: auto; margin-bottom: 15px; }
-        .sidebar-header .title { font-size: 1.4rem; line-height: 1.1; }
-        .sidebar-nav { flex-grow: 1; }
-        .sidebar-nav .nav-link { color: white; padding: 18px 25px; font-size: 1.05rem; font-weight: 600; transition: background-color 0.2s; border-left: none !important; }
-        .sidebar-nav .nav-link:hover { background-color: var(--msu-red-dark); }
-        .sidebar-nav .nav-link.active { background-color: var(--msu-red-dark); }
-        
-        .logout-link {
-            margin-top: auto;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            width: 100%;
-            background-color: var(--msu-red);
-        }
-        .logout-link .nav-link {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            background-color: var(--student-logout-red) !important;
-            color: white !important;
-            padding: 18px 25px;
-            border-radius: 0;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1.05rem;
-            transition: background 0.3s;
-        }
-        .logout-link .nav-link:hover {
-            background-color: var(--msu-red-dark) !important;
-        }
-
-        .main-content {
-            margin-left: var(--sidebar-width);
-            flex-grow: 1;
-            padding: 30px;
-            padding-top: calc(var(--header-height) + 30px);
-            width: calc(100% - var(--sidebar-width));
-            transition: margin-left 0.3s ease, width 0.3s ease;
-        }
-        .content-area {
-            background: #fff;
-            border-radius: 12px;
-            padding: 30px 40px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        .page-header {
-            color: #333;
-            border-bottom: 2px solid var(--msu-red);
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-            font-weight: 600;
-            font-size: 2rem;
-        }
-        
-        
-        /* --- Report Hub Specific Styles --- */
-        .report-section {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 35px;
-            background: #fff;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        .report-section h3 {
-            color: var(--msu-red);
-            padding-bottom: 10px;
-            border-bottom: 1px dashed #eee;
-            margin-bottom: 25px;
-            font-weight: 600;
-            font-size: 1.5rem;
-        }
-        
-        /* --- Dashboard Stat Card Styling --- */
-        .stat-card {
-            display: flex;
-            align-items: center;
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s;
-            height: 100%;
-        }
-        .stat-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            font-size: 1.4rem;
-            color: white;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-        .stat-value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            line-height: 1.1;
-            margin-bottom: 3px;
-        }
-        .stat-label {
-            font-size: 0.9rem;
-            color: #6c757d;
-            font-weight: 500;
-            white-space: normal;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .bg-light-gray { background-color: #f9f9f9 !important; }
-        .border-danger { border-left: 5px solid var(--student-logout-red) !important; }
-
-        .print-stat-table-container { display: none; }
-        
-        /* --- DETAILED HISTORY STYLES (Screen View) --- */
-        
-        .table-responsive {
-            border-radius: 8px;
-            overflow-x: auto;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            margin-top: 25px;
-        }
-        .table {
-            min-width: 1200px;
-            border-collapse: separate;
-        }
-        
-        .table thead th {
-            /* FIX 3: Change table header color from solid black to dark red/gray */
-            background-color: var(--msu-red);
-            color: white;
-            font-weight: 700;
-            vertical-align: middle;
-            font-size: 1rem;
-            padding: 10px 5px;
-            white-space: normal;
-            text-align: center;
-        }
-        .table tbody td {
-            vertical-align: top;
-            padding: 8px 4px;
-            font-size: 1rem;
-            text-align: center;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        /* --- New Styling for One-Item-Per-Row --- */
-        
-        /* Apply strong border only to the first row of a new form group */
-        .table tbody tr.first-item-of-group td {
-            border-top: 2px solid #ccc;
-        }
-
-        /* Remove top border on the very first row of the table */
-        .table tbody tr:first-child.first-item-of-group td {
-            border-top: 0;
-        }
-
-        /* Set Item/Apparatus column styling */
-        .detailed-items-cell {
-            white-space: normal !important;
-            word-break: break-word;
-            overflow: visible;
-            text-align: left !important;
-            padding-left: 10px !important;
-        }
-        
-        /* Hide unused styles for multi-line cells */
-        .detailed-items-cell .d-flex { display: block !important; }
-        .detailed-items-cell .badge { display: none !important; }
-        
-        /* Define Column Widths for Report Table */
-        .table th:nth-child(1) { width: 6%; } /* Form ID */
-        .table th:nth-child(2) { width: 8%; } /* Student ID */
-        .table th:nth-child(3) { width: 14%; } /* Borrower Name */
-        .table th:nth-child(4) { width: 8%; } /* Type */
-        .table th:nth-child(5) { width: 10%; } /* Status */
-        .table th:nth-child(6) { width: 10%; } /* Borrow Date */
-        .table th:nth-child(7) { width: 12%; } /* Expected Return */
-        .table th:nth-child(8) { width: 10%; } /* Actual Return */
-        .table th:nth-child(9) { width: 22%; } /* Items Borrowed */
-        
-        /* --- Detailed Inventory Table Column Widths (6 Columns) --- */
-        .detailed-inventory-table {
-            min-width: 100%;
-        }
-        .detailed-inventory-table th:nth-child(1) { width: 30%; } /* Apparatus Name */
-        .detailed-inventory-table th:nth-child(2) { width: 20%; } /* Type */
-        .detailed-inventory-table th:nth-child(3) { width: 15%; } /* Total Stock */
-        .detailed-inventory-table th:nth-child(4) { width: 15%; } /* Available Stock */
-        .detailed-inventory-table th:nth-child(5) { width: 10%; } /* Damaged Stock (New) */
-        .detailed-inventory-table th:nth-child(6) { width: 10%; } /* Lost Stock (New) */
-
-
-        /* Status Badge Styling (Desktop/Default) */
-        .table tbody td .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 14px;
-            font-weight: 700;
-            text-transform: capitalize;
-            font-size: 0.8rem;
-            white-space: nowrap;
-        }
-        
-        /* FIX 2: Override badge styling for the Inventory Table to remove circles/badges */
-        .detailed-inventory-table tbody td .badge {
-            /* This is targeting the badges in the inventory list. Remove background and border-radius. */
-            background-color: transparent !important;
-            color: var(--main-text) !important;
-            font-weight: 500 !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            border: none !important;
-        }
-
-
-        /* Hide original styles for detailed table now that we use item rows */
-        .detailed-items-cell span {
-            display: block;
-            line-height: 1.4;
-        }
-
-        /* --- PRINT STYLING (Monochrome & Unified) --- */
-        
-        .print-header { display: none; }
-        .wmsu-logo-print { display: none; }
-
-        @media print {
-            body { margin: 0 !important; padding: 0 !important; background: white !important; color: #000; }
-            .sidebar, .page-header, .filter-form, .print-summary-footer, .top-header-bar { display: none !important; }
-            @page { size: A4 portrait; margin: 0.7cm; }
-            
-            /* Print Header */
-            .print-header {
-                display: flex !important;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                padding-bottom: 15px;
-                margin-bottom: 25px;
-                border-bottom: 3px solid #000;
-            }
-            .wmsu-logo-print { display: block !important; width: 70px; height: auto; margin-bottom: 5px; }
-            .print-header .logo { font-size: 0.9rem; font-weight: 600; margin-bottom: 2px; color: #555; }
-            .print-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; color: #000; }
-            
-            /* Unified Report Section Styling */
-            .report-section { border: none !important; box-shadow: none !important; padding: 0; margin-bottom: 25px; }
-            .report-section h3 { color: #333 !important; border-bottom: 1px solid #ccc !important; padding-bottom: 5px; margin-bottom: 15px; font-size: 1.4rem; font-weight: 600; page-break-after: avoid; text-align: left; }
-
-            /* Summary & Inventory Tables for Print */
-            .report-section .row { display: none !important; }
-            .print-stat-table-container { display: block !important; margin-bottom: 30px; }
-            .print-stat-table { width: 100%; border-collapse: collapse !important; font-size: 0.9rem; }
-            .print-stat-table th, .print-stat-table td { border: 1px solid #000 !important; padding: 8px 10px !important; vertical-align: middle; color: #000; font-size: 0.9rem; line-height: 1.2; }
-            .print-stat-table th { background-color: #eee !important; font-weight: 700; width: 70%; }
-            .print-stat-table td { text-align: center; font-weight: 700; width: 30%; color: #000 !important; }
-            .print-stat-table tr:nth-child(even) td { background-color: #f9f9f9 !important; }
-            
-            /* Detailed History Table Styles */
-            body[data-print-view="detailed"] @page { size: A4 landscape; }
-            .table thead th, .table tbody td { border: 1px solid #000 !important; padding: 6px !important; color: #000 !important; vertical-align: top !important; font-size: 0.85rem !important; }
-            .table thead th { background-color: #eee !important; font-weight: 700 !important; white-space: normal; }
-            .table tbody tr:nth-child(odd) { background-color: #f9f9f9 !important; }
-            
-            /* Custom print row grouping borders */
-            .table tbody tr.first-item-of-group td {
-                border-top: 1px solid #000 !important;
-            }
-            .table tbody tr:first-child.first-item-of-group td {
-                border-top: 1px solid #000 !important;
-            }
-            .table tbody tr td {
-                border-bottom: 1px solid #000 !important;
-            }
-            .table tbody tr:last-child td {
-                border-bottom: 1px solid #000 !important;
-            }
-            
-            /* Status Badge - Set to Monochrome for print */
-            .table tbody td .badge {
-                color: #000 !important;
-                background-color: transparent !important;
-                border: 1px solid #000;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                box-shadow: none !important;
-            }
-            
-            /* --- Detailed Apparatus Inventory List Print Layout (Updated for 6 Columns) --- */
-            
-            /* Force A4 Portrait for the apparatus list print */
-            body[data-print-view="apparatus_list"] @page { size: A4 portrait; }
-
-            .print-detailed-inventory .table-responsive {
-                overflow: visible !important; /* Ensure table is fully visible */
-            }
-
-            .detailed-inventory-table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                /* Remove screen-only min-width */
-                min-width: unset !important;
-            }
-
-            .detailed-inventory-table thead th,
-            .detailed-inventory-table tbody td {
-                border: 1px solid #000 !important;
-                padding: 8px 6px !important;
-                font-size: 0.9rem !important;
-                text-align: center !important;
-                vertical-align: middle !important;
-            }
-            
-            .detailed-inventory-table thead th {
-                background-color: #eee !important;
-                font-weight: 700 !important;
-            }
-            
-            /* Apparatus Name is left-aligned and bold */
-            .detailed-inventory-table tbody tr td:first-child {
-                text-align: left !important;
-                font-weight: 700;
-            }
-
-            /* Striped rows for better legibility */
-            .detailed-inventory-table tbody tr:nth-child(odd) {
-                background-color: #f9f9f9 !important;
-            }
-            .detailed-inventory-table tbody tr:nth-child(even) {
-                background-color: #ffffff !important;
-            }
-
-            /* Force column widths for a balanced view (6 columns) */
-            .detailed-inventory-table th:nth-child(1), .detailed-inventory-table td:nth-child(1) { width: 35% !important; } /* Apparatus Name */
-            .detailed-inventory-table th:nth-child(2), .detailed-inventory-table td:nth-child(2) { width: 20% !important; } /* Type */
-            .detailed-inventory-table th:nth-child(3), .detailed-inventory-table td:nth-child(3) { width: 10% !important; } /* Total Stock */
-            .detailed-inventory-table th:nth-child(4), .detailed-inventory-table td:nth-child(4) { width: 15% !important; } /* Available Stock */
-            .detailed-inventory-table th:nth-child(5), .detailed-inventory-table td:nth-child(5) { width: 10% !important; } /* Damaged Stock */
-            .detailed-inventory-table th:nth-child(6), .detailed-inventory-table td:nth-child(6) { width: 10% !important; } /* Lost Stock */
-
-
-            /* Re-add mobile table styling fixes for proper horizontal display in print */
-            .detailed-inventory-table, 
-            .print-detailed-inventory .table thead, 
-            .print-detailed-inventory .table tbody, 
-            .print-detailed-inventory .table tr { 
-                display: table !important; 
-                width: 100% !important;
-                margin-bottom: 0 !important;
-            }
-            .print-detailed-inventory .table td { 
-                display: table-cell !important;
-                padding: 6px !important; 
-                position: static !important;
-                border: 1px solid #000 !important;
-                text-align: center !important;
-            }
-            
-            /* Remove the mobile pseudo-element labels */
-            .print-detailed-inventory .table td::before { 
-                content: none !important; 
-            }
-            
-            .print-detailed-inventory .table tbody tr {
-                border: none !important; 
-                box-shadow: none !important;
-                padding: 0 !important;
-                overflow: visible !important;
-            }
-            
-            /* Conditional Section Display (Crucial for Print Fix) */
-            .print-target { display: none; }
-            body[data-print-view="summary"] .print-summary,
-            body[data-print-view="inventory"] .print-inventory,
-            body[data-print-view="detailed"] .print-detailed,
-            body[data-print-view="apparatus_list"] .print-detailed-inventory, /* NEW PRINT TYPE */
-            body[data-print-view="all"] .print-target { display: block !important; }
-            body[data-print-view="summary"] .print-summary .print-stat-table-container,
-            body[data-print-view="inventory"] .print-inventory .print-stat-table-container,
-            body[data-print-view="all"] .print-summary .print-stat-table-container,
-            body[data-print-view="all"] .print-inventory .print-stat-table-container { display: block !important; }
-
-            /* Force monochrome for colors */
-            .table * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-        }
-
-        /* --- MOBILE RESPONSIVE CSS (Stacked Layout) --- */
-
-        /* 1. New Intermediate Breakpoint for Laptops/Large Tablets */
-        @media (max-width: 1200px) {
-            /* Adjust Filter Form to stack elements two-up on large tablets/small laptops */
-            #report-filter-form .col-md-3 {
-                width: 50% !important;
-            }
-            #report-filter-form .col-md-6 {
-                width: 100% !important;
-            }
-            /* Tighten up stat card view */
-            .stat-card {
-                padding: 10px 15px;
-            }
-            .stat-icon {
-                width: 40px;
-                height: 40px;
-                font-size: 1.2rem;
-            }
-            .stat-value {
-                font-size: 1.4rem;
-            }
-            /* Adjust main table for slightly smaller landscape view */
-            .table {
-                min-width: 1000px;
-            }
-            .table thead th {
-                font-size: 0.9rem;
-            }
-        }
-
-        /* 2. Tablet Portrait and Smaller Laptop */
-        @media (max-width: 992px) {
-            /* Desktop/Tablet Toggle Position */
-            .menu-toggle {
-                display: flex;
-                left: 20px;
-            }
-            .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
-            .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
-            .main-content { margin-left: 0; padding-left: 15px; padding-right: 15px; padding-top: calc(var(--header-height) + 15px); }
-            .top-header-bar { left: 0; padding-left: 70px; padding-right: 15px; }
-            .content-area { padding: 20px 15px; }
-            .page-header { font-size: 1.8rem; }
-            
-            /* Filter form full stacking on 992px and below (tablet portrait) */
-            #report-filter-form .col-md-3,
-            #report-filter-form .col-md-6 { width: 100% !important; margin-top: 15px; }
-            #report-filter-form > div:first-child { margin-top: 0 !important; }
-            .d-flex.justify-content-between.align-items-center { flex-direction: column; align-items: stretch !important; }
-            .d-flex.justify-content-between.align-items-center > * { width: 100%; }
-            
-            /* Adjust stat cards to stack two-up */
-            .report-section .row > div {
-                width: 50% !important;
-            }
-            .report-section .row > div:nth-child(odd) {
-                padding-left: 0.375rem !important;
-            }
-            .report-section .row > div:nth-child(even) {
-                padding-right: 0.375rem !important;
-            }
-            .report-section .row { margin-left: -0.375rem !important; margin-right: -0.375rem !important; }
-            
-        }
-
-        /* 3. Mobile Screens */
-        @media (max-width: 768px) {
-            .main-content { padding: 10px; padding-top: calc(var(--header-height) + 10px); }
-            .content-area { padding: 10px; }
-
-            /* Report Hub Card Styling: Force full stack */
-            .report-section .row > div { width: 100% !important; margin-bottom: 15px; padding: 0 0.75rem !important; }
-            .report-section h3 { font-size: 1.3rem; }
-            .stat-card { border-left: 5px solid #ddd; }
-            .stat-label { font-size: 1rem; }
-            .stat-value { font-size: 1.8rem; }
-            
-            /* Detailed History Table Stacking */
-            .table-responsive { overflow-x: hidden; }
-            .table { min-width: auto; }
-            .table thead { display: none; }
-            .table tbody, .table tr, .table td { display: block; width: 100%; }
-            
-            .table tr {
-                margin-bottom: 15px;
-                border: 1px solid #ccc;
-                /* 1. REMOVE RED BAR: Change to a subtle border */
-                border-left: 1px solid #ccc;
-                border-radius: 8px;
-                background-color: var(--card-background);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                padding: 0;
-                overflow: hidden;
-            }
-            
-            /* Remove desktop grouping borders on mobile */
-            .table tbody tr.first-item-of-group td {
-                border-top: none;
-            }
-
-            .table td {
-                text-align: right !important;
-                padding-left: 50% !important;
-                position: relative;
-                border: none;
-                border-bottom: 1px solid #eee;
-                padding: 10px 10px !important;
-            }
-            .table td:last-child { border-bottom: none; }
-
-            /* --- Labels (Clean Look) --- */
-            .table td::before {
-                content: attr(data-label);
-                position: absolute;
-                left: 0;
-                width: 50%;
-                height: 100%;
-                padding: 10px;
-                white-space: nowrap;
-                text-align: left;
-                font-weight: 600;
-                color: var(--main-text);
-                font-size: 0.9rem;
-                background-color: transparent;
-                border-right: none;
-                display: flex;
-                align-items: center;
-            }
-            
-            /* --- Custom Headers (Data Hierarchy) --- */
-            
-            .table tbody tr td:nth-child(1) { /* Form ID - Top of card */
-                text-align: left !important;
-                padding: 10px !important;
-                font-weight: 700;
-                color: #6c757d;
-                background-color: #f8f8f8;
-                border-bottom: 1px solid #ddd;
-            }
-            .table tbody tr td:nth-child(1)::before {
-                content: "Form ";
-                background: none;
-                border: none;
-                color: #6c757d;
-                font-size: 0.9rem;
-                padding: 0;
-                position: static;
-                width: auto;
-                height: auto;
-            }
-            
-            .table tbody tr td:nth-child(3) {
-                font-size: 1rem;
-                font-weight: 700;
-                color: var(--main-text); /* MODIFIED: Set to dark gray/near black */
-            }
-            .table tbody tr td:nth-child(3)::before {
-                content: "Borrower Name";
-                background-color: #f8f8f8;
-                color: #000; /* MODIFIED: Changed from var(--msu-red-dark) to black (#000) */
-                font-weight: 700;
-            }
-            
-            .table tbody tr td:nth-child(5) {
-                font-weight: 700;
-                /* 2. REMOVE YELLOW HIGHLIGHT ON STATUS: (CSS block below removed in previous step) */
-            }
-            
-            .table tbody tr td:nth-child(9) {
-                font-weight: 700;
-            }
-            
-            .table tbody tr td:nth-child(9) {
-                text-align: left !important;
-                padding-left: 10px !important;
-                border-bottom: none;
-            }
-            .table tbody tr td:nth-child(9)::before {
-                content: "Items Borrowed";
-                position: static;
-                width: 100%;
-                height: auto;
-                background: #f8f8f8;
-                border-right: none;
-                border-bottom: 1px solid #eee;
-                display: block;
-                padding: 10px;
-                margin-bottom: 5px;
-            }
-            /* FIX: Item details need to stack cleanly inside the full-width block */
-            .detailed-items-cell span {
-                /* Ensure the apparatus text remains block for a clean list */
-                display: block !important;
-                padding: 5px 0;
-            }
-            
-            /* 3. REMOVE PILL/CIRCLE AROUND STATUS: Override the badge styling for mobile */
-             .table tbody tr td:nth-child(5) .badge {
-                border-radius: 0 !important; /* Make it square */
-                background-color: transparent !important; /* Remove background color */
-                color: #333 !important; /* Set text color to default black/dark gray */
-                font-weight: 600 !important; /* Adjust font weight to look more like regular text */
-                padding: 0 !important;
-                border: none !important; /* Remove border */
-            }
-
-            /* Detailed Apparatus List: Fix for Mobile View (Needs to be a stacked card, not a table) */
-            .detailed-inventory-table thead { display: none; }
-            .detailed-inventory-table tbody, .detailed-inventory-table tr, .detailed-inventory-table td { 
-                display: block; 
-                width: 100%; 
-                padding: 0;
-            }
-            .detailed-inventory-table tr {
-                margin-bottom: 15px;
-                border: 1px solid #ccc;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                padding: 0;
-                overflow: hidden;
-            }
-            .detailed-inventory-table td {
-                text-align: right !important;
-                padding-left: 50% !important;
-                position: relative;
-                border: none;
-                border-bottom: 1px solid #eee;
-                padding: 10px 10px !important;
-            }
-            .detailed-inventory-table td:last-child { border-bottom: none; }
-
-            /* Apparatus Name - Top Header */
-            .detailed-inventory-table tbody tr td:nth-child(1) {
-                text-align: left !important;
-                padding: 10px !important;
-                font-weight: 700;
-                font-size: 1.1rem;
-                color: var(--msu-red);
-                background-color: #f8f8f8;
-                border-bottom: 1px solid #ddd;
-            }
-            .detailed-inventory-table tbody tr td:nth-child(1)::before {
-                content: "Apparatus Name:";
-                background: none;
-                border: none;
-                color: #6c757d;
-                font-size: 0.9rem;
-                padding: 0;
-                position: static;
-                width: auto;
-                height: auto;
-                display: block;
-            }
-            
-            /* Mobile labels for other columns */
-            .detailed-inventory-table tbody tr td:nth-child(2)::before { content: "Type"; }
-            .detailed-inventory-table tbody tr td:nth-child(3)::before { content: "Total Stock"; }
-            .detailed-inventory-table tbody tr td:nth-child(4)::before { content: "Available Stock"; }
-            .detailed-inventory-table tbody tr td:nth-child(5)::before { content: "Damaged Stock"; } /* Updated */
-            .detailed-inventory-table tbody tr td:nth-child(6)::before { content: "Lost Stock"; } /* Added */
-
-
-        }
-        
-        @media (max-width: 576px) {
-            .top-header-bar { padding-left: 65px; }
-        }
-        
+        @media (min-width:993px){.menu-toggle{display:none}}
+        @media (max-width:1200px){#report-filter-form .col-md-3{width:50%!important}#report-filter-form .col-md-6{width:100%!important}.stat-card{padding:10px 15px}.stat-icon{width:40px;height:40px;font-size:1.2rem}.stat-value{font-size:1.4rem}.table{min-width:1000px}.table thead th{font-size:.9rem}}
+        @media (max-width:992px){.menu-toggle{display:flex;left:20px}.sidebar{left:calc(var(--sidebar-width) * -1);transition:left .3s ease;box-shadow:none;--sidebar-width:250px}.sidebar.active{left:0;box-shadow:2px 0 5px rgba(0,0,0,0.2)}.main-content{margin-left:0;padding-left:15px;padding-right:15px;padding-top:calc(var(--header-height) + 15px)}.top-header-bar{left:0;padding-left:70px;padding-right:15px}.content-area{padding:20px 15px}.page-header{font-size:1.8rem}#report-filter-form .col-md-3,#report-filter-form .col-md-6{width:100%!important;margin-top:10px}#report-filter-form>div:first-child{margin-top:0!important}.d-flex.justify-content-end.align-items-end{flex-direction:column;align-items:stretch!important}.d-flex.justify-content-end.align-items-end .btn{width:100%;margin-left:0!important;margin-right:0!important;margin-bottom:5px}.report-section .row>div{width:50%!important}.report-section .row>div:nth-child(odd){padding-right:.375rem!important}.report-section .row>div:nth-child(even){padding-left:.375rem!important}.report-section .row{margin-left:-.375rem!important;margin-right:-.375rem!important}}
+        @media (max-width:768px){.main-content{padding:10px;padding-top:calc(var(--header-height) + 10px)}.content-area{padding:10px}.report-section .row>div{width:100%!important;margin-bottom:15px;padding:0 .75rem!important}.report-section h3{font-size:1.3rem}.table-responsive{overflow-x:hidden}.table{min-width:auto}.table thead{display:none}.table tbody,.table tr,.table td{display:block;width:100%}.table tr{margin-bottom:15px;border:1px solid #ccc;border-left:1px solid #ccc;border-radius:8px;background-color:var(--card-background);box-shadow:0 2px 4px rgba(0,0,0,0.05);padding:0;overflow:hidden}.table tbody tr.first-item-of-group td{border-top:none}.table tbody tr.first-item-of-group{margin-top:15px}.table tbody tr:first-child.first-item-of-group{margin-top:0}.table td{text-align:right!important;padding-left:50%!important;position:relative;border:none;border-bottom:1px solid #eee;padding:10px 10px!important}.table td:last-child{border-bottom:none}.table:not(.detailed-inventory-table) td::before{content:attr(data-label);position:absolute;left:0;width:50%;height:100%;padding:10px;white-space:nowrap;text-align:left;font-weight:600;color:var(--main-text);font-size:.9rem;background-color:transparent;border-right:none;display:flex;align-items:center}.table tbody tr td:nth-child(1){text-align:left!important;padding:10px!important;font-weight:700;color:#6c757d;background-color:#f8f8f8;border-bottom:1px solid #ddd}.table tbody tr td:nth-child(1)::before{content:"Form ";position:static;display:inline;color:#6c757d;font-size:.9rem;padding:0;width:auto;height:auto}.table tbody tr td:nth-child(3){font-size:1rem;font-weight:700;color:var(--main-text)}.table tbody tr td:nth-child(3)::before{content:"Borrower Name";background-color:#f8f8f8;color:#000;font-weight:700}.table tbody tr td .badge{border-radius:0!important;background-color:transparent!important;color:#333!important;font-weight:600!important;padding:0!important;border:none!important}.table tbody tr td:nth-child(9){text-align:left!important;padding-left:10px!important;border-bottom:none}.table tbody tr td:nth-child(9)::before{content:"Items Borrowed";position:static;width:100%;height:auto;background:#f8f8f8;border-right:none;border-bottom:1px solid #eee;display:block;padding:10px;margin-bottom:5px}.detailed-items-cell span{display:block!important;padding:5px 0}.detailed-inventory-table{min-width:auto}.detailed-inventory-table thead{display:none}.detailed-inventory-table tbody,.detailed-inventory-table tr,.detailed-inventory-table td{display:block;width:100%;padding:0}.detailed-inventory-table tr{margin-bottom:15px;border:1px solid #ccc;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);overflow:hidden}.detailed-inventory-table tbody tr td:nth-child(1){text-align:left!important;font-size:1.1rem;color:var(--msu-red);background-color:#f8f8f8}.detailed-inventory-table tbody tr td:nth-child(1)::before{content:"Apparatus Name:";position:static;display:block;width:100%;color:#6c757d;font-size:.9rem}.detailed-inventory-table tbody tr td:nth-child(2)::before{content:"Type"}.detailed-inventory-table tbody tr td:nth-child(3)::before{content:"Total Stock"}.detailed-inventory-table tbody tr td:nth-child(4)::before{content:"Available Stock"}.detailed-inventory-table tbody tr td:nth-child(5)::before{content:"Damaged Stock"}.detailed-inventory-table tbody tr td:nth-child(6)::before{content:"Lost Stock"}}
+        @media (max-width:576px){.top-header-bar{padding-left:65px}}
     </style>
 </head>
 <body data-print-view="<?= htmlspecialchars($report_view_type) ?>">
-
-<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
-    <i class="fas fa-bars"></i>
-</button>
-
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu"><i class="fas fa-bars"></i></button>
 <div class="sidebar">
     <div class="sidebar-header">
         <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo" class="img-fluid">
-        <div class="title">
-            CSM LABORATORY <br>APPARATUS BORROWING
-        </div>
+        <div class="title">CSM LABORATORY <br>APPARATUS BORROWING</div>
     </div>
-    
     <div class="sidebar-nav nav flex-column">
-        <a class="nav-link" href="staff_dashboard.php">
-            <i class="fas fa-chart-line fa-fw me-2"></i>Dashboard
-        </a>
-        <a class="nav-link" href="staff_apparatus.php">
-            <i class="fas fa-vials fa-fw me-2"></i>Apparatus List
-        </a>
-        <a class="nav-link" href="staff_pending.php">
-            <i class="fas fa-hourglass-half fa-fw me-2"></i>Pending Approvals
-        </a>
-        <a class="nav-link" href="staff_transaction.php">
-            <i class="fas fa-list-alt fa-fw me-2"></i>All Transactions
-        </a>
-        <a class="nav-link active" href="staff_report.php">
-            <i class="fas fa-print fa-fw me-2"></i>Generate Reports
-        </a>
+        <a class="nav-link" href="staff_dashboard.php"><i class="fas fa-chart-line fa-fw me-2"></i>Dashboard</a>
+        <a class="nav-link" href="staff_apparatus.php"><i class="fas fa-vials fa-fw me-2"></i>Apparatus List</a>
+        <a class="nav-link" href="staff_pending.php"><i class="fas fa-hourglass-half fa-fw me-2"></i>Pending Approvals</a>
+        <a class="nav-link" href="staff_transaction.php"><i class="fas fa-list-alt fa-fw me-2"></i>All Transactions</a>
+        <a class="nav-link active" href="staff_report.php"><i class="fas fa-print fa-fw me-2"></i>Generate Reports</a>
     </div>
-    
     <div class="logout-link">
-        <a href="../pages/logout.php" class="nav-link">
-            <i class="fas fa-sign-out-alt fa-fw me-2"></i> Logout
-        </a>
+        <a href="../pages/logout.php" class="nav-link"><i class="fas fa-sign-out-alt fa-fw me-2"></i> Logout</a>
     </div>
 </div>
-
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
 <header class="top-header-bar">
     <ul class="navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown notification-bell-container">
-            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-                data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-bell fa-lg"></i>
                 <span class="badge rounded-pill badge-counter" id="notification-bell-badge" style="display:none;"></span>
             </a>
-            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
-                aria-labelledby="alertsDropdown" id="notification-dropdown">
-                <h6 class="dropdown-header text-center">New Requests</h6>
+            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="alertsDropdown" id="notification-dropdown">
                 
-                <div class="dynamic-notif-placeholder">
-                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
-                </div>
+                <h6 class="dropdown-header text-center">New Requests</h6>
                 
                 <a class="dropdown-item text-center small text-muted" href="staff_pending.php">View All Pending Requests</a>
             </div>
@@ -1104,7 +354,7 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
             <h1>
             <?php
                 if ($report_view_type === 'summary') echo 'Transaction Status Summary Report';
-                elseif ($report_view_type === 'inventory') echo 'Apparatus Inventory Stock Report';
+                elseif ($report_view_type === 'inventory') echo 'Apparatus Inventory Stock Report (Summary)';
                 elseif ($report_view_type === 'detailed') echo 'Detailed Transaction History Report';
                 elseif ($report_view_type === 'apparatus_list') echo 'Detailed Apparatus Inventory List';
                 else echo 'All Reports Hub View';
@@ -1121,10 +371,10 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
 
         <div class="report-section filter-form mb-4">
             <h3><i class="fas fa-filter me-2"></i> Filter Report Data</h3>
-            <form method="GET" action="staff_report.php" class="row g-3 align-items-end" id="report-filter-form">
+            <form method="GET" action="staff_report.php" class="row g-3" id="report-filter-form">
                 
                 <div class="col-md-3">
-                    <label for="report_view_type_select" class="form-label">**Select Report View Type**</label>
+                    <label for="report_view_type_select" class="form-label fw-bold">**Select Report View Type**</label>
                     <select name="report_view_type" id="report_view_type_select" class="form-select">
                         <option value="all" <?= ($report_view_type === 'all') ? 'selected' : '' ?>>View/Print: All Sections (Hub View)</option>
                         <option value="summary" <?= ($report_view_type === 'summary') ? 'selected' : '' ?>>View/Print: Transaction Summary Only</option>
@@ -1180,7 +430,7 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                         <option value="waiting_for_approval" <?= ($status_filter === 'waiting_for_approval') ? 'selected' : '' ?>>Pending Approval</option>
                         <option value="approved" <?= ($status_filter === 'approved') ? 'selected' : '' ?>>Reserved (Approved)</option>
                         <option value="borrowed" <?= ($status_filter === 'borrowed') ? 'selected' : '' ?>>Currently Borrowed</option>
-                        <option value="borrowed_reserved" <?= ($status_filter === 'borrowed_reserved') ? 'selected' : '' ?>>All Completed/Active Forms (Exclude Pending/Rejected)</option>
+                        <option value="borrowed_reserved" <?= ($status_filter === 'borrowed_reserved') ? 'selected' : '' ?>>All Active/Completed Forms</option>
                         <option value="overdue" <?= ($status_filter === 'overdue') ? 'selected' : '' ?>>** Overdue **</option>
                         <option value="returned" <?= ($status_filter === 'returned') ? 'selected' : '' ?>>Returned (On Time)</option>
                         <option value="late_returns" <?= ($status_filter === 'late_returns') ? 'selected' : '' ?>>Returned (LATE)</option>
@@ -1366,15 +616,15 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                                 <tr>
                                     <td data-label="Apparatus Name" class="text-start"><strong><?= htmlspecialchars($app['name']) ?></strong></td>
                                     <td data-label="Type"><?= htmlspecialchars(ucfirst($app['apparatus_type'] ?? 'N/A')) ?></td>
-                                    <td data-label="Total Stock"><?= $app['total_stock'] ?></td>
+                                    <td data-label="Total Stock"><?= (int)($app['total_stock'] ?? 0) ?></td>
                                     <td data-label="Available Stock">
-                                        <?= $app['available_stock'] ?>
+                                        <?= (int)($app['available_stock'] ?? 0) ?>
                                     </td>
                                     <td data-label="Damaged Stock">
-                                        <?= (int)$app['damaged_stock'] ?>
+                                        <?= (int)($app['damaged_stock'] ?? 0) ?>
                                     </td>
                                     <td data-label="Lost Stock">
-                                        <?= (int)$app['lost_stock'] ?>
+                                        <?= (int)($app['lost_stock'] ?? 0) ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1409,15 +659,15 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                                 <tr class="<?= $row['is_first_item'] ? 'first-item-of-group' : '' ?>">
                                     <td data-label="Form ID:"><?= $row['form_id'] ?></td>
                                     <td data-label="Student ID:"><?= $row['student_id'] ?></td>
-                                    <td data-label="Borrower Name:">
-                                        <strong style="color: black !important;"><?= $row['borrower_name'] ?></strong>
+                                    <td data-label="Borrower Name:" class="text-start">
+                                        <strong style="color: var(--main-text);"><?= $row['borrower_name'] ?></strong>
                                     </td>
                                     <td data-label="Type:"><?= $row['form_type'] ?></td>
                                     <td data-label="Status:"><?= $row['status_badge'] ?></td>
                                     <td data-label="Borrow Date:"><?= $row['borrow_date'] ?></td>
                                     <td data-label="Expected Return:"><?= $row['expected_return'] ?></td>
                                     <td data-label="Actual Return:"><?= $row['actual_return'] ?></td>
-                                    <td data-label="Items Borrowed:" class="detailed-items-cell text-start">
+                                    <td data-label="Items Borrowed:" class="detailed-items-cell">
                                         <span><?= $row['apparatus'] ?></span>
                                     </td>
                                 </tr>
@@ -1432,13 +682,14 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
         
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    
     // --- JAVASCRIPT FOR STAFF NOTIFICATION LOGIC ---
-    // Function to handle clicking a notification link
+    
+    // 1. Function to handle clicking a notification link
     window.handleNotificationClick = function(event, element, notificationId) {
-        event.preventDefault();
+        event.preventDefault(); 
         const linkHref = element.getAttribute('href');
 
         $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
@@ -1446,7 +697,7 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                 window.location.href = linkHref;
             } else {
                 console.error("Failed to mark notification as read.");
-                window.location.href = linkHref;
+                window.location.href = linkHref; 
             }
         }).fail(function() {
             console.error("API call failed.");
@@ -1454,11 +705,12 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
         });
     };
 
-    // Function to mark ALL staff notifications as read
+    // 2. Function to mark ALL staff notifications as read
     window.markAllStaffAsRead = function() {
         $.post('../api/mark_notification_as_read.php', { mark_all: true, role: 'staff' }, function(response) {
             if (response.success) {
-                window.location.reload();
+                // Instead of full reload, just re-fetch to update the UI cleanly
+                fetchStaffNotifications(); 
             } else {
                 alert("Failed to clear all notifications.");
                 console.error("Failed to mark all staff notifications as read.");
@@ -1468,71 +720,81 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
         });
     };
     
-    // Function to fetch the count and populate the dropdown
+    // 3. Function to fetch the count and populate the dropdown
     function fetchStaffNotifications() {
-        const apiPath = '../api/get_notifications.php';
+        const apiPath = '../api/get_notifications.php'; 
 
-        $.getJSON(apiPath, function(response) {
+        $.getJSON(apiPath, function(response) { 
             
-            const unreadCount = response.count;
-            const notifications = response.alerts || [];
+            const unreadCount = response.count; 
+            const notifications = response.alerts || []; 
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
-            
-            const $viewAllLink = $dropdown.find('a[href="staff_pending.php"]').detach();
             const $header = $dropdown.find('.dropdown-header');
             
-            $dropdown.find('.dynamic-notif-placeholder').find('.dynamic-notif-item').remove();
-            $dropdown.find('.mark-all-btn-wrapper').remove();
+            // Find and detach the static View All link
+            const $viewAllLink = $dropdown.find('a[href="staff_pending.php"]').detach();
             
+            // Clear previous dynamic content
+            // We clear everything between the header and the View All link
+            $dropdown.children().not($header).not($viewAllLink).remove();
+            
+            // Update badge display
             $badge.text(unreadCount);
-            $badge.toggle(unreadCount > 0);
+            $badge.toggle(unreadCount > 0); 
             
+            
+            let contentToInsert = [];
             
             if (notifications.length > 0) {
                 
-                // Clear the placeholder
-                $dropdown.find('.dynamic-notif-placeholder').empty();
-                
+                // A. Mark All button (Must be inserted first)
                 if (unreadCount > 0) {
-                     $dropdown.find('.dynamic-notif-placeholder').append(`
-                                     <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
-                                         <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                                     </a>
-                                 `);
+                     contentToInsert.push(`
+                            <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
+                                <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                            </a>
+                        `);
                 }
-
+                
+                // B. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
-                    let iconClass = 'fas fa-info-circle text-info';
+                    let iconClass = 'fas fa-info-circle text-info'; 
                     if (notif.type.includes('form_pending')) {
-                         iconClass = 'fas fa-hourglass-half text-warning';
+                            iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                         iconClass = 'fas fa-redo text-primary';
+                            iconClass = 'fas fa-redo text-primary';
                     }
                     
                     const itemClass = notif.is_read == 0 ? 'fw-bold' : 'text-muted';
 
-                    $dropdown.find('.dynamic-notif-placeholder').append(`
-                        <a class="dropdown-item d-flex align-items-center dynamic-notif-item"
+                    contentToInsert.push(`
+                        <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
                             href="${notif.link}"
                             data-id="${notif.id}"
                             onclick="handleNotificationClick(event, this, ${notif.id})">
                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
                             <div>
                                 <div class="small text-gray-500">${notif.created_at.split(' ')[0]}</div>
-                                <span class="${itemClass} d-block">${notif.message}</span>
+                                <span class="${itemClass}">${notif.message}</span>
                             </div>
                         </a>
                     `);
                 });
+                
             } else {
-                $dropdown.find('.dynamic-notif-placeholder').html(`
+                // Display a "No Alerts" message
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No New Notifications</a>
                 `);
             }
             
+            // 4. Insert all dynamic content (Mark All + notifications) after the header
+            $header.after(contentToInsert.join(''));
+            
+            // 5. Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
             
 
@@ -1544,149 +806,116 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
     // --- END JAVASCRIPT FOR STAFF NOTIFICATION LOGIC ---
 
 
-    // --- Print Fix Logic ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Sidebar Activation ---
+        const path = window.location.pathname.split('/').pop() || 'staff_dashboard.php';
+        const links = document.querySelectorAll('.sidebar .nav-link');
+        
+        links.forEach(link => {
+            const linkPath = link.getAttribute('href').split('/').pop();
+            
+            if (linkPath === path) {
+                link.classList.add('active');
+            } else {
+                 link.classList.remove('active');
+            }
+        });
+        
+        // --- Mobile Toggle Logic (Simplified for brevity) ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content'); 
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                if (window.innerWidth <= 992) {
+                    const isActive = sidebar.classList.contains('active');
+                    if (isActive) {
+                        mainContent.style.pointerEvents = 'none';
+                        mainContent.style.opacity = '0.5';
+                    } else {
+                        mainContent.style.pointerEvents = 'auto';
+                        mainContent.style.opacity = '1';
+                    }
+                }
+            });
+            
+            mainContent.addEventListener('click', () => {
+                if (sidebar.classList.contains('active') && window.innerWidth <= 992) {
+                    sidebar.classList.remove('active');
+                    mainContent.style.pointerEvents = 'auto';
+                    mainContent.style.opacity = '1';
+                }
+            });
+            
+            sidebar.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+        
+        // --- Filter Submission Logic ---
+        const statusFilter = document.getElementById('statusFilter');
+        const form = document.getElementById('transactionFilterForm');
+
+        if (statusFilter && form) {
+            statusFilter.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+        
+        // --- Report View Handler ---
+        document.getElementById('report_view_type_select').addEventListener('change', updateHubView);
+        document.getElementById('main-print-button').addEventListener('click', handlePrint);
+        
+        // --- Notification Initialization ---
+        fetchStaffNotifications();
+        setInterval(fetchStaffNotifications, 30000); 
+    });
+
+    // --- REPORT UTILITY FUNCTIONS ---
     function handlePrint() {
         const viewType = document.getElementById('report_view_type_select').value;
-        
-        // 1. Set the print mode immediately (before window.print)
         document.body.setAttribute('data-print-view', viewType);
-        
-        // 2. Trigger the print dialogue
         window.print();
-
-        // 3. Use setTimeout to defer the cleanup.
         setTimeout(() => {
             document.body.removeAttribute('data-print-view');
         }, 100);
     }
     
-    // --- Update Hub View Logic (For Screen Display) ---
     function updateHubView() {
         const viewType = document.getElementById('report_view_type_select').value;
         const sections = ['summary', 'inventory', 'apparatus-list', 'detailed-table'];
+        const printButton = document.getElementById('main-print-button');
         
         // Hide all sections first
         sections.forEach(id => {
-            const section = document.getElementById(`report-${id}`);
-            if (section) section.style.display = 'none';
+            const el = document.getElementById(`report-${id}`);
+            if (el) el.style.display = 'none';
         });
 
-        // Show relevant sections based on select box value
+        // Show the selected section(s) and update the print button text
         if (viewType === 'all') {
             sections.forEach(id => {
-                const section = document.getElementById(`report-${id}`);
-                if (section) section.style.display = 'block';
+                const el = document.getElementById(`report-${id}`);
+                if (el) el.style.display = 'block';
             });
-            // Show print button
-            document.getElementById('main-print-button').style.display = 'block';
-            document.getElementById('main-print-button').textContent = 'Print All Sections (Hub View)';
-        } else if (viewType === 'summary') {
-            document.getElementById('report-summary').style.display = 'block';
-            document.getElementById('main-print-button').style.display = 'block';
-            document.getElementById('main-print-button').textContent = 'Print Transaction Summary';
-        } else if (viewType === 'inventory') {
-            document.getElementById('report-inventory').style.display = 'block';
-            document.getElementById('main-print-button').style.display = 'block';
-            document.getElementById('main-print-button').textContent = 'Print Inventory Stock Status';
-        } else if (viewType === 'apparatus_list') {
-            document.getElementById('report-apparatus-list').style.display = 'block';
-            document.getElementById('main-print-button').style.display = 'block';
-            document.getElementById('main-print-button').textContent = 'Print Detailed Apparatus List';
-        } else if (viewType === 'detailed') {
-            document.getElementById('report-detailed-table').style.display = 'block';
-            document.getElementById('main-print-button').style.display = 'block';
-            document.getElementById('main-print-button').textContent = 'Print Filtered Detailed History';
+            printButton.textContent = 'Print All Sections (Hub View)';
+        } else if (viewType === 'summary' || viewType === 'inventory' || viewType === 'detailed' || viewType === 'apparatus_list') {
+            const targetId = viewType === 'detailed' ? 'detailed-table' : (viewType === 'apparatus_list' ? 'apparatus-list' : viewType);
+            const el = document.getElementById(`report-${targetId}`);
+            if (el) el.style.display = 'block';
+
+            // Update button text
+            let text = 'Print Report';
+            if (viewType === 'summary') text = 'Print Transaction Summary';
+            else if (viewType === 'inventory') text = 'Print Inventory Stock Status';
+            else if (viewType === 'apparatus_list') text = 'Print Detailed Apparatus List';
+            else if (viewType === 'detailed') text = 'Print Filtered Detailed History';
+            
+            printButton.textContent = text;
         }
     }
-
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Sidebar Activation ---
-        const reportsLink = document.querySelector('a[href="staff_report.php"]');
-        if (reportsLink) {
-            document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
-            reportsLink.classList.add('active');
-        }
-        
-        // --- Mobile Toggle Logic ---
-        const menuToggle = document.querySelector('.menu-toggle');
-        const sidebar = document.querySelector('.sidebar');
-        const sidebarBackdrop = document.querySelector('.sidebar-backdrop');
-        
-        // Function to set the initial state (open on desktop, closed on mobile)
-        function setInitialState() {
-            if (window.innerWidth > 992) {
-                // Ensure it starts open on desktop
-                sidebar.classList.remove('closed');
-                sidebar.classList.remove('active');
-                if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-            } else {
-                // Ensure it starts hidden on mobile
-                sidebar.classList.remove('closed');
-                sidebar.classList.remove('active');
-                if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-            }
-        }
-        
-        // Function to toggle the state of the sidebar and layout
-        function toggleSidebar() {
-            if (window.innerWidth <= 992) {
-                // Mobile behavior: Toggle 'active' class for overlay/menu
-                sidebar.classList.toggle('active');
-                if (sidebarBackdrop) {
-                    sidebarBackdrop.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
-                }
-            } else {
-                // Desktop behavior: Toggle 'closed' class to collapse it
-                sidebar.classList.toggle('closed');
-            }
-        }
-
-        if (menuToggle && sidebar) {
-            menuToggle.addEventListener('click', toggleSidebar);
-            
-            // Backdrop click handler (only for mobile overlay)
-            if (sidebarBackdrop) {
-                sidebarBackdrop.addEventListener('click', () => {
-                    sidebar.classList.remove('active');
-                    sidebarBackdrop.style.display = 'none';
-                });
-            }
-            
-            // Hide mobile overlay when navigating
-            const navLinks = sidebar.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                    link.addEventListener('click', () => {
-                       if (window.innerWidth <= 992) {
-                           sidebar.classList.remove('active');
-                           sidebarBackdrop.style.display = 'none';
-                       }
-                    });
-            });
-            
-            // Handle window resize (switching between mobile/desktop layouts)
-            window.addEventListener('resize', setInitialState);
-
-            // Set initial state on load
-            setInitialState();
-        }
-
-        // --- Event Listeners and Initial Load ---
-        
-        // Attach event listener for dynamic changes in the Hub View
-        const select = document.getElementById('report_view_type_select');
-        if (select) select.addEventListener('change', updateHubView);
-        
-        // Attach print handler to button
-        document.getElementById('main-print-button').addEventListener('click', handlePrint);
-        
-        // Set initial view state based on PHP variable
-        updateHubView();
-        
-        // --- Notification Initialization ---
-        fetchStaffNotifications();
-        setInterval(fetchStaffNotifications, 30000);
-    });
 </script>
 </body>
 </html>

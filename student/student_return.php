@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["return"])) {
         if ($transaction->markAsChecking($form_id, $student_id, $remarks)) {
             
             // Final message shown to student - adjusted to confirm email was sent (by Transaction.php)
-            $message = "Your return request (ID: **$form_id**) has been submitted and is pending staff verification. A confirmation email has been sent.";
+            $message = "Your return request (ID: $form_id) has been submitted and is pending staff verification. A confirmation email has been sent.";
             $is_success = true;
 
         } else {
@@ -46,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["return"])) {
             $form_status_check = $transaction->getBorrowFormById($form_id);
             $current_status = $form_status_check['status'] ?? 'Unknown/Missing';
             
-            $message = "Failed to submit return request for ID $form_id. Current database status is **{$current_status}**. The item may be fully returned, rejected, or already pending check.";
+            $message = "Failed to submit return request for ID $form_id. Current database status is {$current_status}. The item may be fully returned, rejected, or already pending check.";
             $is_success = false;
             // --- END FIX ---
         }
@@ -604,13 +604,13 @@ $today = date("Y-m-d");
                     ) {
                         // Reserved/Approved but date not yet reached
                         $action_content = '<span class="action-message-checking bg-info text-white">
-                                            <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
+                                            <i class="fas fa-lock me-1"></i> Return available on ' . htmlspecialchars($form["expected_return_date"]) . '
                                           </span>';
                     } else {
                         // Ready for return submission (Borrowed, Overdue, or Reserved/Approved and due date reached/passed)
                         $overdue_warning = '';
                         if ($is_overdue) {
-                            $overdue_warning = '<p class="text-danger fw-bold small mb-2"><i class="fas fa-exclamation-circle me-1"></i> **LATE RETURN:** This loan was marked overdue by staff. Submit now to finalize the return.</p>';
+                            $overdue_warning = '<p class="text-danger fw-bold small mb-2"><i class="fas fa-exclamation-circle me-1"></i> LATE RETURN: This loan was marked overdue by staff. Submit now to finalize the return.</p>';
                         }
                         
                         $action_content = '

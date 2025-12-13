@@ -29,9 +29,14 @@ $errors = [];
 $message = "";
 
 // Initialize values
-$name = $type = $size = $material = $description = $total_stock = $damaged_stock = $lost_stock = ""; 
+$name = $type = $size = $material = $description = $total_stock = $damaged_stock = $lost_stock = "";  
 $edit_id = $_GET['edit_id'] ?? null; // ID of the apparatus being edited
 $current_image = 'default.jpg'; // Initialize current image
+
+// --- NEW LOGIC: Determine if the ADD form should be visible (by default, it is hidden)
+// Show the ADD form if there were errors on a POST attempt, or if the user explicitly clicked the 'show add' button
+$show_add_form = isset($_POST['add_apparatus']) && !empty($errors) || isset($_GET['show_add']);
+
 
 // Handle Form Submissions (Add, Edit, Quick Update, Delete, RESTORE UNIT) ---
 
@@ -47,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_apparatus'])) {
     $lost_stock = (int)$_POST['lost_stock']; // CAPTURE LOST STOCK
     
     // Initial available stock calculation check
-    $initial_available = $total_stock - $damaged_stock - $lost_stock; 
+    $initial_available = $total_stock - $damaged_stock - $lost_stock;  
     
     // Validation
     if (empty($name)) $errors['name'] = "Apparatus name is required.";
@@ -60,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_apparatus'])) {
     if ($initial_available < 0) $errors['stock_math'] = "Damaged/Lost stock cannot exceed Total Stock.";
     
     // Enforce image upload
-    $image_name = "default.jpg"; 
+    $image_name = "default.jpg";  
     if (!isset($_FILES['apparatus_image']) || $_FILES['apparatus_image']['error'] === UPLOAD_ERR_NO_FILE) {
         $errors['image'] = "An apparatus image is required.";
     }
@@ -88,7 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_apparatus'])) {
         if ($result === true) {
             $message = "✅ Apparatus '{$name}' added successfully!";
             // Clear inputs
-            $name = $type = $size = $material = $description = $total_stock = $damaged_stock = $lost_stock = ""; 
+            $name = $type = $size = $material = $description = $total_stock = $damaged_stock = $lost_stock = "";  
+            $show_add_form = false; // Hide form on success
         } elseif ($result === false) {
             $message = "❌ Failed to add apparatus: An item with the exact Name, Type, Size, and Material already exists.";
             if ($image_name !== "default.jpg") { deleteApparatusImage($image_name); }
@@ -106,15 +112,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_details'])) {
     $type = trim($_POST['type']);
     $size = trim($_POST['size']);
     $material = trim($_POST['material']);
-    $description = trim($_POST['description']); 
-    $total_stock = (int)$_POST['total_stock']; 
+    $description = trim($_POST['description']);  
+    $total_stock = (int)$_POST['total_stock'];  
     $damaged_stock = (int)$_POST['damaged_stock']; // NEW
     $lost_stock = (int)$_POST['lost_stock']; // NEW
     
-    $old_image = $_POST['old_image']; 
+    $old_image = $_POST['old_image'];  
     $new_image_name = $old_image;
 
-    // Fetch current available stock 
+    // Fetch current available stock  
     $current_app = $transaction->getApparatusById($id);
     $current_items_out = $current_app['currently_out']; // items currently borrowed/reserved
     
@@ -124,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_details'])) {
     if (empty($size)) $errors['size'] = "Size is required.";
     if (empty($material)) $errors['material'] = "Material is required.";
     if (empty($description)) $errors['description'] = "Description is required.";
-    if ($total_stock <= 0) $errors['total_stock'] = "Total stock quantity must be a positive number."; 
+    if ($total_stock <= 0) $errors['total_stock'] = "Total stock quantity must be a positive number.";  
     if ($damaged_stock < 0 || $lost_stock < 0) $errors['stock_neg'] = "Damaged/Lost stock cannot be negative.";
     
     // Stock constraint check: Total stock minus Damaged/Lost stock must be >= items currently borrowed/reserved
@@ -145,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_details'])) {
             // Delete the old image only if the new one was successfully saved AND the old one isn't the default
             deleteApparatusImage($old_image);
         } else {
-            $new_image_name = $old_image; 
+            $new_image_name = $old_image;  
             $errors['image_update'] = "Failed to upload new image. Retaining old image.";
         }
     }
@@ -168,16 +174,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_details'])) {
         $message = "❌ Update failed due to validation errors.";
     }
     // If update fails, ensure $edit_id is set to display the form again
-    $edit_id = $id; 
+    // If we're in error mode, the edit form MUST remain visible
+    $edit_id = $id;  
 }
 
 
 // 3. Handle status/condition quick update (Now only updates stock levels)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quick_update_stock'])) {
     $id = $_POST['apparatus_id'];
-    $total_stock = (int)$_POST['total_stock']; 
-    $damaged_stock = (int)$_POST['damaged_stock']; 
-    $lost_stock = (int)$_POST['lost_stock']; 
+    $total_stock = (int)$_POST['total_stock'];  
+    $damaged_stock = (int)$_POST['damaged_stock'];  
+    $lost_stock = (int)$_POST['lost_stock'];  
 
     // --- NEW: Fetch all existing metadata needed for the update function ---
     $current_app = $transaction->getApparatusById($id);
@@ -197,14 +204,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quick_update_stock'])
         // === FIXED CALL: Use the existing comprehensive method ===
         $transaction->updateApparatusDetailsAndStock(
             $id,
-            $current_app['name'], 
-            $current_app['apparatus_type'], 
-            $current_app['size'], 
-            $current_app['material'], 
+            $current_app['name'],  
+            $current_app['apparatus_type'],  
+            $current_app['size'],  
+            $current_app['material'],  
             $current_app['description'],
-            $total_stock, 
-            $damaged_stock, 
-            $lost_stock, 
+            $total_stock,  
+            $damaged_stock,  
+            $lost_stock,  
             $current_app['image']
         )
     ) {
@@ -224,14 +231,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['quick_update_stock'])
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_apparatus'])) {
     // The modal form passes the data directly here
     $id = $_POST['apparatus_id'];
-    $image_to_delete = $_POST['apparatus_image']; 
+    $image_to_delete = $_POST['apparatus_image'];  
     
     // Fetch the name for the feedback message before attempting deletion
     $app_to_delete = $transaction->getApparatusById($id);
     $app_name = htmlspecialchars($app_to_delete['name'] ?? 'Apparatus');
 
     // deleteApparatus now checks apparatus_unit status via isApparatusDeletable
-    $result = $transaction->deleteApparatus($id); 
+    $result = $transaction->deleteApparatus($id);  
     
     if ($result === true) {
         deleteApparatusImage($image_to_delete);
@@ -239,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_apparatus'])) 
         $message = "✅ Apparatus #$id ('{$app_name}') deleted successfully. The next new apparatus will be assigned the next available sequential ID.";
     } elseif ($result === 'in_use') {
         // Message updated to reflect BCNF meaning: active units exist
-        $message = "❌ Failed to delete apparatus #$id ('{$app_name}'): Units are currently checked out (borrowed/reserved). Resolve active loans first."; 
+        $message = "❌ Failed to delete apparatus #$id ('{$app_name}'): Units are currently checked out (borrowed/reserved). Resolve active loans first.";  
     } else {
         $message = "❌ Failed to delete apparatus #$id ('{$app_name}') from the database.";
     }
@@ -262,7 +269,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['unit_to_restore'])) {
     if ($result === true) {
         // MODIFIED MESSAGE to reflect restored status and availability
         $message = "✅ Unit ID {$unit_id} successfully restored to good condition and made available.";
-    } elseif ($result === 'not_restorable') { 
+    } elseif ($result === 'not_restorable') {  
         // Changed message to reflect generalized check (not_damaged/not_lost)
         $message = "❌ Error: Unit ID {$unit_id} was not marked as damaged or lost, or does not exist.";
     } else {
@@ -283,7 +290,7 @@ $success_message = $_GET['message'] ?? $message; // Use URL message if set
 
 if ($edit_id) {
     // Fetch the specific apparatus data for editing
-    $current_apparatus = $transaction->getApparatusById($edit_id); 
+    $current_apparatus = $transaction->getApparatusById($edit_id);  
     if ($current_apparatus) {
         // Only override if the form wasn't just submitted with errors (which keeps POST data)
         if (!isset($_POST['update_details'])) {
@@ -291,8 +298,8 @@ if ($edit_id) {
             $type = $current_apparatus['apparatus_type'];
             $size = $current_apparatus['size'];
             $material = $current_apparatus['material'];
-            $description = $current_apparatus['description'] ?? ''; 
-            $total_stock = $current_apparatus['total_stock']; 
+            $description = $current_apparatus['description'] ?? '';  
+            $total_stock = $current_apparatus['total_stock'];  
             $damaged_stock = $current_apparatus['damaged_stock']; // NEW
             $lost_stock = $current_apparatus['lost_stock']; // NEW
         }
@@ -313,12 +320,12 @@ if ($edit_id) {
     $original_damaged_stock = 0;
     $original_lost_stock = 0;
     $currently_out = 0;
-} 
+}  
 
 
-// --- Search and Filter Logic--- 
+// --- Search and Filter Logic---  
 $filter_status = $_GET['status'] ?? 'all';
-$search_query = $_GET['search'] ?? ''; 
+$search_query = $_GET['search'] ?? '';  
 
 // We use the updated getAllApparatus() to get the full list
 $apparatusList = $transaction->getAllApparatus();
@@ -387,13 +394,13 @@ if (!empty($search_query)) {
     /* --- BURGER BUTTON FIX: Always visible on desktop for sidebar collapse, CENTERED ICON --- */
     .menu-toggle {
         /* FIX FOR REQUEST: Hide the button completely on DESKTOP */
-        display: none; 
+        display: none;  
         
         /* Original styles (retained for mobile only via media query) */
         position: fixed;
         top: 15px;
-        left: calc(var(--sidebar-width) + 20px); 
-        z-index: 1060; 
+        left: calc(var(--sidebar-width) + 20px);  
+        z-index: 1060;  
         background: var(--msu-red);
         color: white;
         border: none;
@@ -401,13 +408,13 @@ if (!empty($search_query)) {
         border-radius: 6px;
         font-size: 1.2rem;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        transition: left 0.3s ease; 
+        transition: left 0.3s ease;  
         display: flex;
         justify-content: center;
         align-items: center;
-        width: 44px; 
-        height: 44px; 
-        padding: 0; 
+        width: 44px;  
+        height: 44px;  
+        padding: 0;  
     }
     
     /* NEW CLASS: When sidebar is closed (Desktop collapse mode) - RETAIN FOR TRANSITION LOGIC*/
@@ -420,16 +427,17 @@ if (!empty($search_query)) {
     /* FIX: When sidebar is permanently open on desktop, main content and header must shift */
     .top-header-bar {
         left: var(--sidebar-width); /* Default desktop position */
+        background-color: #fcfcfc; /* Lighter header background for contrast */
     }
     .main-content {
         margin-left: var(--sidebar-width); /* Default desktop position */
     }
     /* The .closed classes below are now essentially unused on desktop since it's permanently open */
     .sidebar.closed ~ .top-header-bar {
-        left: 0; 
+        left: 0;  
     }
     .sidebar.closed ~ .main-content {
-        margin-left: 0; 
+        margin-left: 0;  
         width: 100%;
     }
     /* --- END BURGER BUTTON FIX --- */
@@ -462,7 +470,7 @@ if (!empty($search_query)) {
         left: var(--sidebar-width); /* Start from the right edge of the fixed sidebar */
         right: 0;
         height: var(--header-height);
-        background-color: #fff;
+        background-color: #fcfcfc; /* Lighter background */
         border-bottom: 1px solid #ddd;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         display: flex;
@@ -508,7 +516,7 @@ if (!empty($search_query)) {
     }
     .mark-all-link {
         cursor: pointer;
-        color: var(--msu-red);
+        color: var(--main-text); /* Use main text color for readability */
         font-weight: 600;
         padding: 8px 15px;
         display: block;
@@ -570,6 +578,9 @@ if (!empty($search_query)) {
     }
     .sidebar-nav .nav-link.active {
         background-color: var(--msu-red-dark);
+        /* REMOVED: Gold accent border for consistency */
+        /* border-left: 5px solid #ffc107;  
+        padding-left: 20px; */
     }
     
     /* --- FINAL LOGOUT FIX --- */
@@ -623,24 +634,27 @@ if (!empty($search_query)) {
         font-size: 2rem;
     }
     h3 {
-        color: #333;
-        font-weight: 600;
+        color: var(--msu-red); /* Changed to MSU red for form headings */
+        font-weight: 700; /* Made bolder */
         font-size: 1.4rem;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--msu-red); /* Match theme red */
         padding-bottom: 10px;
+        margin-bottom: 20px;
     }
 
+    /* Form Styling - Card separation */
     .add-form {
         padding: 30px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: none; /* Removed original border */
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Stronger shadow for card effect */
         margin-bottom: 30px;
+        background-color: #ffffff;
     }
     .add-form label {
         font-weight: 600;
         margin-top: 10px;
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
     
     /* Form Inputs */
@@ -649,12 +663,13 @@ if (!empty($search_query)) {
     }
     .edit-image-preview {
         max-width: 150px;
-        height: auto;
+        max-height: 150px; /* Constrain height too */
         display: block;
         margin-top: 10px;
-        border: 1px solid #ccc;
+        border: 2px solid #ddd;
         border-radius: 5px;
         object-fit: contain;
+        padding: 5px;
     }
 
 
@@ -667,8 +682,8 @@ if (!empty($search_query)) {
     
     /* Ensure the table doesn't collapse but has a defined width for scrolling */
     .table {
-        /* Adjusted minimum width to account for removed columns */
-        min-width: 1100px; 
+        /* Adjusted minimum width to account for removed columns. Removed 'Unit Cond.' column */
+        min-width: 1100px;  
     }
 
     .table thead th {
@@ -687,6 +702,11 @@ if (!empty($search_query)) {
         padding: 8px 4px;
         text-align: center;
     }
+    /* Left align Name and Description in table */
+    .table tbody tr td:nth-child(3),  
+    .table tbody tr td:nth-child(11) { /* Changed from 12 to 11 */
+        text-align: left !important;
+    }
     
     /* UI FIX: Constrain image size in table */
     .table img {
@@ -699,19 +719,21 @@ if (!empty($search_query)) {
     }
     
     .status-tag {
-        display: inline-block;
-        padding: 5px 12px;
+        display: inline-flex;
+        padding: 5px 8px; /* Tighter padding */
         border-radius: 16px;
         font-weight: 700;
         text-transform: capitalize;
         font-size: 0.85rem;
         line-height: 1.2;
         white-space: nowrap;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        justify-content: center;
+        align-items: center;
+        min-width: 80px;
     }
-    /* Status Tag Colors (Used for Condition and Type Status) */
-    .status-tag.good { background-color: #28a745; color: white; } /* Item Condition */
-    .status-tag.damaged { background-color: #ffc107; color: #333; } /* Item Condition */
-    .status-tag.lost { background-color: #dc3545; color: white; } /* Item Condition */
+    /* Status Tag Colors (Used for Type Status) */
+    /* Removed .status-tag.good, .damaged, .lost from here as 'Unit Cond.' column is removed */
 
     .status-tag.available { background-color: #28a745; color: white; } /* Type Status */
     .status-tag.borrowed { background-color: #0d6efd; color: white; } /* Type Status */
@@ -721,8 +743,8 @@ if (!empty($search_query)) {
 
     .action-buttons-group {
         display: flex;
-        gap: 5px;
-        justify-content: center;
+        gap: 10px; /* Increased gap */
+        justify-content: space-evenly; /* Spread out buttons slightly */
         align-items: center;
         flex-wrap: nowrap;
     }
@@ -732,10 +754,6 @@ if (!empty($search_query)) {
         font-size: 0.9rem;
         white-space: nowrap;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .btn-stock-action {
-        padding: 7px 9px;
     }
 
     .btn-icon-only {
@@ -748,18 +766,30 @@ if (!empty($search_query)) {
         border-radius: 6px;
     }
     
+    /* Default button styling (Theming Consistency - MSU Red) */
+    .btn-primary {  
+        background-color: var(--msu-red) !important;  
+        border-color: var(--msu-red) !important;  
+        color: white !important;  
+        transition: background-color 0.2s;
+    }
+    .btn-primary:hover {  
+        background-color: var(--msu-red-dark) !important;  
+        border-color: var(--msu-red-dark) !important;  
+    }
+    /* Edit button should stay warning color for consistency */
+    .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #212529 !important; }
+
+    .btn-info { background-color: #17a2b8; border-color: #17a2b8; color: white !important; }
+    .btn-danger { background-color: #dc3545; border-color: #dc3545; }
+    
     /* Description cell needs space but must wrap */
-    .table tbody td:nth-child(11) { /* Adjusted index after removing Stock/Unit Actions */
-        max-width: 180px;
+    /* Index 11 is the Description column now (was 12) */
+    .table tbody td:nth-child(11) {  
+        max-width: 200px;
         white-space: normal;
         word-wrap: break-word;
     }
-    
-    /* Default button styling (unchanged) */
-    .btn-primary { background-color: #007bff; border-color: #007bff; }
-    .btn-info { background-color: #17a2b8; border-color: #17a2b8; color: white !important; }
-    .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #212529 !important; }
-    .btn-danger { background-color: #dc3545; border-color: #dc3545; }
     
     /* Modal Custom Style for Warning (Unchanged) */
     #unitManageModal .modal-header { background-color: var(--msu-blue); color: white; }
@@ -792,20 +822,9 @@ if (!empty($search_query)) {
         .table {
             min-width: 900px; /* Adjusted min width */
         }
-        /* Make Stock buttons wrap and take full width */
-        .unit-actions-cell {
-            min-width: 150px;
-        }
-        .unit-actions-cell .action-buttons-group {
-             flex-wrap: wrap;
-        }
-        .unit-actions-cell .action-buttons-group .btn {
-            flex: 1 1 100%;
-            margin-bottom: 5px;
-        }
         /* Keep edit/delete side-by-side or expand */
         .action-buttons-group:last-child {
-            flex-wrap: nowrap;
+             flex-wrap: nowrap;
         }
         .action-buttons-group:last-child .btn-icon-only {
              flex-grow: 1;
@@ -994,14 +1013,15 @@ if (!empty($search_query)) {
             padding: 10px; /* Add padding back to label */
         }
         /* Ensure standard cells have a light background for data alignment */
+        /* Columns adjusted after removal of Unit Cond. */
         .table tbody td:nth-child(4),
         .table tbody td:nth-child(5),
         .table tbody td:nth-child(6),
         .table tbody td:nth-child(7),
         .table tbody td:nth-child(8),
-        .table tbody td:nth-child(11),
-        .table tbody td:nth-child(13),
-        .table tbody td:nth-child(14) {
+        .table tbody td:nth-child(9),
+        .table tbody td:nth-child(10),
+        .table tbody td:nth-child(12) {
             display: block;
             width: 100%;
             border-bottom: 1px solid #eee;
@@ -1011,7 +1031,7 @@ if (!empty($search_query)) {
 
         /* --- 3. Highlight Critical Stock (FIXED) --- */
         
-        /* Apply background to the ENTIRE Damaged TD (for the visual block) */
+        /* Apply background to the ENTIRE Damaged TD (index 9 now) */
         .table tbody td:nth-child(9) {
             background-color: #fff3cd !important; /* Warning light background */
         }
@@ -1021,7 +1041,7 @@ if (!empty($search_query)) {
             color: #856404; /* Dark text color for readability */
         }
         
-        /* Apply background to the ENTIRE Lost TD (for the visual block) */
+        /* Apply background to the ENTIRE Lost TD (index 10 now) */
         .table tbody td:nth-child(10) {
             background-color: #f8d7da !important; /* Danger light background */
         }
@@ -1037,9 +1057,8 @@ if (!empty($search_query)) {
         .table tbody td:nth-child(6),
         .table tbody td:nth-child(7),
         .table tbody td:nth-child(8),
-        .table tbody td:nth-child(11),
-        .table tbody td:nth-child(13),
-        .table tbody td:nth-child(14) {
+        .table tbody td:nth-child(11), /* Description (index 11 now) is handled next */
+        .table tbody td:nth-child(12) { /* Type Status (index 12 now) */
             background-color: var(--card-background); /* Ensure standard cells are light */
         }
         
@@ -1090,27 +1109,27 @@ if (!empty($search_query)) {
         }
 
         /* --- 5. Action Buttons (Edit/Delete) --- */
-        /* NOTE: Index changed from 16 to 12 */
-        .table td:nth-child(12) {
+        /* NOTE: Index changed from 15 to 13 (after removing Unit Cond.) */
+        .table td:nth-child(13) {
             border-bottom: none;
             padding: 10px 10px 15px 10px !important;
             text-align: center !important;
             padding-left: 10px !important;
             display: block;
             width: 100%;
-            background-color: var(--card-background);
+            background-color: #f8f8f8 !important; /* Highlighted background for actions */
             position: static; /* Ensure it flows correctly */
         }
-        .table td:nth-child(12)::before {
+        .table td:nth-child(13)::before {
             display: none;
         }
-        /* Edit/Delete group (12th cell) */
-        .table td:nth-child(12) .action-buttons-group {
+        /* Edit/Delete group (13th cell) */
+        .table td:nth-child(13) .action-buttons-group {
             flex-direction: row;
             margin-top: 10px;
             gap: 10px;
         }
-        .table td:nth-child(12) .action-buttons-group .btn-icon-only {
+        .table td:nth-child(13) .action-buttons-group .btn-icon-only {
             flex-grow: 1;
             width: auto;
             height: 44px;
@@ -1128,7 +1147,7 @@ if (!empty($search_query)) {
             font-size: 1rem;
         }
         /* Reset to standard flow for the two icons */
-        .table td:nth-child(12) .action-buttons-group {
+        .table td:nth-child(13) .action-buttons-group {
             flex-direction: row;
         }
     }
@@ -1143,7 +1162,7 @@ if (!empty($search_query)) {
 
 <div class="sidebar">
     <div class="sidebar-header">
-        <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo"> 
+        <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo">  
         <div class="title">
             CSM LABORATORY <br>APPARATUS BORROWING
         </div>
@@ -1179,22 +1198,24 @@ if (!empty($search_query)) {
 <header class="top-header-bar">
     <ul class="navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown notification-bell-container">
-            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" 
+            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"  
                 data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-bell fa-lg"></i>
                 <span class="badge rounded-pill badge-counter" id="notification-bell-badge" style="display:none;"></span>
             </a>
-            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" 
+            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"  
                 aria-labelledby="alertsDropdown" id="notification-dropdown">
+                
                 <h6 class="dropdown-header text-center">New Requests</h6>
                 
+                <a class="dropdown-item text-center small text-muted mark-all-link" id="mark-all-link"
+                    onclick="window.markAllStaffAsRead()" style="display:none;">
+                    <i class="fas fa-check-double me-1"></i> Mark All as Read
+                </a>
+
                 <div class="dynamic-notif-placeholder">
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">Loading notifications...</a>
                 </div>
-                
-                <a class="dropdown-item text-center small text-muted mark-all-link" onclick="markAllStaffAsRead()">
-                    <i class="fas fa-check-double me-1"></i> Mark All as Read
-                </a>
                 
                 <a class="dropdown-item text-center small text-muted" href="staff_pending.php">View All Pending Requests</a>
             </div>
@@ -1214,8 +1235,27 @@ if (!empty($search_query)) {
             </div>
         <?php endif; ?>
 
-        <div class="add-form">
-            <?php if ($edit_id && $current_apparatus): ?>
+        <div class="d-flex justify-content-end mb-4">
+            <?php if ($edit_id): ?>
+                <a href="staff_apparatus.php" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-times me-1"></i> Cancel Edit
+                </a>
+            <?php else: ?>
+                <button  
+                    class="btn btn-success"  
+                    type="button"  
+                    data-bs-toggle="collapse"  
+                    data-bs-target="#addApparatusCollapse"  
+                    aria-expanded="<?= $show_add_form ? 'true' : 'false' ?>"  
+                    aria-controls="addApparatusCollapse"
+                    id="toggleAddFormButton">
+                    <i class="fas fa-plus me-1"></i> Add New Apparatus
+                </button>
+            <?php endif; ?>
+        </div>
+        
+        <?php if ($edit_id && $current_apparatus): ?>
+            <div class="add-form">
                 <h3><i class="fas fa-edit me-2"></i> Edit Apparatus #<?= $edit_id ?></h3>
                 <form method="POST" enctype="multipart/form-data" class="row g-3" id="editApparatusForm">
                     <input type="hidden" name="id" value="<?= $edit_id ?>">
@@ -1310,16 +1350,19 @@ if (!empty($search_query)) {
                     </div>
                     
                     <div class="col-12 text-end">
-                        <a href="staff_apparatus.php" class="btn btn-secondary me-2">Cancel Edit</a>
-                        <button type="button" 
+                        <button type="button"  
                                 id="saveChangesButton"
-                                class="btn btn-warning"
+                                class="btn btn-primary"
                                 onclick="showEditConfirmModal()">
                             <i class="fas fa-sync me-1"></i> Save Changes
                         </button>
                     </div>
                 </form>
-            <?php else: ?>
+            </div>
+        <?php endif; ?>
+        
+        <div class="collapse <?= $show_add_form ? 'show' : '' ?>" id="addApparatusCollapse">
+            <div class="add-form">
                 <h3><i class="fas fa-plus-circle me-2"></i> Add New Apparatus</h3>
                 <form method="POST" enctype="multipart/form-data" class="row g-3">
                     
@@ -1394,7 +1437,7 @@ if (!empty($search_query)) {
                     <?php if (isset($errors['stock_math'])): ?><div class="col-12"><span class="text-danger error fw-bold"><?= htmlspecialchars($errors['stock_math']) ?></span></div><?php endif; ?>
 
                     <div class="col-12">
-                        <label class="form-label">Description (Usage and Details) <span class="text-danger">*</span>:</label> 
+                        <label class="form-label">Description (Usage and Details) <span class="text-danger">*</span>:</label>  
                         <textarea name="description" class="form-control" rows="8"><?= htmlspecialchars($description ?? '') ?></textarea>
                         <?php if (isset($errors['description'])): ?><span class="text-danger error"><?= htmlspecialchars($errors['description']) ?></span><?php endif; ?>
                     </div>
@@ -1405,7 +1448,7 @@ if (!empty($search_query)) {
                         <?php if (isset($errors['image'])): ?><span class="text-danger error"><?= htmlspecialchars($errors['image']) ?></span><?php endif; ?>
                         <?php if (isset($errors['image_upload'])): ?><span class="text-warning error"><?= htmlspecialchars($errors['image_upload']) ?></span><?php endif; ?>
                         
-                        <img id="image-preview" src="../uploads/apparatus_images/default.jpg" alt="Image Preview" style="display: none;">
+                        <img id="image-preview" src="../uploads/apparatus_images/default.jpg" alt="Image Preview" style="display: none;" class="edit-image-preview">
                     </div>
                     
                     <div class="col-12 text-end">
@@ -1414,8 +1457,9 @@ if (!empty($search_query)) {
                         </button>
                     </div>
                 </form>
-            <?php endif; ?>
+            </div>
         </div>
+        
         <h3><i class="fas fa-list me-2"></i> Apparatus Inventory</h3>
         
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1457,15 +1501,14 @@ if (!empty($search_query)) {
                         <th style="width: 9%;">Type</th>
                         <th style="width: 6%;">Size</th>
                         <th style="width: 8%;">Material</th>
-                        <th style="width: 6%;">Total</th> 
-                        <th style="width: 6%;">Available Stock</th> 
-                        <th style="width: 6%;">Damaged Units</th> 
-                        <th style="width: 5%;">Lost Units</th> 
-                        <th style="width: 5%;">Out</th> 
-                        <th style="width: 15%;">Description</th> 
-                        <th style="width: 7%;">Cond.</th> 
-                        <th style="width: 7%;">Status</th>
-                        <th style="width: 7%;">Edit</th> 
+                        <th style="width: 7%;">Total Stock</th>  
+                        <th style="width: 7%;">Available Stock</th>  
+                        <th style="width: 7%;">Damaged Units</th>  
+                        <th style="width: 6%;">Lost Units</th>  
+                        <th style="width: 6%;">Out (Borr/Res)</th>  
+                        <th style="width: 15%;">Description</th>  
+                        <th style="width: 8%;">Type Status</th>
+                        <th style="width: 8%;">Actions</th>  
                     </tr>
                 </thead>
                 <tbody>
@@ -1474,7 +1517,7 @@ if (!empty($search_query)) {
                             <tr>
                                 <td data-label="ID:"><?= $app['id'] ?></td>
                                 <td data-label="Image:">
-                                    <img src="../uploads/apparatus_images/<?= htmlspecialchars($app['image'] ?? 'default.jpg') ?>" 
+                                    <img src="../uploads/apparatus_images/<?= htmlspecialchars($app['image'] ?? 'default.jpg') ?>"  
                                         alt="<?= htmlspecialchars($app['name']) ?>">
                                     <span class="d-md-none text-start" data-name-label="Name:"><?= htmlspecialchars($app['name']) ?></span>
                                 </td>
@@ -1483,53 +1526,48 @@ if (!empty($search_query)) {
                                 <td data-label="Size:"><?= htmlspecialchars($app['size']) ?></td>
                                 <td data-label="Material:"><?= htmlspecialchars($app['material']) ?></td>
                                 
-                                <td data-label="Total:"><?= htmlspecialchars($app['total_stock'] ?? '0') ?></td> 
-                                <td data-label="Available Stock:" class="fw-bold <?= ($app['available_stock'] > 0 ? 'text-success' : 'text-danger') ?>"><?= htmlspecialchars($app['available_stock'] ?? '0') ?></td> 
+                                <td data-label="Total Stock:"><?= htmlspecialchars($app['total_stock'] ?? '0') ?></td>  
+                                <td data-label="Available Stock:" class="fw-bold <?= ($app['available_stock'] > 0 ? 'text-success' : 'text-danger') ?>"><?= htmlspecialchars($app['available_stock'] ?? '0') ?></td>  
                                 
-                                <td data-label="Damaged Units:" class="fw-bold text-warning"><?= htmlspecialchars(max(0, $app['damaged_stock'] ?? '0')) ?></td> 
-                                <td data-label="Lost Units:" class="fw-bold text-danger"><?= htmlspecialchars(max(0, $app['lost_stock'] ?? '0')) ?></td> 
-                                <td data-label="Out:"><?= htmlspecialchars($app['currently_out'] ?? '0') ?></td> 
+                                <td data-label="Damaged Units:" class="fw-bold text-warning"><?= htmlspecialchars(max(0, $app['damaged_stock'] ?? '0')) ?></td>  
+                                <td data-label="Lost Units:" class="fw-bold text-danger"><?= htmlspecialchars(max(0, $app['lost_stock'] ?? '0')) ?></td>  
+                                <td data-label="Out (Borr/Res):"><?= htmlspecialchars($app['currently_out'] ?? '0') ?></td>  
                                 
                                 <td data-label="Description:" class="text-start">
-                                    <?php 
+                                    <?php  
                                             $description = htmlspecialchars($app['description'] ?? '');
                                             $display_limit = 60;
                                             $display_text = (strlen($description) > $display_limit) ? substr($description, 0, $display_limit) . '...' : $description;
 
-                                            echo '<span 
-                                                    tabindex="0" 
-                                                    role="button"
-                                                    data-bs-toggle="popover" 
-                                                    data-bs-trigger="hover focus" 
-                                                    data-bs-placement="bottom" 
-                                                    data-bs-custom-class="description-popover" 
-                                                    data-bs-title="Full Description" 
-                                                    data-bs-content="' . $description . '">' . $display_text . 
-                                                    '</span>';
-                                     ?>
+                                            echo '<span  
+                                                        tabindex="0"  
+                                                        role="button"
+                                                        data-bs-toggle="popover"  
+                                                        data-bs-trigger="hover focus"  
+                                                        data-bs-placement="bottom"  
+                                                        data-bs-custom-class="description-popover"  
+                                                        data-bs-title="Full Description"  
+                                                        data-bs-content="' . $description . '">' . $display_text .  
+                                                        '</span>';
+                                    ?>
                                 </td>
                                 
-                                <td data-label="Condition:">
-                                    <span class="status-tag <?= htmlspecialchars($app['item_condition']) ?>">
-                                        <?= htmlspecialchars(ucfirst($app['item_condition'])) ?>
-                                    </span>
-                                </td>
-                                <td data-label="Status:">
+                                <td data-label="Type Status:">
                                     <span class="status-tag <?= htmlspecialchars($app['status']) ?>">
                                         <?= htmlspecialchars(ucfirst($app['status'])) ?>
                                     </span>
                                 </td>
                                 
-                                <td data-label="Edit:">
+                                <td data-label="Actions:">
                                     <div class="action-buttons-group">
-                                        <a href="staff_apparatus.php?edit_id=<?= $app['id'] ?>" 
-                                            class="btn btn-sm btn-warning btn-icon-only" 
+                                        <a href="staff_apparatus.php?edit_id=<?= $app['id'] ?>"  
+                                            class="btn btn-sm btn-warning btn-icon-only"  
                                             title="Edit Details">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <button type="button" 
+                                        <button type="button"  
                                             class="btn btn-sm btn-danger btn-icon-only"
-                                            data-bs-toggle="modal" 
+                                            data-bs-toggle="modal"  
                                             data-bs-target="#deleteApparatusModal"
                                             data-id="<?= $app['id'] ?>"
                                             data-name="<?= htmlspecialchars($app['name']) ?>"
@@ -1542,7 +1580,7 @@ if (!empty($search_query)) {
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="15" class="text-muted py-3">No apparatus found for the selected filter or search query.</td></tr>
+                        <tr><td colspan="13" class="text-muted py-3">No apparatus found for the selected filter or search query.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -1615,8 +1653,8 @@ if (!empty($search_query)) {
 </div>
 
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>  
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
 <script>
     // Global variable to hold the ID of the unit currently being restored
     let currentUnitIdToRestore = null;
@@ -1647,8 +1685,8 @@ if (!empty($search_query)) {
 
         // --- VALIDATION CHECKS (Should pass if form.checkValidity() worked, but good to reconfirm) ---
         if (newTotal <= 0 || newDamaged < 0 || newLost < 0) {
-             alert("Validation Error: Stock counts must be valid non-negative numbers, and Total Stock must be > 0.");
-             return;
+            alert("Validation Error: Stock counts must be valid non-negative numbers, and Total Stock must be > 0.");
+            return;
         }
         
         // Calculate new available physical stock
@@ -1694,11 +1732,11 @@ if (!empty($search_query)) {
             });
 
             if (otherFieldsChanged) {
-                 $modalBody.html('<p class="fw-bold text-success">No stock counts were modified, but other details (Name, Type, Description, etc.) will be updated.</p>');
+                $modalBody.html('<p class="fw-bold text-success">No stock counts were modified, but other details (Name, Type, Description, etc.) will be updated.</p>');
             } else {
-                 // No changes at all - prevent modal show and alert user
-                 alert("No changes were made to the apparatus details or stock counts.");
-                 return;
+                // No changes at all - prevent modal show and alert user
+                alert("No changes were made to the apparatus details or stock counts.");
+                return;
             }
         }
         
@@ -1747,7 +1785,7 @@ if (!empty($search_query)) {
             // This function creates a hidden form and submits it to staff_apparatus.php
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = 'staff_apparatus.php'; 
+            form.action = 'staff_apparatus.php';  
             
             const idInput = document.createElement('input');
             idInput.type = 'hidden';
@@ -1779,6 +1817,131 @@ if (!empty($search_query)) {
     window.previewImage = previewImage; // Make accessible globally
 
 
+    // =========================================================================
+    // --- NOTIFICATION HANDLER IMPLEMENTATION (COPIED FROM STAFF DASHBOARD) ---
+    // =========================================================================
+
+    // 1. Function to handle marking ALL staff notifications as read
+    window.markAllStaffAsRead = function() {
+        // Use the generalized API endpoint for staff batch read
+        $.post('../api/mark_notification_as_read.php', { mark_all: true, role: 'staff' }, function(response) {
+            if (response.success) {
+                // Update text and force UI refresh via re-fetch
+                $('#mark-all-link').text('Successfully marked all as read!').removeClass('text-muted').addClass('text-success');
+                setTimeout(fetchStaffNotifications, 500);
+            } else {
+                console.error("Failed to mark all staff notifications as read.");
+                alert("Failed to clear all notifications.");
+            }
+        }).fail(function() {
+            console.error("API call failed.");
+        });
+    };
+    
+    // 2. Function to handle single notification click (Mark as read + navigate)
+    window.handleNotificationClick = function(event, element, notificationId) {
+        event.preventDefault(); 
+        const linkHref = element.getAttribute('href');
+
+        // Explicitly close the Bootstrap Dropdown
+        const $dropdownToggle = $('#alertsDropdown');
+        const dropdownInstance = bootstrap.Dropdown.getInstance($dropdownToggle[0]);
+        if (dropdownInstance) { dropdownInstance.hide(); }
+        
+        // Use the generalized API endpoint to mark the single alert as read
+        $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
+            if (response.success) {
+                // Navigate after marking as read
+                window.location.href = linkHref;
+            } else {
+                console.error("Failed to mark notification as read. Navigating anyway.");
+                window.location.href = linkHref;
+            }
+        }).fail(function() {
+            console.error("API call failed. Navigating anyway.");
+            window.location.href = linkHref;
+        });
+    };
+
+    // 3. Function to fetch the count and populate the dropdown
+    function fetchStaffNotifications() {
+        const apiPath = '../api/get_notifications.php'; 
+
+        $.getJSON(apiPath, function(response) { 
+            
+            const unreadCount = response.count; 
+            const notifications = response.alerts || []; 
+            
+            const $badge = $('#notification-bell-badge');
+            const $markAllLink = $('#mark-all-link'); // Get the static HTML element
+            const $dropdown = $('#notification-dropdown');
+            
+            // Clear previous dynamic items
+            $dropdown.find('.dynamic-notif-item').remove(); 
+            
+            // 1. Update the Badge Count
+            $badge.text(unreadCount);
+            $badge.toggle(unreadCount > 0); 
+            
+            // 2. Control visibility of the static Mark All link
+            if (unreadCount > 0) {
+                 // Show the link and update the count text
+                 $markAllLink.show().text(`Mark All ${unreadCount} as Read`).removeClass('text-success').addClass('text-muted');
+            } else {
+                 // Hide the link
+                 $markAllLink.hide();
+            }
+
+            // 3. Populate the Dynamic Placeholder
+            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            
+            if (notifications.length > 0) {
+                notifications.slice(0, 5).forEach(notif => {
+                    
+                    let iconClass = 'fas fa-info-circle text-info'; 
+                    if (notif.type.includes('form_pending')) {
+                            iconClass = 'fas fa-hourglass-half text-warning';
+                    } else if (notif.type.includes('checking')) {
+                            iconClass = 'fas fa-redo text-primary';
+                    }
+                    
+                    const is_read = notif.is_read == 1;
+                    const itemClass = is_read ? 'text-muted' : 'fw-bold'; // Highlight unread
+                    const targetLink = notif.link ? notif.link : 'staff_pending.php';  
+
+
+                    $placeholder.append(`
+                             <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
+                                 href="${targetLink}"
+                                 data-id="${notif.id}"
+                                 onclick="handleNotificationClick(event, this, ${notif.id})">
+                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                 <div>
+                                     <div class="small text-gray-500">${notif.created_at.split(' ')[0]}</div>
+                                     <span class="d-block ${itemClass}">${notif.message}</span>
+                                 </div>
+                             </a>
+                     `);
+                });
+            } else {
+                // Display a "No Alerts" message
+                $placeholder.html(`
+                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">No New Notifications</a>
+                `);
+            }
+            
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            console.error("Error fetching staff notifications:", textStatus, errorThrown);
+            // Ensure the badge is hidden and link is hidden on failure
+            $('#notification-bell-badge').text('0').hide();
+            $('#mark-all-link').hide();
+        });
+    }
+    // =========================================================================
+    // --- END NOTIFICATION HANDLER IMPLEMENTATION ---
+    // =========================================================================
+
+
     // --- JS Initialization ---
     document.addEventListener('DOMContentLoaded', () => {
         // Sidebar active link script
@@ -1794,68 +1957,59 @@ if (!empty($search_query)) {
             }
         });
         
-        // --- NEW DESKTOP COLLAPSE LOGIC (MODIFIED FOR PERMANENTLY OPEN SIDEBAR) ---
+        // --- NEW DESKTOP COLLAPSE LOGIC ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
-        const sidebarBackdrop = document.getElementById('sidebarBackdrop'); 
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');  
         
-        // Function to set the initial state (open on desktop, closed on mobile)
         function setInitialState() {
             if (window.innerWidth > 992) {
-                // Desktop: Default is permanently OPEN, remove all collapse/active classes
                 sidebar.classList.remove('closed');
                 sidebar.classList.remove('active');
                 if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-                // **CRITICAL FIX: Hide the burger button on desktop**
-                if (menuToggle) menuToggle.style.display = 'none'; 
+                if (menuToggle) menuToggle.style.display = 'none';  
             } else {
-                // Mobile: Default is hidden, but keep menu toggle visible for mobile
                 sidebar.classList.remove('closed');
                 sidebar.classList.remove('active');
                 if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-                if (menuToggle) menuToggle.style.display = 'flex'; // Show for mobile
+                if (menuToggle) menuToggle.style.display = 'flex'; 
             }
         }
         
-        // Function to toggle the state of the sidebar and layout
         function toggleSidebar() {
             if (window.innerWidth <= 992) {
-                // Mobile behavior: Toggle 'active' class for overlay/menu
                 sidebar.classList.toggle('active');
                 if (sidebarBackdrop) {
-                    sidebarBackdrop.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
+                    const isActive = sidebar.classList.contains('active');
+                    sidebarBackdrop.style.display = isActive ? 'block' : 'none';
+                    sidebarBackdrop.style.opacity = isActive ? '1' : '0';
                 }
-            } else {
-                // Desktop behavior: DO NOTHING - Sidebar is permanently open
-            }
+            } 
         }
 
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', toggleSidebar);
             
-            // Backdrop click handler (only for mobile overlay)
             if (sidebarBackdrop) {
                 sidebarBackdrop.addEventListener('click', () => {
-                    sidebar.classList.remove('active'); // Close mobile overlay
+                    sidebar.classList.remove('active');
                     sidebarBackdrop.style.display = 'none';
                 });
             }
             
-            // Hide mobile overlay when navigating
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
-                 link.addEventListener('click', () => {
-                     if (window.innerWidth <= 992) {
-                         sidebar.classList.remove('active');
-                         sidebarBackdrop.style.display = 'none';
-                     }
-                 });
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) {
+                        setTimeout(() => {
+                           sidebar.classList.remove('active');
+                           sidebarBackdrop.style.display = 'none';
+                        }, 100);
+                    }
+                });
             });
 
-            // Handle window resize (switching between mobile/desktop layouts)
             window.addEventListener('resize', setInitialState);
-
-            // Set initial state on load
             setInitialState();
         }
         // --- END NEW DESKTOP COLLAPSE LOGIC ---

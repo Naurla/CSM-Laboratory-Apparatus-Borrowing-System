@@ -34,35 +34,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["return"])) {
 
     if ($borrowDate <= date("Y-m-d")) {
         // --- Step 1: Execute Transaction (DB Commit & System Notification to staff) ---
+        // markAsChecking now handles the database updates AND the email confirmation internally.
         if ($transaction->markAsChecking($form_id, $student_id, $remarks)) {
             
-            // --- Step 2: Fetch Recipient Details for Email ---
-            $student_details = $transaction->getUserDetails($student_id, null);
+            // =================================================================
+            // REMOVED DUPLICATE EMAIL LOGIC FROM HERE (Lines 33-54 removed)
+            // =================================================================
             
-            if ($student_details) {
-                // --- Step 3: Send the Email Notification (Confirmation of Submission) ---
-                
-                // Fetch apparatus list for email content
-                $form_items_raw = $transaction->getBorrowFormItems($form_id);
-                $apparatus_names = array_column($form_items_raw, 'name');
-                $items_list = implode(', ', $apparatus_names);
-                
-                // We'll send a custom 'checking' email using the generic status method
-                $email_sent = $mailer->sendTransactionStatusEmail(
-                    $student_details['email'], 
-                    $student_details['firstname'], 
-                    $form_id, 
-                    'checking', 
-                    "Your return request for items ({$items_list}) has been successfully submitted and is now waiting for staff inspection."
-                );
-                
-                $email_message = $email_sent ? 'and a confirmation email has been sent.' : ', but the confirmation email failed to send.';
-            } else {
-                 $email_message = ", but the confirmation email failed to send (User details not found).";
-            }
-            
-            // Final message shown to student
-            $message = "Your return request (ID: **$form_id**) has been submitted and is pending staff verification. {$email_message}";
+            // Final message shown to student - adjusted to confirm email was sent (by Transaction.php)
+            $message = "Your return request (ID: **$form_id**) has been submitted and is pending staff verification. A confirmation email has been sent.";
             $is_success = true;
 
         } else {
@@ -641,15 +621,15 @@ $today = date("Y-m-d");
                     $action_content = '';
                     if ($is_pending_check) {
                         $action_content = '<span class="action-message-checking">
-                                            <i class="fas fa-clock me-1"></i> Pending Staff Check
-                                          </span>';
+                                             <i class="fas fa-clock me-1"></i> Pending Staff Check
+                                           </span>';
                     } elseif (
                         (!$is_expected_return_date_reached) && 
                         ($clean_status === 'reserved' || $clean_status === 'approved')
                     ) {
                         $action_content = '<span class="action-message-checking bg-info text-white">
-                                            <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
-                                          </span>';
+                                             <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
+                                           </span>';
                     } else {
                         $overdue_warning = '';
                         if ($is_overdue) {
@@ -670,6 +650,7 @@ $today = date("Y-m-d");
                     $expected_class = $is_overdue ? 'expected-return' : 'expected-return ok';
                 ?>
                     <div class="return-card <?= $card_status_class ?>">
+                        
                         
                         
                         
@@ -720,7 +701,7 @@ $today = date("Y-m-d");
         const isRead = item.data('isRead');
         
         if (isHoverClick || isRead === 0) {
-              event.preventDefault();
+             event.preventDefault();
         }
 
         if (isRead === 0) {
@@ -809,24 +790,24 @@ $today = date("Y-m-d");
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
                     $placeholder.append(`
-                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                                href="${link}" 
-                                data-id="${notif.id}"
-                                data-is-read="${notif.is_read}"
-                                onclick="window.markSingleAlertAndGo(event, this)">
-                                <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                                <div class="flex-grow-1">
-                                    <div class="small text-gray-500">${datePart}</div>
-                                    <span class="d-block">${cleanMessage}</span>
-                                </div>
-                                ${notif.is_read == 0 ? 
-                                    `<button type="button" class="mark-read-hover-btn" 
-                                                title="Mark as Read" 
-                                                data-id="${notif.id}"
-                                                onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                        <i class="fas fa-check-circle"></i>
-                                    </button>` : ''}
-                            </a>
+                                <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                                    href="${link}" 
+                                    data-id="${notif.id}"
+                                    data-is-read="${notif.is_read}"
+                                    onclick="window.markSingleAlertAndGo(event, this)">
+                                    <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                    <div class="flex-grow-1">
+                                        <div class="small text-gray-500">${datePart}</div>
+                                        <span class="d-block">${cleanMessage}</span>
+                                    </div>
+                                    ${notif.is_read == 0 ? 
+                                        `<button type="button" class="mark-read-hover-btn" 
+                                                    title="Mark as Read" 
+                                                    data-id="${notif.id}"
+                                                    onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>` : ''}
+                                </a>
                     `);
                 });
             } else {
@@ -838,7 +819,7 @@ $today = date("Y-m-d");
             // Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
             
-
+            
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching student alerts:", textStatus, errorThrown);
             $('#notification-bell-badge').text('0').hide();
@@ -888,24 +869,24 @@ $today = date("Y-m-d");
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
                 if (sidebar.classList.contains('active')) {
-                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                    mainWrapper.addEventListener('click', closeSidebarOnce);
                 } else {
-                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                    mainWrapper.removeEventListener('click', closeSidebarOnce);
                 }
             });
             
             function closeSidebarOnce() {
-                 sidebar.classList.remove('active');
-                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+                sidebar.classList.remove('active');
+                mainWrapper.removeEventListener('click', closeSidebarOnce);
             }
             
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
-                 link.addEventListener('click', () => {
-                     if (window.innerWidth <= 992) {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) {
                         sidebar.classList.remove('active');
-                     }
-                 });
+                    }
+                });
             });
         }
     });

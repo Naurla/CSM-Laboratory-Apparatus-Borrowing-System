@@ -168,44 +168,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($errors)) {
 
         // FIX: createTransaction must return the new form ID for the notification trigger
+        // The email is sent from inside this method now.
         $result = $transaction->createTransaction($student_id, $type, $apparatus_details_for_transaction, $borrow_date, $expected_return_date, $agreed_terms);
 
         if (is_numeric($result)) { // SUCCESS!
 
             $new_borrow_form_id = (int)$result;
 
-            // ------------------------------------------------------------
-            // 🛑 NOTIFICATION CODE REMOVED HERE TO PREVENT DUPLICATES 🛑
-            // ------------------------------------------------------------
-
-            // ================================================
-            // ✉️ EMAIL NOTIFICATION TRIGGER (Student Confirmation) ✉️
-            // ================================================
-
-            // 1. Fetch student details (Name and Email)
-            $student_details = $transaction->getUserDetails($student_id, null);
-
-            // 2. Fetch apparatus list for the email context
-            $apparatus_details_decoded = json_decode(urldecode($request_array_json), true);
-            $apparatus_names = array_column($apparatus_details_decoded, 'name');
-            $items_list = implode(', ', $apparatus_names);
-
-            $email_msg = 'Error sending confirmation email.';
-
-            if ($student_details) {
-                $email_sent = $mailer->sendTransactionStatusEmail(
-                    $student_details['email'],
-                    $student_details['firstname'],
-                    $new_borrow_form_id,
-                    'waiting_for_approval',
-                    "Items requested: {$items_list}. Expected return: {$expected_return_date}."
-                );
-
-                $email_msg = $email_sent ? 'A confirmation email was sent.' : 'Error sending confirmation email.';
-            } else {
-                $email_msg = 'Error: Could not retrieve student email details.';
-            }
-            // ================================================
+            // --------------------------------------------------------------------------------
+            // 🛑 REMOVED DUPLICATE EMAIL LOGIC HERE TO FIX DOUBLE SENDING.
+            //    The submission email is now sent exclusively from
+            //    classes/Transaction.php::createTransaction().
+            // --------------------------------------------------------------------------------
 
             $newActiveCount = $transaction->getActiveTransactionCount($student_id);
             $final_secondary_message = '';
@@ -215,7 +189,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             $_SESSION['submission_status'] = [
-                'message' => "Successfully submitted your request! It is now awaiting staff approval. " . $email_msg,
+                // Clean message, relying on Transaction.php for email confirmation
+                'message' => "Successfully submitted your request! It is now awaiting staff approval. A confirmation email has been sent.",
                 'success' => true,
                 'secondary_message' => $final_secondary_message
             ];
@@ -748,9 +723,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                             <label class="form-label fw-bold">Expected Return Date <span class="text-danger">*</span>:</label>
                             <div class="input-group">
                                 <input type="text" id="expected_return_date_display" class="form-control"
-                                         value="<?= htmlspecialchars($expected_return_date) ?>"
-                                         placeholder="Auto-filled"
-                                         readonly>
+                                             value="<?= htmlspecialchars($expected_return_date) ?>"
+                                             placeholder="Auto-filled"
+                                             readonly>
                                 <span class="input-group-text"><i class="fas fa-clock"></i></span>
                             </div>
 
@@ -913,7 +888,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                 for ($i = $start_page; $i <= $end_page; $i++): ?>
                     <li class="page-item <?= ($currentPage == $i) ? 'active' : '' ?>">
-                            <a class="page-link" href="#" data-page="<?= $i ?>" onclick="manualPagination(event, this.dataset.page)"><?= $i ?></a>
+                             <a class="page-link" href="#" data-page="<?= $i ?>" onclick="manualPagination(event, this.dataset.page)"><?= $i ?></a>
                     </li>
                 <?php endfor; ?>
                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
@@ -1290,7 +1265,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         const isRead = item.data('isRead');
 
         if (isHoverClick || isRead === 0) {
-              event.preventDefault();
+             event.preventDefault();
         }
 
         if (isRead === 0) {
@@ -1360,11 +1335,11 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                     let iconClass = 'fas fa-info-circle text-secondary';
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE')) {
-                          iconClass = 'fas fa-exclamation-triangle text-danger';
+                         iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                          iconClass = 'fas fa-check-circle text-success';
+                         iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                          iconClass = 'fas fa-hourglass-half text-warning';
+                         iconClass = 'fas fa-hourglass-half text-warning';
                     }
 
                     const is_read = notif.is_read == 1;
@@ -1389,13 +1364,13 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                              </div>
                              ${notif.is_read == 0 ?
                                  `<button type="button" class="mark-read-hover-btn"
-                                             title="Mark as Read"
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                         title="Mark as Read"
+                                         data-id="${notif.id}"
+                                         onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
                                      <i class="fas fa-check-circle"></i>
                                  </button>` : ''}
                           </a>
-                      `);
+                     `);
                 });
             } else {
                 // Display a "No Alerts" message
@@ -1451,29 +1426,29 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
-                 // Optional: Close sidebar when clicking outside (simple solution)
+                // Optional: Close sidebar when clicking outside (simple solution)
                 if (sidebar.classList.contains('active')) {
-                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                    mainWrapper.addEventListener('click', closeSidebarOnce);
                 } else {
-                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                    mainWrapper.removeEventListener('click', closeSidebarOnce);
                 }
             });
             
-             // Function to close the sidebar only once after clicking outside
+            // Function to close the sidebar only once after clicking outside
             function closeSidebarOnce() {
-                 sidebar.classList.remove('active');
-                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+                sidebar.classList.remove('active');
+                mainWrapper.removeEventListener('click', closeSidebarOnce);
             }
             
             // Close sidebar when a nav item is clicked
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
-                 link.addEventListener('click', () => {
-                     // Check if we are on a mobile view before closing
-                     if (window.innerWidth <= 992) {
+                link.addEventListener('click', () => {
+                    // Check if we are on a mobile view before closing
+                    if (window.innerWidth <= 992) {
                         sidebar.classList.remove('active');
-                     }
-                 });
+                    }
+                });
             });
         }
     });

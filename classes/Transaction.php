@@ -163,6 +163,8 @@ class Transaction extends Database
 
 // File: classes/Transaction.php
 
+// File: classes/Transaction.php (Full replacement for createTransaction)
+
 public function createTransaction($user_id, $type, $apparatus_list, $borrow_date, $expected_return_date, $agreed_terms)
 {
     $conn = $this->connect();
@@ -177,7 +179,7 @@ public function createTransaction($user_id, $type, $apparatus_list, $borrow_date
         // === STEP 0: PRE-CHECK ACTIVE DUPLICATE REQUESTS ===
         // ... (omitted for brevity)
 
-        // 1. Initial Stock Check and locking (omitted for brevity, assume correct)
+        // 1. Initial Stock Check and locking
         foreach ($apparatus_list as $app) {
             $type_id = $app['id'];
             $quantity = $app['quantity'];
@@ -219,7 +221,7 @@ public function createTransaction($user_id, $type, $apparatus_list, $borrow_date
 
         $form_id = $conn->lastInsertId();
 
-        // 3. Insert borrow items (omitted for brevity, assume correct)
+        // 3. Insert borrow items
         $stmt2 = $conn->prepare("
             INSERT INTO borrow_items (form_id, type_id, quantity, item_status, unit_id) 
             VALUES (:form_id, :type_id, :quantity, 'pending', NULL)
@@ -235,12 +237,12 @@ public function createTransaction($user_id, $type, $apparatus_list, $borrow_date
             }
         }
 
-        // 4. Update the available_stock column (omitted for brevity, assume correct)
+        // 4. Update the available_stock column
         foreach ($refreshed_ids as $type_id) {
             $this->refreshAvailableStockColumn($type_id, $conn);
         }
         
-        // 5. Notifications and User details fetch
+        // 5. Notifications and User details fetch (inside transaction)
         $student_details = $this->getUserDetails($user_id, $conn);
         $item_list_for_email = $this->getFormItemsForEmail($form_id); 
         
@@ -264,14 +266,13 @@ public function createTransaction($user_id, $type, $apparatus_list, $borrow_date
             $conn
         );
         
-        // =================================================================
-        // >> REMOVED: CRITICAL FIX: EMAIL Submission Confirmation (Waiting for Approval) <<
-        // >> This logic is now handled by the external status handler to prevent double-send.
-        // =================================================================
         $conn->commit();
-        $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);  
+        $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
         
-        /*
+        // =================================================================
+        // >> RE-INTEGRATED CRITICAL FIX: EMAIL Submission Confirmation (Waiting for Approval) <<
+        // >> Using the correct dates ($borrow_date, $expected_return_date)
+        // =================================================================
         $mailer = new Mailer(); 
 
         $mail_success = $mailer->sendTransactionStatusEmail(
@@ -280,16 +281,15 @@ public function createTransaction($user_id, $type, $apparatus_list, $borrow_date
             $form_id,
             'waiting_for_approval', 
             'Your request has been placed and is currently awaiting approval from the staff.',
-            $borrow_date, // Passed as Request Date
+            $borrow_date, // Passed as Borrow Date
             $expected_return_date, // Passed as Due Date
-            '', 
+            '', // No approval date yet
             $item_list_for_email  
         );
 
         if (!$mail_success) {
             error_log("Submission Email FAILED for Form #{$form_id}. Check Mailer logs.");
         }
-        */
         // =================================================================
         
         return $form_id; 

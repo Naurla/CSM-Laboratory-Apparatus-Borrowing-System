@@ -127,12 +127,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <style>
         /* --- COPYING STYLES FROM DASHBOARD --- */
         :root {
-            --msu-red: #A40404; /* FIXED: Consistent Red */
-            --msu-red-dark: #820303; /* FIXED: Consistent Dark Red */
+            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --primary-color-dark: #820303; 
+            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --text-dark: #2c3e50;
             --sidebar-width: 280px; 
             --bg-light: #f5f6fa;
             --header-height: 60px;
-            --danger-dark: #8b0000;
+            --danger-color: #dc3545;
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -141,6 +143,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             display: flex; 
             padding: 0;
             margin: 0;
+            color: var(--text-dark);
         }
 
         /* NEW CSS for Mobile Toggle */
@@ -150,7 +153,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             top: 15px;
             left: 20px;
             z-index: 1060; 
-            background: var(--msu-red);
+            background: var(--primary-color);
             color: white;
             border: none;
             padding: 8px 12px;
@@ -160,9 +163,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         /* --- Sidebar Styles (Unifying Look) --- */
-        .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh; background-color: var(--msu-red); color: white; padding: 0; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); z-index: 1050; }
+        .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh; background-color: var(--primary-color); color: white; padding: 0; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); z-index: 1050; transition: left 0.3s ease; }
         .sidebar-header { text-align: center; padding: 20px 15px; font-size: 1.2rem; font-weight: 700; line-height: 1.15; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px; }
-        /* FIX: Fixed logo size for consistency */
         .sidebar-header img { width: 90px; height: 90px; object-fit: contain; margin: 0 auto 15px auto; display: block; } 
         .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
         .sidebar-nav { flex-grow: 1; }
@@ -176,13 +178,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             display: flex; 
             align-items: center;
         }
-        .sidebar .nav-link:hover { background-color: var(--msu-red-dark); }
-        .sidebar .nav-link.active { background-color: var(--msu-red-dark); } 
+        .sidebar .nav-link:hover { background-color: var(--primary-color-dark); }
+        .sidebar .nav-link.active { background-color: var(--primary-color-dark); } 
         .sidebar .nav-link.banned { background-color: #5a2624; opacity: 0.8; cursor: pointer; pointer-events: auto; }
         .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        /* Consistent logout button styles */
         .logout-link .nav-link { background-color: #C62828 !important; color: white !important; } 
-        .logout-link .nav-link:hover { background-color: var(--msu-red-dark) !important; }
+        .logout-link .nav-link:hover { background-color: var(--primary-color-dark) !important; }
         
         /* --- Top Header Bar Styles --- */
         .top-header-bar {
@@ -199,6 +200,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             justify-content: flex-end; 
             padding: 0 20px;
             z-index: 1000;
+            transition: left 0.3s ease;
         }
         /* Notification Bell (Restored) */
         .notification-bell-container {
@@ -213,32 +215,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             right: 0px;
             font-size: 0.7em;
             padding: 0.35em 0.5em;
-            background-color: #ffc107;
-            color: #333;
+            background-color: var(--secondary-color); /* Use accent color */
+            color: var(--text-dark);
             font-weight: bold;
         }
-         /* Ensure the current link looks active */
+        /* Active Link Styling for Edit Profile */
         .edit-profile-link {
-            color: var(--msu-red);
+            color: var(--primary-color);
             font-weight: 700;
             text-decoration: none;
             transition: color 0.2s;
-            /* Ensure the active link is highlighted even though it's the only item */
-            border-bottom: 3px solid var(--msu-red);
+            border-bottom: 3px solid var(--primary-color);
             padding-bottom: 3px;
         }
         .edit-profile-link:hover {
-            color: var(--msu-red-dark);
+            color: var(--primary-color-dark);
             text-decoration: none;
         }
         /* --- END Top Header Bar Styles --- */
 
-        /* --- Main Content Styles (FULL COVERAGE) --- */
+        /* --- Main Content Styles --- */
         .main-wrapper {
             margin-left: var(--sidebar-width); 
             padding: 0; 
             padding-top: var(--header-height); 
             flex-grow: 1;
+            transition: margin-left 0.3s ease;
         }
         .content-area {
             background: #fff; 
@@ -251,18 +253,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             min-height: calc(100vh - var(--header-height)); 
         }
         .page-header {
-            color: #333; 
+            color: var(--text-dark); 
             margin-bottom: 30px;
             padding-bottom: 15px;
-            border-bottom: 2px solid var(--msu-red);
+            border-bottom: 2px solid var(--primary-color); /* Use primary color */
             font-weight: 700;
             font-size: 2.2rem;
         }
         
-        /* --- Form Styles (WIDER APPEARANCE FIX) --- */
+        /* --- Form Styles --- */
         .form-container-wrapper {
             width: 95%; 
-            max-width: 800px; /* Constrain max width for better form presentation */
+            max-width: 800px; 
             margin: 0 auto; 
         }
         .form-group {
@@ -271,7 +273,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             align-items: flex-start;
         }
         .form-group label {
-            flex: 0 0 160px; /* Increased label width for better alignment */
+            flex: 0 0 160px; 
             padding-right: 20px;
             text-align: right;
             padding-top: 8px;
@@ -284,6 +286,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             border-radius: 6px; 
             box-sizing: border-box; 
             font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus, .contact-input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
+            outline: none;
         }
         
         /* --- Disabled/Read-Only Styling for Student ID --- */
@@ -301,64 +309,81 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-align: center; 
         }
         .error {
-            color: var(--msu-red);
+            color: var(--primary-color); /* Use primary color for errors */
             font-size: 0.95rem;
             margin-top: -15px; 
             margin-bottom: 20px; 
-            padding-left: 180px; /* Adjusted padding to align with input field */
+            padding-left: 180px; 
             font-weight: 600;
             display: block;
         }
         
+        /* Alert styling - Consistent with login/signup pages */
         .alert-custom {
             margin-bottom: 20px;
             padding: 15px;
-            font-weight: bold;
+            font-weight: 600;
             border-radius: 8px;
             font-size: 1.05rem;
+            text-align: left;
         }
-        /* Button styling */
-        .btn-custom-ok {
-            background-color: var(--msu-red);
-            border-color: var(--msu-red);
+        .alert-success {
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger { /* Used for validation and system errors */
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* Button styling - New Primary Style (Pill shape) */
+        .btn-theme-primary {
+            background-color: var(--primary-color);
             color: white;
-            font-weight: bold;
+            border: none;
+            border-radius: 50px; /* Pill shape */
+            padding: 12px 30px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .btn-theme-primary:hover {
+            background-color: var(--primary-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Modal button styling (Updated to use theme colors) */
+        .modal-footer .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+            font-weight: 600;
+        }
+        .modal-footer .btn-custom-ok {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            font-weight: 700;
         }
 
 
         /* --- RESPONSIVE ADJUSTMENTS --- */
         @media (max-width: 992px) {
             /* Mobile Sidebar */
-            .menu-toggle {
-                display: block;
-            }
-            .sidebar {
-                left: calc(var(--sidebar-width) * -1); 
-                transition: left 0.3s ease;
-                box-shadow: none;
-                --sidebar-width: 250px; 
-            }
-            .sidebar.active {
-                left: 0; 
-                box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-            }
-            .main-wrapper {
-                margin-left: 0;
-            }
-            .top-header-bar {
-                left: 0;
-                padding-left: 70px; /* Space for hamburger icon */
-                justify-content: flex-end;
-            }
+            .menu-toggle { display: block; }
+            .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
+            .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
+            .main-wrapper { margin-left: 0; }
+            .top-header-bar { left: 0; padding-left: 70px; justify-content: flex-end; }
         }
         
         @media (max-width: 768px) {
-            .content-area {
-                padding: 20px 15px;
-            }
-            .page-header {
-                font-size: 2rem;
-            }
+            .content-area { padding: 20px 15px; }
+            .page-header { font-size: 2rem; }
             /* Stack form elements */
             .form-group {
                 flex-direction: column;
@@ -384,17 +409,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             .form-actions button {
                  width: 100%;
             }
-            /* Align bell and profile left */
             .top-header-bar {
-                justify-content: space-between;
-                padding-left: 70px;
+                 /* Re-adjust for better spacing */
+                 padding: 0 15px;
+                 justify-content: space-between;
+                 padding-left: 70px;
             }
         }
         @media (max-width: 576px) {
-             .top-header-bar {
-                padding: 0 15px;
-                justify-content: flex-end;
-                padding-left: 65px;
+            .top-header-bar {
+                 padding: 0 15px;
+                 justify-content: flex-end;
+                 padding-left: 65px;
             }
             .top-header-bar .notification-bell-container {
                  margin-right: 10px;
@@ -456,7 +482,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </a>
         </li>
     </ul>
-    <a href="student_edit.php" class="edit-profile-link" style="color: var(--msu-red);">
+    <a href="student_edit.php" class="edit-profile-link">
         <i class="fas fa-user-edit me-1"></i> Edit Profile
     </a>
 </header>
@@ -468,9 +494,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <i class="fas fa-user-edit fa-fw me-2 text-secondary"></i> Edit Profile Details
             </h2>
             
-            <?php if (!empty($message)): ?>
-                <div class="alert-custom <?= strpos($message, '✅') !== false ? 'alert-success' : (strpos($message, '⚠️') !== false ? 'alert-danger' : 'alert-danger') ?>">
-                    <?= $message ?>
+            <?php 
+            $alert_class = '';
+            if (strpos($message, '✅') !== false) {
+                $alert_class = 'alert-success';
+            } elseif (!empty($message)) {
+                $alert_class = 'alert-danger';
+            }
+            if (!empty($message)): 
+            ?>
+                <div class="alert-custom <?= $alert_class ?>">
+                    <?= htmlspecialchars($message) ?>
                 </div>
             <?php endif; ?>
 
@@ -483,36 +517,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <div class="form-group">
                     <label for="firstname">First Name</label>
-                    <input type="text" id="firstname" name="firstname" class="form-control" value="<?= htmlspecialchars($current_data['firstname']) ?>">
+                    <input type="text" id="firstname" name="firstname" class="form-control <?= isset($errors['firstname']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['firstname']) ?>">
                 </div>
-                <?php if (isset($errors['firstname'])): ?><span class="error"><?= $errors['firstname'] ?></span><?php endif; ?>
+                <?php if (isset($errors['firstname'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['firstname'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="lastname">Last Name</label>
-                    <input type="text" id="lastname" name="lastname" class="form-control" value="<?= htmlspecialchars($current_data['lastname']) ?>">
+                    <input type="text" id="lastname" name="lastname" class="form-control <?= isset($errors['lastname']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['lastname']) ?>">
                 </div>
-                <?php if (isset($errors['lastname'])): ?><span class="error"><?= $errors['lastname'] ?></span><?php endif; ?>
+                <?php if (isset($errors['lastname'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['lastname'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="course">Course</label>
-                    <input type="text" id="course" name="course" class="form-control" value="<?= htmlspecialchars($current_data['course']) ?>">
+                    <input type="text" id="course" name="course" class="form-control <?= isset($errors['course']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['course']) ?>">
                 </div>
-                <?php if (isset($errors['course'])): ?><span class="error"><?= $errors['course'] ?></span><?php endif; ?>
+                <?php if (isset($errors['course'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['course'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" class="form-control" value="<?= htmlspecialchars($current_data['email']) ?>">
+                    <input type="email" id="email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['email']) ?>">
                 </div>
-                <?php if (isset($errors['email'])): ?><span class="error"><?= $errors['email'] ?></span><?php endif; ?>
+                <?php if (isset($errors['email'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['email'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="contact_number">Contact Number</label>
-                    <input type="text" id="contact_number" name="contact_number" class="contact-input" value="<?= htmlspecialchars($current_data['contact_number']) ?>" placeholder="e.g., +639123456789">
+                    <input type="text" id="contact_number" name="contact_number" class="contact-input form-control <?= isset($errors['contact_number']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['contact_number']) ?>" placeholder="e.g., +639123456789">
                 </div>
-                <?php if (isset( $errors['contact_number'])): ?><span class="error"><?= $errors['contact_number'] ?></span><?php endif; ?>
+                <?php if (isset( $errors['contact_number'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['contact_number'] ?></span><?php endif; ?>
 
                 <div class="form-actions">
-                    <button type="button" id="openConfirmModal" class="btn btn-danger btn-lg"> 
+                    <button type="button" id="openConfirmModal" class="btn-theme-primary"> 
                         <i class="fas fa-save me-2"></i> Save Changes
                     </button>
                 </div>
@@ -548,12 +582,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         // --- Sidebar Activation Logic ---
         const links = document.querySelectorAll('.sidebar .nav-link');
+        const currentPath = 'student_edit.php'; 
+        
         links.forEach(link => {
-            link.classList.remove('active');
+             const linkPath = link.getAttribute('href').split('/').pop();
+            
+             if (linkPath === currentPath) {
+                 link.classList.add('active');
+             } else {
+                 link.classList.remove('active');
+             }
         });
 
         // --- 1. Track Form Changes ---
-        const inputFields = form.querySelectorAll('input:not([type="hidden"])');
+        const inputFields = form.querySelectorAll('input:not([type="hidden"]):not([disabled])');
         
         // Store initial values to compare later
         const initialValues = {};
@@ -623,15 +665,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
-                if (sidebar.classList.contains('active')) {
-                     mainWrapper.addEventListener('click', closeSidebarOnce);
-                } else {
-                     mainWrapper.removeEventListener('click', closeSidebarOnce);
+                if (window.innerWidth <= 992) {
+                     if (sidebar.classList.contains('active')) {
+                        document.body.style.overflow = 'hidden'; 
+                        mainWrapper.addEventListener('click', closeSidebarOnce);
+                    } else {
+                        document.body.style.overflow = 'auto'; 
+                        mainWrapper.removeEventListener('click', closeSidebarOnce);
+                    }
                 }
             });
             
             function closeSidebarOnce() {
                  sidebar.classList.remove('active');
+                 document.body.style.overflow = 'auto'; 
                  mainWrapper.removeEventListener('click', closeSidebarOnce);
             }
             
@@ -639,7 +686,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             navLinks.forEach(link => {
                  link.addEventListener('click', () => {
                      if (window.innerWidth <= 992) {
-                        sidebar.classList.remove('active');
+                         setTimeout(() => {
+                             sidebar.classList.remove('active');
+                             document.body.style.overflow = 'auto';
+                        }, 100);
                      }
                  });
             });

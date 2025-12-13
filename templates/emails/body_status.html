@@ -1,15 +1,51 @@
-<p>Dear {{ RECIPIENT_NAME }},</p>
-<p>Your request (ID: <strong>#{{ FORM_ID }}</strong>) has been processed by the staff.</p>
+<p>Dear **{{ RECIPIENT_NAME }}**:</p>
+
+<p>We are writing to provide an update on your apparatus request with ID **#{{ FORM_ID }}**.</p>
 
 <div class="status-box {{ STATUS_CLASS }}">
-    Status: {{ STATUS_TEXT }}
+    TRANSACTION STATUS: **{{ STATUS_TEXT | uppercase }}**
 </div>
 
-<p>{{ DYNAMIC_MESSAGE }}</p>
+<h2 style="margin-top: 30px;">Request Summary</h2>
+<table class="details-table">
+    <tr>
+        <th>Request Date:</th>
+        <td>{{ REQUEST_DATE }}</td>
+    </tr>
+    <tr>
+        <th>Due Date:</th>
+        <td>{{ DUE_DATE }}</td>
+    </tr>
+    {{ IF APPROVAL_DATE }} 
+    <tr>
+        <th>Approval Date:</th>
+        <td>{{ APPROVAL_DATE }}</td>
+    </tr>
+    {{ ENDIF }}
+</table>
 
-<h4 style="margin-top: 30px;">Staff Remarks:</h4>
-<div class="remarks-box">
-    {{ REMARKS }}
-</div>
 
-<p style="margin-top: 20px;">Thank you for using the system.</p>
+<h3 style="margin-top: 30px;">Next Steps</h3>
+<p>**{{ DYNAMIC_MESSAGE }}**</p> 
+
+{{ IF STATUS_CLASS == 'status-approved' }}
+<p>You may now proceed to the laboratory to pick up your requested items. Please ensure you present your ID and transaction details.</p>
+{{ ELSEIF STATUS_CLASS == 'status-rejected' }}
+<p style="color: #721c24;">Your request was declined. Please review the staff remarks below for the specific reason and consider submitting a new request with modifications.</p>
+{{ ELSEIF STATUS_CLASS == 'status-waiting' }}
+<p>Your request is currently pending review by the laboratory staff. We will notify you again once a decision has been made. Thank you for your patience.</p>
+{{ ENDIF }}
+
+
+{{ IF REMARKS }}
+    <h4 style="margin-top: 30px;">Staff Reasoning/Remarks:</h4>
+    <div class="remarks-box">
+        {{ REMARKS }}
+    </div>
+{{ ENDIF }}
+
+<p style="margin-top: 30px; text-align: center;">
+    <!-- <a href="{{ VIEW_TRANSACTION_URL }}" class="button">View Full Transaction Details</a> -->
+</p>
+
+<p style="margin-top: 20px;">If you have any concerns or require further clarification, please contact the laboratory staff immediately.</p>

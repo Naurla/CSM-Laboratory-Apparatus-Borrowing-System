@@ -5,24 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSM Borrowing System Notification</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        /* Base Styles */
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .header { background-color: #b8312d; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
         .header h1 { margin: 0; font-size: 1.5rem; }
         .content { padding: 30px; line-height: 1.6; color: #333; }
         .footer { background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 0.8rem; color: #666; border-radius: 0 0 8px 8px; border-top: 1px solid #ddd; }
-        /* File: templates/emails/base_layout.html (Inside the <style> tag) */
 
-/* ... existing CSS ... */
+        /* Status Box Styles */
+        .status-box { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.1rem; text-transform: uppercase; }
+        .status-approved { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; } /* Green - Successful Transaction */
+        .status-rejected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; } /* Red - Rejected */
+        .status-waiting { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; } /* Yellow/Warning - Pending/Awaiting */
+        .status-late { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; } /* Use Red for Late to imply urgency/consequence */
+        
+        /* NEW: Specific box for Damage/Issue notifications, using a prominent color */
+        .status-issue { background-color: #ffc299; color: #8d4500; border: 1px solid #ffab7d; } /* Orange/Brown - Damage/Penalty */
 
-.status-box { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.1rem; }
-.status-approved { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; } /* Green */
-.status-rejected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; } /* Red */
-.status-waiting { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; } /* Yellow/Warning */
+        /* Remarks and Specificity Box */
+        /* Make remarks more visible, especially when they detail a problem */
+        .remarks-box { 
+            margin-top: 20px; 
+            padding: 15px; 
+            background-color: #fef9e7; /* Lighter background */
+            border-left: 4px solid #f39c12; /* Prominent left border */
+            font-style: normal; 
+            font-size: 0.95rem;
+        }
 
-/* ... existing CSS ... */
-        .status-late, .status-waiting { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .remarks-box { margin-top: 20px; padding: 10px; background-color: #fafafa; border-left: 3px solid #ccc; font-style: italic; }
+        /* NEW: Table for Transaction Details */
+        .details-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .details-table th, .details-table td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.9rem; }
+        .details-table th { background-color: #f9f9f9; font-weight: bold; color: #555; }
+        .details-table tr:last-child td { border-bottom: none; }
+
+        /* NEW: Button Style for Call to Action */
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 20px;
+            background-color: #b8312d;
+            color: white !important; /* Important for mail clients */
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .button:hover { background-color: #8c2420; }
     </style>
 </head>
 <body>

@@ -1,35 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URGENT: Overdue Apparatus Notice</title>
     <style>
         /* INLINE CSS IS BEST for email compatibility */
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); border-top: 5px solid #b8312d; }
-        .header { background-color: #b8312d; color: white; padding: 15px; text-align: center; border-radius: 4px 4px 0 0; }
-        .content { padding: 20px 0; line-height: 1.6; color: #333; }
-        .footer { font-size: 0.8em; color: #777; text-align: center; padding-top: 15px; border-top: 1px solid #eee; }
-        .alert { background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; border: 1px solid #f5c6cb; font-weight: bold; margin: 15px 0; }
-        .button { display: inline-block; padding: 10px 20px; margin-top: 15px; background-color: #0d6efd; color: white !important; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); border-top: 5px solid #b8312d; }
+        .header { background-color: #b8312d; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h2 { margin: 0; font-size: 1.5rem; }
+        .content { padding: 30px; line-height: 1.6; color: #333; }
+        .footer { font-size: 0.8em; color: #777; text-align: center; padding: 15px 30px; border-top: 1px solid #eee; border-radius: 0 0 8px 8px; }
+        
+        /* Alert Box for Overdue Status */
+        .alert { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; border: 1px solid #f5c6cb; font-weight: bold; margin: 15px 0; text-align: center; font-size: 1.1rem; }
+        
+        /* Item Details Table */
+        .details-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .details-table th, .details-table td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.9rem; }
+        .details-table th { background-color: #f9f9f9; font-weight: bold; color: #555; }
+        
+        /* Action Button (Using System's Red for Consistency) */
+        .button { 
+            display: inline-block; 
+            padding: 12px 25px; 
+            margin-top: 15px; 
+            background-color: #b8312d; /* System Red */
+            color: white !important; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-weight: bold; 
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2 style="margin: 0;">CSM Borrowing System Alert</h2>
+            <h2>CSM Borrowing System Alert</h2>
         </div>
         <div class="content">
-            <p>Dear **{USER_NAME}**:</p>
+            <p>Dear **{{ USER_NAME }}**:</p>
             
             <div class="alert">
-                🚨 **URGENT:** Your loan (Form ID: **{FORM_ID}**) is officially **OVERDUE**.
+                🚨 **URGENT:** Your apparatus loan (Form ID: **#{{ FORM_ID }}**) is officially **OVERDUE**.
             </div>
             
-            <p>The items were due for return on **{EXPECTED_DATE}**.</p>
-            <p>Please initiate the return process immediately to prevent the suspension of your borrowing privileges and potential penalties.</p>
+            <p style="margin-bottom: 20px;">The items were due for return on **{{ EXPECTED_DATE }}**. Please return them immediately to the laboratory office.</p>
             
-            <p style="text-align: center;">
-                <a href="http://localhost/wd123/student/student_return.php" class="button">Initiate Return Now</a>
+            <h3 style="margin-top: 25px;">Overdue Items</h3>
+            <table class="details-table">
+                <thead>
+                    <tr>
+                        <th>Apparatus</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ FOR item IN OVERDUE_ITEMS }}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                    </tr>
+                    {{ ENDFOR }}
+                </tbody>
+            </table>
+            
+            <h3 style="color: #721c24; margin-top: 30px;">Action Required: Prevent Penalties</h3>
+            <p>Failure to return the items immediately will result in:</p>
+            <ul style="color: #333;">
+                <li>**Suspension** of your borrowing privileges.</li>
+                <li>**Assessment of fines** for each day overdue.</li>
+                <li>**Liability** for the replacement cost of items that are lost or damaged.</li>
+            </ul>
+            
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="{{ RETURN_URL }}" class="button">Initiate Return / View Transaction</a>
             </p>
+            
+            <p style="margin-top: 25px; font-size: 0.9em; color: #555;">Please contact the laboratory staff if you have already returned the items or if there is a discrepancy with this notice.</p>
         </div>
         <div class="footer">
             This is an automated security and notification email. Please do not reply.

@@ -1,26 +1,66 @@
-<p>Dear {{ RECIPIENT_NAME }},</p>
-<p>The staff has finalized the inspection of the items for your request (ID: <strong>#{{ FORM_ID }}</strong>).</p>
+<p>Dear **{{ RECIPIENT_NAME }}**:</p>
 
-<div class="status-box status-{{ CONDITION }}">
-    {{ STATUS_TEXT }}
-</div>
-
-{{ IF CONDITION == "good" }}
-<p style="color: green;">All returned items were found to be in **GOOD** condition. The transaction is now complete.</p>
-{{ ENDIF }}
-
-{{ IF CONDITION == "late" }}
-<p style="color: orange;">Your return was processed, but was marked as **LATE**. Please note this may affect future borrowing privileges.</p>
-{{ ENDIF }}
+<p>Your return request (ID: **#{{ FORM_ID }}**) has been successfully processed and finalized by the laboratory staff.</p>
 
 {{ IF CONDITION == "damaged" }}
-<p style="color: red;">**IMPORTANT:** The return was processed, but **DAMAGE** was noted on one or more items.</p>
-<p>Please contact the office immediately regarding the damage report and potential liabilities.</p>
+    <div class="status-box status-issue">⚠️ Return Processed: DAMAGE/ISSUE NOTED</div>
+{{ ELSEIF CONDITION == "late" }}
+    <div class="status-box status-late">Return Processed: LATE</div>
+{{ ELSE }}
+    <div class="status-box status-approved">Return Complete! All items in GOOD condition.</div>
 {{ ENDIF }}
 
-<h4 style="margin-top: 30px;">Staff Remarks:</h4>
-<div class="remarks-box">
-    {{ REMARKS }}
-</div>
 
-<p style="margin-top: 20px;">Thank you for using the system.</p>
+<h2 style="margin-top: 30px;">Item Condition Summary</h2>
+<table class="details-table">
+    <thead>
+        <tr>
+            <th>Apparatus Name</th>
+            <th>Qty Returned</th>
+            <th>Final Condition</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ FOR item IN RETURNED_ITEMS }} 
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>
+                {{ IF item.condition == 'Damaged' OR item.condition == 'Lost' }}
+                    <strong style="color: #b8312d;">{{ item.condition | uppercase }}</strong>
+                {{ ELSE }}
+                    Good
+                {{ ENDIF }}
+            </td>
+        </tr>
+        {{ ENDFOR }}
+    </tbody>
+</table>
+
+
+{{ IF CONDITION == "damaged" OR CONDITION == "late" }}
+    <div class="remarks-box">
+        <h3 style="color: #8d4500; margin-top: 0;">Reasoning & Next Steps</h3>
+        
+        <p>The following official report was recorded by the staff regarding the condition of your return:</p>
+        
+        <strong style="display: block; margin-bottom: 10px;">Staff Remarks:</strong>
+        <div style="border: 1px solid #ddd; padding: 10px; background-color: white; border-radius: 4px;">
+            {{ REMARKS }}
+        </div>
+        
+        {{ IF DAMAGE_FINE > 0 }}
+            <p style="margin-top: 15px; padding: 10px; background-color: #f8d7da; border-left: 3px solid #721c24;">
+                <strong style="color: #721c24;">ACTION REQUIRED: A financial liability of {{ DAMAGE_FINE }} has been assessed due to the issue(s) noted above. Please contact the College Office immediately to settle this amount.</strong>
+            </p>
+        {{ ENDIF }}
+
+    </div>
+{{ ENDIF }}
+
+
+<p style="margin-top: 30px; text-align: center;">
+    <!-- <a href="{{ VIEW_TRANSACTION_URL }}" class="button">View Full Transaction Record Online</a> -->
+</p>
+
+<p style="margin-top: 20px;">For any questions or clarification, please contact the laboratory staff or reply to this email.</p>

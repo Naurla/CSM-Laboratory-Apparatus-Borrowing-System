@@ -196,6 +196,59 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         font-weight: bold;
     }
     
+    /* FIX: Notification Dropdown size and spacing */
+    .dropdown-menu { 
+        min-width: 320px; 
+        padding: 0; 
+        border-radius: 8px; /* Consistent rounded corners */
+    }
+    .dropdown-header { 
+        font-size: 1rem; 
+        color: #6c757d; 
+        padding: 10px 15px; 
+        text-align: center; 
+        border-bottom: 1px solid #eee; 
+        margin-bottom: 0; 
+    }
+    .dropdown-item {
+        padding: 8px 15px; /* Tighter vertical padding */
+        white-space: normal;
+        transition: background-color 0.1s;
+        border-bottom: 1px dotted #eee; /* Separator for clean lines */
+    }
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    .dropdown-item.unread-item { 
+        font-weight: 600; 
+        background-color: #f8f8ff; 
+    }
+    .dropdown-item small { 
+        display: block; 
+        font-size: 0.8em; 
+        color: #999; 
+    }
+    .mark-read-hover-btn { 
+        opacity: 0; 
+        font-size: 0.9rem; 
+    }
+    .dropdown-item:hover .mark-read-hover-btn { 
+        opacity: 1; 
+    }
+    .dropdown-item.mark-all-link-wrapper {
+        border-top: none; 
+        border-bottom: 1px solid #ddd; 
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-weight: 600;
+        color: var(--primary-color) !important;
+        background-color: #fcfcfc;
+    }
+    .dropdown-item.mark-all-link-wrapper:hover {
+        background-color: #f0f0f0;
+    }
+    /* --- End Notification Fix --- */
+    
     /* --- Sidebar Styles --- */
     .sidebar {
         width: var(--sidebar-width);
@@ -261,15 +314,6 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         background-color: var(--primary-color-dark) !important;
     }
     
-    /* Dropdown Menu Styles (Notification) - Retained */
-    .dropdown-menu { min-width: 300px; padding: 0; }
-    .dropdown-header { font-size: 1rem; color: #6c757d; padding: 10px 15px; text-align: center; border-bottom: 1px solid #eee; margin-bottom: 0; }
-    .dropdown-item.unread-item { font-weight: 600; background-color: #f8f8ff; }
-    .dropdown-item small { display: block; font-size: 0.8em; color: #999; }
-    .mark-read-hover-btn { opacity: 0; }
-    .dropdown-item:hover .mark-read-hover-btn { opacity: 1; }
-
-
     /* --- Main Content CSS --- */
     .main-wrapper {
         margin-left: var(--sidebar-width); 
@@ -535,13 +579,9 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
             </a>
             
             <div class="dropdown-menu dropdown-menu-end shadow" 
-                aria-labelledby="alertsDropdown" id="notification-dropdown">
+                 aria-labelledby="alertsDropdown" id="notification-dropdown">
                 
                 <h6 class="dropdown-header">Your Alerts</h6>
-                
-                <div class="dynamic-notif-placeholder">
-                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
-                </div>
                 
                 <a class="dropdown-item text-center small text-muted" href="student_transaction.php">View All History</a>
             </div>
@@ -674,7 +714,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         
         // Prevent default navigation if it was an unread item or a hover click
         if (isHoverClick || isRead === 0) {
-              event.preventDefault();
+             event.preventDefault();
         }
 
         if (isRead === 0) {
@@ -727,29 +767,32 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
             const $header = $dropdown.find('.dropdown-header');
+            
+            // Find and detach the static View All link
             const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
             
-            // Clear previous dynamic content and any old Mark All buttons
-            $dropdown.find('.dynamic-notif-item').remove();
-            $dropdown.find('.mark-all-btn-wrapper').remove(); 
-
+            // Clear previous dynamic content
+            $dropdown.children().not($header).not($viewAllLink).remove();
+            
             // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
 
-            // 2. Populate the Dropdown Menu
-            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            // 2. Prepare content
+            let contentToInsert = [];
             
             if (notifications.length > 0) {
-                // Add a Mark All button if there are unread items
+                
+                // A. Mark All button (Inserted first)
                 if (unreadCount > 0) {
-                     $placeholder.append(`
-                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                    contentToInsert.push(`
+                         <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-link-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
                              <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                          </a>
-                     `);
+                         </a>
+                    `);
                 }
 
+                // B. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-secondary'; 
@@ -762,18 +805,18 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                     }
                     
                     const is_read = notif.is_read == 1;
-                    const itemClass = is_read ? 'read-item' : 'unread-item';
+                    const itemClass = is_read ? 'text-muted' : 'fw-bold';
                     const link = notif.link || 'student_transaction.php';
                     
                     const cleanMessage = notif.message.replace(/\*\*/g, '');
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-                    $placeholder.append(`
+                    contentToInsert.push(`
                          <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                            href="${link}" 
-                            data-id="${notif.id}"
-                            data-is-read="${notif.is_read}"
-                            onclick="window.markSingleAlertAndGo(event, this)">
+                             href="${link}" 
+                             data-id="${notif.id}"
+                             data-is-read="${notif.is_read}"
+                             onclick="window.markSingleAlertAndGo(event, this)">
                              <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
                              <div class="flex-grow-1">
                                  <div class="small text-gray-500">${datePart}</div>
@@ -781,22 +824,25 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                              </div>
                              ${notif.is_read == 0 ? 
                                  `<button type="button" class="mark-read-hover-btn" 
-                                             title="Mark as Read" 
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                     <i class="fas fa-check-circle"></i>
-                                 </button>` : ''}
+                                          title="Mark as Read" 
+                                          data-id="${notif.id}"
+                                          onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                      <i class="fas fa-check-circle"></i>
+                                  </button>` : ''}
                          </a>
                      `);
                 });
             } else {
                 // Display a "No Alerts" message
-                $placeholder.html(`
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No Recent Notifications</a>
                 `);
             }
             
-            // Re-append the 'View All' link to the end of the dropdown
+            // 3. Insert all dynamic content after the header
+            $header.after(contentToInsert.join(''));
+            
+            // 4. Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
             
 
@@ -856,7 +902,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                  link.addEventListener('click', () => {
                      // Check if we are on a mobile view before closing
                      if (window.innerWidth <= 992) {
-                        sidebar.classList.remove('active');
+                          sidebar.classList.remove('active');
                      }
                  });
             });

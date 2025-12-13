@@ -102,11 +102,66 @@ $baseURL = "../uploads/apparatus_images/";
             padding: 0 20px;
             z-index: 1000;
         }
-        .edit-profile-link { color: var(--primary-color); font-weight: 600; text-decoration: none; }
-        .notification-bell-container { position: relative; margin-right: 25px; list-style: none; padding: 0; }
-        .notification-bell-container .badge-counter { background-color: var(--secondary-color); color: var(--text-dark); }
-        .dropdown-menu { min-width: 300px; padding: 0; z-index: 1051; }
-        .dropdown-item.unread-item { font-weight: 600; background-color: #f8f8ff; }
+        .edit-profile-link { 
+            color: var(--primary-color); 
+            font-weight: 600; 
+            text-decoration: none; 
+        }
+        .notification-bell-container { 
+            position: relative; 
+            margin-right: 25px; 
+            list-style: none; 
+            padding: 0; 
+        }
+        .notification-bell-container .badge-counter { 
+            background-color: var(--secondary-color); 
+            color: var(--text-dark); 
+        }
+        
+        /* FIX: Notification Dropdown size and spacing (Thin lines) */
+        .dropdown-menu { 
+            min-width: 320px; 
+            padding: 0; 
+            border-radius: 8px; 
+            z-index: 1051; 
+        }
+        .dropdown-header { 
+            font-size: 1rem; 
+            color: #6c757d; 
+            padding: 10px 15px; 
+            text-align: center; 
+            border-bottom: 1px solid #eee; 
+            margin-bottom: 0; 
+        }
+        /* FIX: Individual item spacing (Thin lines) */
+        .dropdown-item {
+            padding: 8px 15px; /* Tighter vertical padding */
+            white-space: normal;
+            transition: background-color 0.1s;
+            border-bottom: 1px dotted #eee; /* Separator for clean lines */
+        }
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .dropdown-item.unread-item { 
+            font-weight: 600; 
+            background-color: #f8f8ff; 
+        }
+        /* Mark All link styling */
+        .dropdown-item.mark-all-btn-wrapper {
+            border-top: none; 
+            border-bottom: 1px solid #ddd; 
+            padding-top: 10px;
+            padding-bottom: 10px;
+            font-weight: 600;
+            color: var(--primary-color) !important;
+            background-color: #fcfcfc;
+        }
+        .dropdown-item.mark-all-btn-wrapper:hover {
+            background-color: #f0f0f0;
+        }
+        .mark-read-hover-btn { opacity: 0; }
+        .dropdown-item:hover .mark-read-hover-btn { opacity: 1; }
         /* === END TOP HEADER BAR STYLES === */
         
         .container {
@@ -262,11 +317,11 @@ $baseURL = "../uploads/apparatus_images/";
         
         @media (max-width: 576px) {
             .top-header-bar {
-                 padding: 0 10px;
-                 justify-content: flex-end;
+                padding: 0 10px;
+                justify-content: flex-end;
             }
             .edit-profile-link {
-                 font-size: 0.9rem;
+                font-size: 0.9rem;
             }
             .form-details-grid .col-md-3, .form-details-grid .col-sm-6 {
                 width: 100%; /* Full stack on XS screens */
@@ -290,7 +345,7 @@ $baseURL = "../uploads/apparatus_images/";
                 
                 <h6 class="dropdown-header">Your Alerts</h6>
                 
-                <div class="dynamic-notif-placeholder">
+                <div class="dynamic-content-area">
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">Loading notifications...</a>
                 </div>
                 
@@ -355,14 +410,11 @@ $baseURL = "../uploads/apparatus_images/";
             <?php if (!empty($items)): ?>
                 <?php foreach ($items as $item): 
                     // Determine image URL with fallback
-                    $imagePath = "../uploads/apparatus_images/" . ($item["image"] ?? 'default.jpg');
-                    $imageURL = $baseURL . ($item["image"] ?? 'default.jpg');
-
-                    // Note: file_exists() check is not executable here, so we rely on the URL path logic.
+                    $imagePath = $baseURL . ($item["image"] ?? 'default.jpg');
                 ?>
                     <tr>
                         <td class="table-image-cell">
-                            <img src="<?= htmlspecialchars($imageURL) ?>" 
+                            <img src="<?= htmlspecialchars($imagePath) ?>" 
                                 alt="<?= htmlspecialchars($item["name"] ?? 'N/A') ?>" 
                                 class="img-fluid rounded"
                                 style="width: 50px; height: 50px; object-fit: cover;">
@@ -394,7 +446,7 @@ $baseURL = "../uploads/apparatus_images/";
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- DROPDOWN NOTIFICATION LOGIC (Restored) ---
+    // --- DROPDOWN NOTIFICATION LOGIC (Restored and adapted) ---
 
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
@@ -454,73 +506,83 @@ $baseURL = "../uploads/apparatus_images/";
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
-            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            const $header = $dropdown.find('.dropdown-header');
             
+            // Find and detach the static View All link
             const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
             
-            $dropdown.find('.mark-all-btn-wrapper').remove(); 
-
+            // Clear previous dynamic content
+            $dropdown.children().not($header).not($viewAllLink).remove(); 
+            
             // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
 
-            // 2. Populate the Dropdown Menu
+            // 2. Prepare content
+            let contentToInsert = [];
+            
             if (notifications.length > 0) {
+                
+                // A. Mark All button (Inserted first)
                 if (unreadCount > 0) {
-                     $placeholder.append(`
-                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                             </a>
-                     `);
+                    contentToInsert.push(`
+                         <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                         </a>
+                    `);
                 }
 
+                // B. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-secondary'; 
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE') || notif.message.includes('URGENT')) {
-                            iconClass = 'fas fa-exclamation-triangle text-danger';
+                          iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                            iconClass = 'fas fa-check-circle text-success';
+                          iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                            iconClass = 'fas fa-hourglass-half text-warning';
+                          iconClass = 'fas fa-hourglass-half text-warning';
                     }
                     
                     const is_read = notif.is_read == 1;
-                    const itemClass = is_read ? 'read-item' : 'unread-item';
+                    const itemClass = is_read ? 'text-muted' : 'unread-item';
                     const link = notif.link || 'student_transaction.php';
                     
                     const cleanMessage = notif.message.replace(/\*\*/g, '');
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-                    $placeholder.append(`
-                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                                 href="${link}" 
-                                 data-id="${notif.id}"
-                                 data-is-read="${notif.is_read}"
-                                 onclick="window.markSingleAlertAndGo(event, this)">
-                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                                 <div class="flex-grow-1">
-                                     <div class="small text-gray-500">${datePart}</div>
-                                     <span class="d-block">${cleanMessage}</span>
-                                 </div>
-                                 ${notif.is_read == 0 ? 
-                                     `<button type="button" class="mark-read-hover-btn" 
-                                             title="Mark as Read" 
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                         <i class="fas fa-check-circle"></i>
-                                     </button>` : ''}
-                            </a>
-                    `);
+                    contentToInsert.push(`
+                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                             href="${link}" 
+                             data-id="${notif.id}"
+                             data-is-read="${notif.is_read}"
+                             onclick="window.markSingleAlertAndGo(event, this)">
+                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                             <div class="flex-grow-1">
+                                 <div class="small text-gray-500">${datePart}</div>
+                                 <span class="d-block">${cleanMessage}</span>
+                             </div>
+                             ${notif.is_read == 0 ? 
+                                 `<button type="button" class="mark-read-hover-btn" 
+                                          title="Mark as Read" 
+                                          data-id="${notif.id}"
+                                          onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                      <i class="fas fa-check-circle"></i>
+                                  </button>` : ''}
+                         </a>
+                     `);
                 });
             } else {
                 // Display a "No Alerts" message
-                $placeholder.html(`
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No Recent Notifications</a>
                 `);
             }
             
-            // Re-append the 'View All' link to the end of the dropdown
+            // 3. Insert all dynamic content after the header
+            $header.after(contentToInsert.join(''));
+            
+            // 4. Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
             
 
@@ -533,7 +595,7 @@ $baseURL = "../uploads/apparatus_images/";
 
     // --- DOMContentLoaded Execution (Initialization) ---
     document.addEventListener('DOMContentLoaded', () => {
-        // 1. Notification Logic Setup
+        // Notification Logic Setup
         fetchStudentAlerts(); // Initial fetch on page load
         setInterval(fetchStudentAlerts, 30000); // Poll the server every 30 seconds
     });

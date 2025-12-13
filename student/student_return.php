@@ -154,9 +154,46 @@ $today = date("Y-m-d");
         color: var(--text-dark);
         font-weight: bold;
     }
-    .dropdown-item.unread-item {
+    
+    /* FIX: Notification Dropdown size and spacing (Copied from dashboard fix) */
+    .dropdown-menu { 
+        min-width: 320px; 
+        padding: 0; 
+        border-radius: 8px; /* Consistent rounded corners */
+    }
+    .dropdown-header { 
+        font-size: 1rem; 
+        color: #6c757d; 
+        padding: 10px 15px; 
+        text-align: center; 
+        border-bottom: 1px solid #eee; 
+        margin-bottom: 0; 
+    }
+    /* FIX: Individual item spacing */
+    .dropdown-item {
+        padding: 8px 15px; /* Tighter vertical padding */
+        white-space: normal;
+        transition: background-color 0.1s;
+        border-bottom: 1px dotted #eee; /* Separator for clean lines */
+    }
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    .dropdown-item.unread-item { 
+        font-weight: 600; 
+        background-color: #f8f8ff; 
+    }
+    .dropdown-item.mark-all-btn-wrapper {
+        border-top: none; 
+        border-bottom: 1px solid #ddd; 
+        padding-top: 10px;
+        padding-bottom: 10px;
         font-weight: 600;
-        background-color: #f8f8ff;
+        color: var(--primary-color) !important;
+        background-color: #fcfcfc;
+    }
+    .dropdown-item.mark-all-btn-wrapper:hover {
+        background-color: #f0f0f0;
     }
     /* === END TOP HEADER BAR STYLES === */
 
@@ -540,10 +577,6 @@ $today = date("Y-m-d");
                 
                 <h6 class="dropdown-header">Your Alerts</h6>
                 
-                <div class="dynamic-notif-placeholder">
-                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
-                </div>
-                
                 <a class="dropdown-item text-center small text-muted" href="student_transaction.php">View All History</a>
             </div>
             
@@ -596,16 +629,16 @@ $today = date("Y-m-d");
                     $action_content = '';
                     if ($is_pending_check) {
                         $action_content = '<span class="action-message-checking">
-                                            <i class="fas fa-clock me-1"></i> Pending Staff Check
-                                          </span>';
+                                             <i class="fas fa-clock me-1"></i> Pending Staff Check
+                                           </span>';
                     } elseif (
                         (!$is_expected_return_date_reached) && 
                         ($clean_status === 'reserved' || $clean_status === 'approved')
                     ) {
                         // Reserved/Approved but date not yet reached
                         $action_content = '<span class="action-message-checking bg-info text-white">
-                                            <i class="fas fa-lock me-1"></i> Return available on ' . htmlspecialchars($form["expected_return_date"]) . '
-                                          </span>';
+                                             <i class="fas fa-lock me-1"></i> Return available on ' . htmlspecialchars($form["expected_return_date"]) . '
+                                           </span>';
                     } else {
                         // Ready for return submission (Borrowed, Overdue, or Reserved/Approved and due date reached/passed)
                         $overdue_warning = '';
@@ -662,7 +695,8 @@ $today = date("Y-m-d");
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- GLOBAL HANDLERS (for notification dropdown logic - Restored) ---
+    // --- GLOBAL HANDLERS (for notification dropdown logic) ---
+
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
         event.preventDefault();
@@ -679,6 +713,7 @@ $today = date("Y-m-d");
         }
 
         if (isRead === 0) {
+            // 1. Mark as read via API
             $.post('../api/mark_notification_as_read.php', { notification_id: notifId }, function(response) {
                 if (response.success) {
                     if (!isHoverClick) {
@@ -693,6 +728,7 @@ $today = date("Y-m-d");
                 console.error("API call failed.");
             });
         } else if (isRead === 1 && !isHoverClick) {
+            // If already read, just navigate
             window.location.href = linkHref;
         }
     }
@@ -721,83 +757,109 @@ $today = date("Y-m-d");
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
-            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            const $header = $dropdown.find('.dropdown-header');
+            
+            // Find and detach the static View All link
             const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
             
-            $dropdown.find('.mark-all-btn-wrapper').remove(); 
-
+            // Clear all previous dynamic content
+            $dropdown.children().not($header).not($viewAllLink).remove(); 
+            
             // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
 
-            // 2. Populate the Dropdown Menu
+            // 2. Prepare content
+            let contentToInsert = [];
+            
             if (notifications.length > 0) {
+                
+                // A. Mark All button (Inserted first)
                 if (unreadCount > 0) {
-                     $placeholder.append(`
-                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                             </a>
-                     `);
+                    contentToInsert.push(`
+                         <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-link-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                         </a>
+                    `);
                 }
 
+                // B. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-secondary'; 
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE') || notif.message.includes('URGENT')) {
-                            iconClass = 'fas fa-exclamation-triangle text-danger';
+                          iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                            iconClass = 'fas fa-check-circle text-success';
+                          iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                            iconClass = 'fas fa-hourglass-half text-warning';
+                          iconClass = 'fas fa-hourglass-half text-warning';
                     }
                     
                     const is_read = notif.is_read == 1;
-                    const itemClass = is_read ? 'read-item' : 'unread-item';
+                    const itemClass = is_read ? 'text-muted' : 'unread-item'; // Use unread-item class for styling
                     const link = notif.link || 'student_transaction.php';
                     
                     const cleanMessage = notif.message.replace(/\*\*/g, '');
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-                    $placeholder.append(`
-                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                                 href="${link}" 
-                                 data-id="${notif.id}"
-                                 data-is-read="${notif.is_read}"
-                                 onclick="window.markSingleAlertAndGo(event, this)">
-                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                                 <div class="flex-grow-1">
-                                     <div class="small text-gray-500">${datePart}</div>
-                                     <span class="d-block">${cleanMessage}</span>
-                                 </div>
-                                 ${notif.is_read == 0 ? 
-                                     `<button type="button" class="mark-read-hover-btn" 
-                                             title="Mark as Read" 
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                         <i class="fas fa-check-circle"></i>
-                                     </button>` : ''}
-                            </a>
-                    `);
+                    contentToInsert.push(`
+                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                             href="${link}" 
+                             data-id="${notif.id}"
+                             data-is-read="${notif.is_read}"
+                             onclick="window.markSingleAlertAndGo(event, this)">
+                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                             <div class="flex-grow-1">
+                                 <div class="small text-gray-500">${datePart}</div>
+                                 <span class="d-block">${cleanMessage}</span>
+                             </div>
+                             ${notif.is_read == 0 ? 
+                                 `<button type="button" class="mark-read-hover-btn" 
+                                          title="Mark as Read" 
+                                          data-id="${notif.id}"
+                                          onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                      <i class="fas fa-check-circle"></i>
+                                  </button>` : ''}
+                         </a>
+                     `);
                 });
             } else {
-                $placeholder.html(`
+                // Display a "No Alerts" message
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No Recent Notifications</a>
                 `);
             }
             
+            // 3. Insert all dynamic content after the header
+            $header.after(contentToInsert.join(''));
+            
+            // 4. Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
             
+
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching student alerts:", textStatus, errorThrown);
             $('#notification-bell-badge').text('0').hide();
         });
     }
-    // --- END NOTIFICATION LOGIC ---
-
 
     // --- DOMContentLoaded Execution ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Run initial fetch on page load
+        // ... (Sidebar activation logic) ...
+        const path = window.location.pathname.split('/').pop() || 'student_dashboard.php';
+        const links = document.querySelectorAll('.sidebar .nav-link');
+        
+        links.forEach(link => {
+            const linkPath = link.getAttribute('href').split('/').pop();
+            
+            if (linkPath === 'student_return.php') {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+        
+        // Initial fetch on page load
         fetchStudentAlerts();
         
         // Refresh every 30 seconds
@@ -813,59 +875,47 @@ $today = date("Y-m-d");
             }, 5000); 
         }
 
-        // --- Sidebar active link script (unchanged) ---
-        const path = window.location.pathname.split('/').pop();
-        const links = document.querySelectorAll('.sidebar .nav-link');
-        const topHeaderBar = document.querySelector('.top-header-bar');
-        
-        links.forEach(link => {
-            const linkPath = link.getAttribute('href').split('/').pop();
-            
-            if (linkPath === 'student_return.php') {
-                link.classList.add('active');
-            } else {
-                 link.classList.remove('active');
-            }
-        });
-        
         // New Mobile Toggle Logic
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const mainWrapper = document.querySelector('.main-wrapper');
+        const topHeaderBar = document.querySelector('.top-header-bar');
 
         if (menuToggle && sidebar) {
+            const closeSidebar = () => {
+                sidebar.classList.remove('active');
+                if (window.innerWidth <= 992) {
+                     document.body.style.overflow = 'auto'; 
+                     mainWrapper.removeEventListener('click', closeSidebar);
+                     topHeaderBar.removeEventListener('click', closeSidebar);
+                }
+            };
+            
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
                 if (window.innerWidth <= 992) {
                     if (sidebar.classList.contains('active')) {
                         document.body.style.overflow = 'hidden'; 
-                        mainWrapper.addEventListener('click', closeSidebarOnce);
-                        topHeaderBar.addEventListener('click', closeSidebarOnce);
+                        // Delay binding to avoid immediate close on toggle click
+                        setTimeout(() => {
+                             mainWrapper.addEventListener('click', closeSidebar);
+                             topHeaderBar.addEventListener('click', closeSidebar);
+                        }, 50);
                     } else {
-                        document.body.style.overflow = 'auto'; 
-                        mainWrapper.removeEventListener('click', closeSidebarOnce);
-                        topHeaderBar.removeEventListener('click', closeSidebarOnce);
+                         closeSidebar();
                     }
                 }
             });
             
-            function closeSidebarOnce() {
-                sidebar.classList.remove('active');
-                document.body.style.overflow = 'auto'; 
-                mainWrapper.removeEventListener('click', closeSidebarOnce);
-                topHeaderBar.removeEventListener('click', closeSidebarOnce);
-            }
-            
+            // Close sidebar when a nav item is clicked
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                    if (window.innerWidth <= 992) {
-                        setTimeout(() => {
-                            sidebar.classList.remove('active');
-                            document.body.style.overflow = 'auto';
-                        }, 100);
-                    }
-                });
+                 link.addEventListener('click', () => {
+                     // Check if we are on a mobile view before closing
+                     if (window.innerWidth <= 992) {
+                          setTimeout(closeSidebar, 100);
+                     }
+                 });
             });
         }
     });

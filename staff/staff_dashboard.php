@@ -73,7 +73,6 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             padding: 8px 12px;
             border-radius: 6px;
             font-size: 1.2rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             width: 44px;  
             height: 44px;  
             display: flex;
@@ -136,6 +135,43 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             color: var(--main-text);
             font-weight: bold;
         }
+        
+        /* FIX: Notification Dropdown size and spacing */
+        .dropdown-menu { 
+            min-width: 320px; 
+            padding: 0; 
+            border-radius: 8px;
+        }
+        .dropdown-header { 
+            font-size: 1rem; 
+            color: #6c757d; 
+            padding: 10px 15px; 
+            text-align: center; 
+            border-bottom: 1px solid #eee; 
+            margin-bottom: 0; 
+        }
+        .dropdown-item {
+            padding: 8px 15px; /* Tighter vertical padding */
+            white-space: normal;
+            transition: background-color 0.1s;
+            border-bottom: 1px dotted #eee; /* Separator for clean lines */
+        }
+        .dropdown-item:last-child {
+             border-bottom: none;
+        }
+        .dropdown-item.mark-all-btn-wrapper {
+             border-top: none; 
+             border-bottom: 1px solid #ddd; 
+             padding-top: 10px;
+             padding-bottom: 10px;
+             font-weight: 600;
+             color: var(--main-text) !important;
+             background-color: #fcfcfc;
+        }
+        .dropdown-item.mark-all-btn-wrapper:hover {
+            background-color: #f0f0f0;
+        }
+        /* --- End Notification Fix --- */
         
         /* --- Sidebar Styles (Fixed for Consistency) --- */
         .sidebar {
@@ -423,11 +459,8 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             </a>
             <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" 
                 aria-labelledby="alertsDropdown" id="notification-dropdown">
-                <h6 class="dropdown-header text-center">New Requests</h6>
                 
-                <div class="dynamic-notif-placeholder">
-                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Fetching notifications...</a>
-                </div>
+                <h6 class="dropdown-header text-center">New Requests</h6>
                 
                 <a class="dropdown-item text-center small text-muted" href="staff_pending.php">View All Pending Requests</a>
             </div>
@@ -577,7 +610,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
         });
     };
 
-    // 3. Function to fetch the count and populate the dropdown (UPDATED for dynamic Mark All)
+    // 3. Function to fetch the count and populate the dropdown (UPDATED for dynamic Mark All and styling)
     function fetchStaffNotifications() {
         const apiPath = '../api/get_notifications.php'; 
 
@@ -588,33 +621,34 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
+            const $header = $dropdown.find('.dropdown-header');
             
             // Find and detach the static 'View All' link
             const $viewAllLink = $dropdown.find('a[href="staff_pending.php"]').detach();
             
-            // Clear previous dynamic items and dynamic Mark All link
-            $dropdown.find('.dynamic-notif-item').remove(); 
-            $dropdown.find('.mark-all-link-wrapper').remove(); 
+            // Clear previous dynamic content
+            $dropdown.children().not($header).not($viewAllLink).remove(); 
             
             // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
 
-            // 2. Populate the Dropdown Menu
-            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
+            // 2. Prepare content
+            let contentToInsert = [];
             
             if (notifications.length > 0) {
                 
-                // *** DYNAMIC MARK ALL BUTTON CREATION ***
+                // A. Mark All button (Inserted first)
                 if (unreadCount > 0) {
-                    $placeholder.append(`
-                        <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-link-wrapper" href="#" 
+                    contentToInsert.push(`
+                        <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" 
                             onclick="event.preventDefault(); window.markAllStaffAsRead();">
                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
                         </a>
                     `);
                 }
                 
+                // B. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-info'; 
@@ -627,7 +661,7 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                     const is_read = notif.is_read == 1;
                     const itemClass = is_read ? 'text-muted' : 'fw-bold'; // Highlight unread
 
-                    $placeholder.append(`
+                    contentToInsert.push(`
                              <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
                                  href="${notif.link}"
                                  data-id="${notif.id}"
@@ -642,12 +676,15 @@ $returnedForms = count(array_filter($allForms, fn($f) => $f['status'] === 'retur
                 });
             } else {
                 // Display a "No Alerts" message
-                $placeholder.html(`
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No New Notifications</a>
                 `);
             }
             
-            // Re-append the View All link at the bottom
+            // 3. Insert all dynamic content after the header
+            $header.after(contentToInsert.join(''));
+            
+            // 4. Re-append the View All link at the bottom
             $dropdown.append($viewAllLink);
             
         }).fail(function(jqXHR, textStatus, errorThrown) {

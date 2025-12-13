@@ -3,25 +3,19 @@ session_start();
 require_once "../vendor/autoload.php";
 require_once "../classes/Transaction.php";
 require_once "../classes/Database.php";
-
 if (!isset($_SESSION["user"]) || $_SESSION["user"]["role"] != "student") {
     header("Location: ../pages/login.php");
     exit;
 }
-
 $transaction = new Transaction();
 $student_id = $_SESSION["user"]["id"];
-
 // --- BAN/LOCK STATUS CHECKS (used only for sidebar rendering) ---
 $isBanned = $transaction->isStudentBanned($student_id); 
 $activeCount = $transaction->getActiveTransactionCount($student_id);
-
 // --- FILTERING LOGIC ---
 $filter = isset($_GET["filter"]) ? $_GET["filter"] : "all";
-
 // Fetch ALL student transactions for history view (targets borrow_forms)
 $transactions = $transaction->getStudentTransactions($student_id);
-
 // We rely on PHP's array filtering for simplicity, as in the original code.
 if ($filter != "all") {
     $filtered_transactions = array_filter($transactions, function($t) use ($filter) {
@@ -34,17 +28,14 @@ if ($filter != "all") {
 } else {
     $filtered_transactions = $transactions;
 }
-
 // Re-index array after filtering for use with foreach
 $filtered_transactions = array_values($filtered_transactions);
-
 // --- NEW FUNCTION: FLATTEN FORMS INTO ITEM-ROWS ---
 function getStudentDetailedItemRows(array $forms, $transaction) {
     $rows = [];
     foreach ($forms as $form) {
         $form_id = $form['id'];
         $detailed_items = $transaction->getFormItems($form_id);
-
         if (empty($detailed_items)) {
             $detailed_items = [
                 ['name' => 'N/A', 
@@ -53,7 +44,6 @@ function getStudentDetailedItemRows(array $forms, $transaction) {
                 'is_late_return' => $form['is_late_return'] ?? 0] 
             ];
         }
-
         foreach ($detailed_items as $index => $item) {
             $raw_status = strtolower($form['status']);
             $item_status = strtolower($item['item_status'] ?? $raw_status);
@@ -93,23 +83,17 @@ function getStudentDetailedItemRows(array $forms, $transaction) {
     }
     return $rows;
 }
-
 $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transaction);
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student - Transaction History</title>
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
-    
     <style>
     /* Custom Variables and Base Layout (MSU Theme) */
     :root {
@@ -120,22 +104,19 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
         --header-height: 60px; 
-        
         /* Status Colors */
         --danger-color: #dc3545; 
         --warning-color: #ffc107;
         --success-color: #28a745; 
         --info-color: #0d6efd; 
-
         /* Define solid colors for status tags */
         --status-returned-solid: var(--success-color); 
         --status-overdue-solid: var(--danger-color); 
         --status-borrowed-solid: var(--info-color); 
-        --status-pending-solid: var(--warning-color);
+        --status-pending-solid: var(--warning-color); /* ADDED PENDING SOLID COLOR */
         --status-rejected-solid: #6c757d; 
         --status-damaged-solid: var(--text-dark); 
     }
-    
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         background: var(--bg-light); 
@@ -146,7 +127,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         font-size: 1.05rem;
         color: var(--text-dark);
     }
-
     /* NEW CSS for Mobile Toggle */
     .menu-toggle {
         display: none;
@@ -161,7 +141,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         border-radius: 6px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    
     /* === TOP HEADER BAR STYLES === */
     .top-header-bar {
         position: fixed;
@@ -200,13 +179,50 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         color: var(--text-dark);
         font-weight: bold;
     }
-    .dropdown-menu { min-width: 300px; padding: 0; z-index: 1051; }
-    .dropdown-item.unread-item { font-weight: 600; background-color: #f8f8ff; }
+    /* FIX: Notification Dropdown size and spacing (Thin lines) */
+    .dropdown-menu { 
+        min-width: 320px; 
+        padding: 0; 
+        border-radius: 8px; 
+        z-index: 1051; 
+    }
+    .dropdown-header { 
+        font-size: 1rem; 
+        color: #6c757d; 
+        padding: 10px 15px; 
+        text-align: center; 
+        border-bottom: 1px solid #eee; 
+        margin-bottom: 0; 
+    }
+    .dropdown-item {
+        padding: 8px 15px; /* Tighter vertical padding */
+        white-space: normal;
+        transition: background-color 0.1s;
+        border-bottom: 1px dotted #eee; /* Separator for clean lines */
+    }
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    .dropdown-item.unread-item { 
+        font-weight: 600; 
+        background-color: #f8f8ff; 
+    }
+    /* Mark All link styling */
+    .dropdown-item.mark-all-btn-wrapper {
+        border-top: none; 
+        border-bottom: 1px solid #ddd; 
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-weight: 600;
+        color: var(--primary-color) !important;
+        background-color: #fcfcfc;
+    }
+    .dropdown-item.mark-all-btn-wrapper:hover {
+        background-color: #f0f0f0;
+    }
     .mark-read-hover-btn { opacity: 0; }
     .dropdown-item:hover .mark-read-hover-btn { opacity: 1; }
     /* === END TOP HEADER BAR STYLES === */
-
-
     /* --- Sidebar Styles (Consistent Look) --- */
     .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); background-color: var(--primary-color); color: white; padding: 0; position: fixed; height: 100%; top: 0; left: 0; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); z-index: 1050; }
     .sidebar-header { text-align: center; padding: 20px 15px; font-size: 1.2rem; font-weight: 700; line-height: 1.15; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px; }
@@ -218,14 +234,12 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .logout-link .nav-link { background-color: #C62828 !important; color: white !important; } 
     .logout-link .nav-link:hover { background-color: var(--primary-color-dark) !important; }
-    
     .main-wrapper {
         margin-left: var(--sidebar-width); 
         padding: 25px;
         padding-top: calc(var(--header-height) + 25px); 
         flex-grow: 1;
     }
-    
     .container {
         background: #fff;
         border-radius: 12px;
@@ -235,7 +249,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         width: 95%;
         margin: 0 auto;
     }
-    
     h2 { 
         border-bottom: 2px solid var(--primary-color); 
         padding-bottom: 15px; 
@@ -247,7 +260,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         margin-bottom: 30px; 
         color: #555;
     }
-
     /* --- Filter Styles --- */
     .filter {
         margin-bottom: 25px;
@@ -263,8 +275,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         border-color: var(--secondary-color);
         box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
     }
-
-
     /* --- Table Redesign Styles --- */
     .table-responsive {
         border-radius: 10px;
@@ -279,7 +289,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         font-size: 1.05rem;
         min-width: 950px;
     }
-
     /* Table Header */
     .table thead th { 
         background: #e9ecef !important; 
@@ -291,7 +300,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         padding: 15px 15px;
         text-align: center; /* Ensure header alignment is center */
     }
-
     /* Table Body */
     .table td {
         padding: 18px 15px;
@@ -300,7 +308,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         font-size: 1rem;
         text-align: center; /* Default cell alignment */
     }
-    
     /* FIX 1: Explicitly align content that should be left-aligned */
     .table thead th:nth-child(2), /* Item Borrowed Header */
     .item-borrowed {
@@ -310,8 +317,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     .remarks-col {
         text-align: left !important;
     }
-
-
     /* --- CUSTOM ROW GROUPING (Screen View Only) --- */
     .table tbody tr.first-item-of-group td {
         border-top: 2px solid #ccc !important;
@@ -319,7 +324,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     .table tbody tr:first-child.first-item-of-group td {
         border-top: 1px solid #e9ecef !important;
     }
-
     /* Row Highlight for Critical Statuses */
     .status-danger-row {
         background-color: #fff0f0 !important;
@@ -327,7 +331,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     .table-striped > tbody > .status-danger-row:nth-of-type(odd) > * {
         background-color: #fae0e0 !important;
     }
-
     /* Status Tags */
     .status {
         display: inline-block;
@@ -341,12 +344,10 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         text-align: center;
         color: white;
     }
-    
-    /* --- STATUS STYLES --- */
-    /* FIX 2: Pending/Waiting for Approval now uses warning color with DARK text */
-    .status.waitingforapproval, .status.checking, .status.reserved { 
-        background-color: var(--warning-color); 
-        color: var(--text-dark); 
+    /* --- STATUS STYLES (FIXED: Added .pending class) --- */
+    .status.pending, .status.waitingforapproval, .status.checking, .status.reserved { 
+        background-color: var(--status-pending-solid); /* Yellow */
+        color: var(--text-dark); /* Dark text for contrast */
     } 
     .status.approved { background-color: var(--info-color); }
     .status.rejected { background-color: var(--status-rejected-solid); }
@@ -354,7 +355,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     .status.returned { background-color: var(--status-returned-solid); }
     .status.overdue, .status.returnedlate { background-color: var(--status-overdue-solid); color: white; }
     .status.damaged { background-color: var(--status-damaged-solid); color: white; }
-
     /* --- COLUMN STYLING --- */
     /* Ensure only ID/Type is centered for better mobile presentation */
     .form-details {
@@ -368,7 +368,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         font-weight: 500;
         display: block;
     }
-    
     .date-col {
         line-height: 1.6;
     }
@@ -378,7 +377,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     .date-col .expected { color: var(--danger-color); font-weight: 600; }
     .date-col .actual { color: var(--status-returned-solid); font-weight: 600; }
     .date-col .borrow { color: #333; font-weight: 500;}
-    
     /* --- RESPONSIVE ADJUSTMENTS --- */
     @media (max-width: 992px) {
         .menu-toggle { display: block; }
@@ -386,14 +384,11 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
         .main-wrapper { margin-left: 0; padding-left: 15px; padding-right: 15px; }
         .top-header-bar { left: 0; padding-left: 70px; }
-        
         /* Hide Remarks column for smaller desktop/tablet */
         .table thead th:nth-child(7), 
         .table tbody td:nth-child(7) { display: none; }
-        
         .container { padding: 25px; }
     }
-    
     @media (max-width: 768px) {
         /* Mobile View: Card View structure */
         .table-responsive { border: none; box-shadow: none; }
@@ -408,7 +403,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             padding-bottom: 1px;
         }
-        
         .table td {
             text-align: right !important;
             padding-left: 50% !important;
@@ -418,7 +412,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             padding: 10px 15px !important;
         }
         .table td:last-child { border-bottom: none; }
-
         /* Mobile Label */
         .table td::before {
             content: attr(data-label);
@@ -433,7 +426,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             display: flex;
             align-items: center;
         }
-        
         /* Mobile Specific Card Formatting */
         .table tbody tr td:nth-child(1) { /* Form ID/Type - Header block */
             background-color: #f8f8f8;
@@ -452,10 +444,8 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             font-weight: 700;
         }
     }
-    
     @media (max-width: 576px) {
         .top-header-bar { padding-left: 65px; }
-        
         .table tbody tr td:nth-child(1) .form-details {
             flex-direction: column;
             align-items: flex-start;
@@ -464,11 +454,9 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
 </style>
 </head>
 <body>
-
 <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
     <i class="fas fa-bars"></i>
 </button>
-
 <div class="sidebar">
     <div class="sidebar-header">
         <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo"> 
@@ -476,7 +464,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             CSM LABORATORY <br>APPARATUS <br>BORROWING
         </div>
     </div>
-
     <ul class="nav flex-column mb-4 sidebar-nav">
         <li class="nav-item">
             <a href="student_dashboard.php" class="nav-link">
@@ -499,14 +486,12 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             </a>
         </li>
     </ul>
-
     <div class="logout-link">
         <a href="../pages/logout.php" class="nav-link">
             <i class="fas fa-sign-out-alt fa-fw me-2"></i> Logout
         </a>
     </div>
 </div>
-
 <header class="top-header-bar">
     <ul class="navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown notification-bell-container">
@@ -515,19 +500,11 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
                 <i class="fas fa-bell fa-lg"></i>
                 <span class="badge rounded-pill badge-counter" id="notification-bell-badge" style="display:none;">0</span>
             </a>
-            
             <div class="dropdown-menu dropdown-menu-end shadow" 
                 aria-labelledby="alertsDropdown" id="notification-dropdown">
-                
                 <h6 class="dropdown-header">Your Alerts</h6>
-                
-                <div class="dynamic-notif-placeholder">
-                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">Loading notifications...</a>
-                </div>
-                
                 <a class="dropdown-item text-center small text-muted" href="student_transaction.php">View All History</a>
             </div>
-            
         </li>
     </ul>
     <a href="student_edit.php" class="edit-profile-link">
@@ -538,7 +515,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
     <div class="container">
         <h2 class="mb-4"><i class="fas fa-history me-2 text-secondary"></i> Full Transaction History</h2>
         <p class="lead text-start">View all past and current borrowing/reservation records.</p>
-
         <div class="filter">
             <form method="get" action="student_transaction.php" class="d-flex align-items-center">
                 <label class="form-label me-2 mb-0 fw-bold text-secondary">Filter by Status:</label>
@@ -555,7 +531,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
                 </select>
             </form>
         </div>
-
         <div class="table-responsive">
             <table class="table table-striped align-middle">
             <thead>
@@ -591,35 +566,28 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
                             <span class="form-type"><?= htmlspecialchars($row["form_type"]) ?></span>
                         </div>
                     </td>
-
                     <td data-label="Item Borrowed:" class="item-borrowed">
                         <?= $row['item_name'] ?> (x<?= $row['item_quantity'] ?>)
                     </td>
-
                     <td data-label="Status:">
                         <span class="status <?= $row['item_status_class'] ?>">
                             <?= $row['item_status_display'] ?>
                         </span>
                     </td>
-                    
                     <td data-label="Borrow Date:" class="date-col">
                         <span class="borrow"><?= htmlspecialchars($row["borrow_date"]) ?></span>
                     </td>
-                    
                     <td data-label="Expected Return:" class="date-col">
                         <span class="expected"><?= htmlspecialchars($row["expected_return_date"]) ?></span>
                     </td>
-                    
                     <td data-label="Actual Return:" class="date-col">
                         <span class="actual"><?= htmlspecialchars($row["actual_return_date"]) ?></span>
                     </td>
-                    
                     <td class="remarks-col d-none d-md-table-cell" data-label="Staff Remarks:">
                         <?= htmlspecialchars($row["staff_remarks"]) ?>
                     </td>
                 </tr>
             <?php endforeach; ?>
-
             <?php if (!$hasData): ?>
                 <tr><td colspan="7" class="text-center text-muted py-3">No transactions found for the selected filter.</td></tr>
             <?php endif; ?>
@@ -628,26 +596,20 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
         </div>
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // --- DROPDOWN NOTIFICATION LOGIC ---
-
     // New API function to mark a single notification as read (Used by the hover button)
     window.markSingleAlertAndGo = function(event, element, isHoverClick = false) {
         event.preventDefault();
-        
         const $element = $(element);
         const item = isHoverClick ? $element.closest('.dropdown-item') : $element;
-
         const notifId = item.data('id');
         const linkHref = item.attr('href');
         const isRead = item.data('isRead');
-        
         if (isHoverClick || isRead === 0) {
              event.preventDefault();
         }
-
         if (isRead === 0) {
             $.post('../api/mark_notification_as_read.php', { notification_id: notifId }, function(response) {
                 if (response.success) {
@@ -666,7 +628,6 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             window.location.href = linkHref;
         }
     }
-    
     // New API function to mark ALL notifications as read (Used by the Mark All button)
     window.markAllAsRead = function() {
         $.post('../api/mark_notification_as_read.php', { mark_all: true }, function(response) {
@@ -679,107 +640,91 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
             console.error("API call failed.");
         });
     };
-    
     // --- DROPDOWN PREVIEW LOGIC (Fetches alerts and populates the dropdown) ---
     function fetchStudentAlerts() {
         const apiPath = '../api/get_notifications.php'; 
-        
         $.getJSON(apiPath, function(response) { 
-            
             const unreadCount = response.count; 
             const notifications = response.alerts || []; 
-            
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
-            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
-            
+            const $header = $dropdown.find('.dropdown-header');
             // Detach the 'View All' link to re-append it at the end
             const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
-            
-            // 1. Clear previous dynamic items
-            $dropdown.find('.mark-all-btn-wrapper').remove(); 
-            
-            // 2. Update the Badge Count
+            // Clear previous dynamic content
+            $dropdown.children().not($header).not($viewAllLink).remove(); 
+            // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
-
-            // 3. Populate the Dropdown Menu
+            // 2. Prepare content
+            let contentToInsert = [];
             if (notifications.length > 0) {
-                // Add a Mark All button if there are unread items
+                // A. Mark All button (Inserted first)
                 if (unreadCount > 0) {
-                     $placeholder.append(`
-                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                             </a>
-                     `);
+                    contentToInsert.push(`
+                           <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                               <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                           </a>
+                    `);
                 }
-
+                // B. Individual Notifications
                 notifications.slice(0, 5).forEach(notif => {
-                    
                     let iconClass = 'fas fa-info-circle text-secondary'; 
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE') || notif.message.includes('URGENT')) {
-                            iconClass = 'fas fa-exclamation-triangle text-danger';
+                             iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                            iconClass = 'fas fa-check-circle text-success';
+                             iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                            iconClass = 'fas fa-hourglass-half text-warning';
+                             iconClass = 'fas fa-hourglass-half text-warning';
                     }
-                    
                     const is_read = notif.is_read == 1;
-                    const itemClass = is_read ? 'read-item' : 'unread-item';
+                    const itemClass = is_read ? 'text-muted' : 'unread-item';
                     const link = notif.link || 'student_transaction.php';
-                    
                     const cleanMessage = notif.message.replace(/\*\*/g, '');
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-                    $placeholder.append(`
-                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                                 href="${link}" 
-                                 data-id="${notif.id}"
-                                 data-is-read="${notif.is_read}"
-                                 onclick="window.markSingleAlertAndGo(event, this)">
-                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                                 <div class="flex-grow-1">
-                                     <div class="small text-gray-500">${datePart}</div>
-                                     <span class="d-block">${cleanMessage}</span>
-                                 </div>
-                                 ${notif.is_read == 0 ? 
-                                     `<button type="button" class="mark-read-hover-btn" 
-                                             title="Mark as Read" 
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                         <i class="fas fa-check-circle"></i>
-                                     </button>` : ''}
-                            </a>
+                    contentToInsert.push(`
+                           <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                                   href="${link}" 
+                                   data-id="${notif.id}"
+                                   data-is-read="${notif.is_read}"
+                                   onclick="window.markSingleAlertAndGo(event, this)">
+                                   <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                   <div class="flex-grow-1">
+                                       <div class="small text-gray-500">${datePart}</div>
+                                       <span class="d-block">${cleanMessage}</span>
+                                   </div>
+                                   ${notif.is_read == 0 ? 
+                                       `<button type="button" class="mark-read-hover-btn" 
+                                                   title="Mark as Read" 
+                                                   data-id="${notif.id}"
+                                                   onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                                 <i class="fas fa-check-circle"></i>
+                                       </button>` : ''}
+                           </a>
                     `);
                 });
             } else {
                 // Display a "No Alerts" message
-                $placeholder.html(`
+                contentToInsert.push(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No Recent Notifications</a>
                 `);
             }
-            
-            // Re-append the 'View All' link to the end of the dropdown
+            // 3. Insert all dynamic content after the header
+            $header.after(contentToInsert.join(''));
+            // 4. Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
-            
-
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching student alerts:", textStatus, errorThrown);
             $('#notification-bell-badge').text('0').hide();
         });
     }
-
-
     // --- DOMContentLoaded Execution (Initialization) ---
     document.addEventListener('DOMContentLoaded', () => {
         // 1. Sidebar activation logic
         const path = window.location.pathname.split('/').pop() || 'student_dashboard.php';
         const links = document.querySelectorAll('.sidebar .nav-link');
-        
         links.forEach(link => {
             const linkPath = link.getAttribute('href').split('/').pop();
-            
             // This ensures the link is active based on the current file name
             if (linkPath === path) {
                 link.classList.add('active');
@@ -787,17 +732,14 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
                 link.classList.remove('active');
             }
         });
-        
         // 2. Notification Logic Setup
         fetchStudentAlerts(); // Initial fetch on page load
         setInterval(fetchStudentAlerts, 30000); // Poll the server every 30 seconds
-
         // 3. Mobile Toggle Logic
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const mainWrapper = document.querySelector('.main-wrapper');
         const topHeaderBar = document.querySelector('.top-header-bar');
-
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
@@ -813,22 +755,20 @@ $detailedItemRows = getStudentDetailedItemRows($filtered_transactions, $transact
                     }
                 }
             });
-            
             function closeSidebarOnce() {
                  sidebar.classList.remove('active');
                  document.body.style.overflow = 'auto'; 
                  mainWrapper.removeEventListener('click', closeSidebarOnce);
                  topHeaderBar.removeEventListener('click', closeSidebarOnce);
             }
-            
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
                  link.addEventListener('click', () => {
                      if (window.innerWidth <= 992) {
-                         setTimeout(() => {
-                             sidebar.classList.remove('active');
-                             document.body.style.overflow = 'auto';
-                        }, 100);
+                          setTimeout(() => {
+                              sidebar.classList.remove('active');
+                              document.body.style.overflow = 'auto';
+                          }, 100);
                      }
                  });
             });

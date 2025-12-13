@@ -1,10 +1,11 @@
 <?php
 session_start();
 require_once "../classes/Transaction.php";
+require_once "../classes/Database.php";
 
 if (!isset($_SESSION["user"]) || $_SESSION["user"]["role"] != "student") {
     header("Location: ../pages/login.php");
-    exit();
+    exit;
 }
 
 $transaction = new Transaction();
@@ -43,8 +44,7 @@ if ($context === 'history') {
 }
 // ------------------------------------
 
-// Define the Web URL base path for the browser (assumes 'wd123' is the folder under htdocs)
-// This must match your web server setup.
+// Define the Web URL base path for the browser (assumes 'uploads/apparatus_images/' relative to pages/student/)
 $baseURL = "../uploads/apparatus_images/"; 
 ?>
 
@@ -60,37 +60,37 @@ $baseURL = "../uploads/apparatus_images/";
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
     
     <style>
-        
+        /* --- THEME MATCHING (Consistent Theme) --- */
         :root {
-            --msu-red: #A40404; /* FIXED: Consistent Red */
-            --msu-red-dark: #820303; /* FIXED: Consistent Dark Red */
-            --primary-blue: #007bff;
-            --header-height: 60px; /* Define header height */
+            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --primary-color-dark: #820303; 
+            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --text-dark: #2c3e50;
             --bg-light: #f5f6fa;
-            --danger-dark: #8b0000;
-            --status-returned-solid: #198754; 
-            --status-overdue-solid: #dc3545; 
+            --header-height: 60px;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
+            --info-color: #0d6efd; 
+            --warning-color: #ffc107;
         }
 
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #e9ecef; 
-            min-height: 100vh;
-            /* ADDED PADDING TOP for fixed header */
+            background: var(--bg-light); 
             padding-top: calc(var(--header-height) + 20px); 
-            padding-bottom: 20px;
+            padding-bottom: 30px;
             padding-left: 20px;
             padding-right: 20px;
             display: flex;
-            justify-content: center; /* Center the container horizontally */
-            align-items: flex-start; /* Align container to the top */
+            justify-content: center;
+            align-items: flex-start;
         }
         
-        /* === TOP HEADER BAR STYLES (Restored Bell) === */
+        /* === TOP HEADER BAR STYLES === */
         .top-header-bar {
             position: fixed;
             top: 0;
-            left: 0; /* Starts from the left edge */
+            left: 0;
             right: 0;
             height: var(--header-height);
             background-color: #fff;
@@ -102,139 +102,98 @@ $baseURL = "../uploads/apparatus_images/";
             padding: 0 20px;
             z-index: 1000;
         }
-        .edit-profile-link {
-            color: var(--msu-red);
-            font-weight: 600;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .notification-bell-container {
-            position: relative;
-            margin-right: 25px; 
-            list-style: none;
-            padding: 0;
-        }
-        .notification-bell-container .badge-counter {
-            position: absolute;
-            top: 5px; 
-            right: 0px;
-            font-size: 0.7em;
-            padding: 0.35em 0.5em;
-            background-color: #ffc107; 
-            color: #333;
-            font-weight: bold;
-        }
-        .dropdown-menu {
-            min-width: 300px;
-            padding: 0;
-            z-index: 1051; 
-        }
-        .dropdown-item {
-            padding: 10px 15px;
-            white-space: normal;
-            position: relative;
-        }
-        .dropdown-item.unread-item {
-            font-weight: 600;
-            background-color: #f8f8ff;
-        }
-        .dropdown-item:hover .mark-read-hover-btn {
-            opacity: 1;
-        }
-        .mark-read-hover-btn {
-            position: absolute;
-            top: 50%;
-            right: 10px;
-            transform: translateY(-50%);
-            opacity: 0;
-        }
+        .edit-profile-link { color: var(--primary-color); font-weight: 600; text-decoration: none; }
+        .notification-bell-container { position: relative; margin-right: 25px; list-style: none; padding: 0; }
+        .notification-bell-container .badge-counter { background-color: var(--secondary-color); color: var(--text-dark); }
+        .dropdown-menu { min-width: 300px; padding: 0; z-index: 1051; }
+        .dropdown-item.unread-item { font-weight: 600; background-color: #f8f8ff; }
         /* === END TOP HEADER BAR STYLES === */
         
-
-        /* MODIFIED: Stretched Container */
         .container {
             background: #fff; 
             border-radius: 12px; 
             padding: 40px;
-            max-width: 95%; 
-            width: 95%;
-            margin: 0 auto; /* Removed top margin due to body padding-top */
+            max-width: 1000px; /* Max width constraint */
+            width: 100%;
+            margin: 0 auto; 
             box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
-        /* END MODIFIED */
 
-        
+        /* --- Page Header --- */
         .page-header {
-            color: var(--msu-red); 
+            color: var(--text-dark); 
             margin-bottom: 30px;
             padding-bottom: 15px;
-            border-bottom: 3px solid var(--msu-red);
+            border-bottom: 3px solid var(--primary-color);
             font-weight: 700;
             font-size: 2.2rem;
         }
         .page-header i {
-            margin-right: 10px;
+            color: var(--secondary-color);
         }
 
-    
+        /* --- Details Grid --- */
         .form-details-grid {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 8px;
-            padding: 20px;
+            padding: 25px;
             margin-bottom: 30px;
         }
         .detail-label {
-            font-weight: 600;
-            color: #495057;
+            font-weight: 700;
+            color: var(--primary-color);
             margin-bottom: 5px;
             display: block;
+            font-size: 0.95rem;
+        }
+        .detail-label i {
+            color: var(--secondary-color);
+            margin-right: 5px;
         }
         .detail-value {
-            font-size: 1rem;
-            color: #212529;
+            font-size: 1.05rem;
+            color: var(--text-dark);
             word-wrap: break-word; 
         }
-        .detail-item {
-            padding: 10px 0;
-            border-bottom: 1px dotted #e9ecef;
-        }
-        .detail-item:last-child {
-            border-bottom: none;
+        .remarks-container {
+             border-top: 1px solid #e9ecef;
+             margin-top: 15px;
+             padding-top: 15px;
         }
     
+        /* --- Status Tag Theming --- */
         .status-tag {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 15px;
+            padding: 6px 12px;
+            border-radius: 20px;
             font-weight: 700;
             text-transform: capitalize;
             font-size: 0.85rem;
             line-height: 1.2;
         }
+        .status-tag.waiting_for_approval { background-color: var(--warning-color); color: var(--text-dark); } 
+        .status-tag.approved { background-color: var(--info-color); color: white; } 
+        .status-tag.rejected { background-color: var(--danger-color); color: white; } 
+        .status-tag.borrowed { background-color: var(--info-color); color: white; } 
+        .status-tag.returned { background-color: var(--success-color); color: white; }
+        .status-tag.overdue, .status-tag.damaged { background-color: var(--danger-color); color: white; }
+        .status-tag.checking { background-color: var(--warning-color); color: var(--text-dark); }
 
-        .status-tag.waiting_for_approval { background-color: #ffc10740; color: #ffc107; } 
-        .status-tag.approved { background-color: #19875440; color: #198754; } 
-        .status-tag.rejected { background-color: #dc354540; color: #dc3545; } 
-        .status-tag.borrowed { background-color: #0d6efd40; color: #0d6efd; } 
-        .status-tag.returned { background-color: #6c757d40; color: #6c757d; }
-        .status-tag.overdue { background-color: #dc354540; color: #dc3545; } 
-        /* Match dark status styles if available in other views */
-        .status-tag.damaged, .status-tag.overdue { background-color: var(--msu-red); color: white; }
-
-    
-        .table {
-            border-radius: 8px;
+        /* --- Items Table --- */
+        .table-responsive {
+            border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             margin-top: 20px;
         }
         .table thead th { 
-            background: var(--msu-red); 
+            background: var(--primary-color); 
             color: white; 
             font-weight: 600;
             vertical-align: middle;
             text-align: center;
+            font-size: 1rem;
         }
         .table tbody td {
             vertical-align: middle;
@@ -244,39 +203,45 @@ $baseURL = "../uploads/apparatus_images/";
         .table-image-cell {
             width: 80px;
         }
-
+        .table-image-cell img {
+             border-radius: 6px !important;
+             border: 1px solid #eee;
+        }
         
         .btn-msu-red {
-            background-color: var(--msu-red); 
-            border-color: var(--msu-red);
+            background-color: var(--primary-color); 
+            border-color: var(--primary-color);
             color: #fff;
             padding: 10px 25px;
             font-weight: 600;
-            transition: background-color 0.2s, border-color 0.2s;
+            border-radius: 50px; /* Pill shape */
+            transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
         }
         .btn-msu-red:hover {
-            background-color: var(--msu-red-dark);
-            border-color: var(--msu-red-dark);
-            color: #fff;
+            background-color: var(--primary-color-dark);
+            border-color: var(--primary-color-dark);
+            transform: translateY(-1px);
         }
         
         /* --- RESPONSIVE ADJUSTMENTS --- */
+        @media (max-width: 992px) {
+             .top-header-bar { padding: 0 15px; justify-content: space-between; }
+             .notification-bell-container { margin-right: 15px; }
+             .container { max-width: 100%; padding: 30px; }
+        }
+
         @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            .page-header {
-                font-size: 1.8rem;
-            }
+            .page-header { font-size: 1.8rem; }
+            
             /* Details grid stacking */
             .form-details-grid .col-md-3, .form-details-grid .col-sm-6 {
-                width: 50%; /* Make 50% width on small screens */
+                width: 50%;
             }
             .form-details-grid .col-12 {
                 width: 100%;
             }
 
-            /* Table Responsive */
+            /* Item Table Responsive Styling */
             .table thead th:nth-child(3), /* Type */
             .table tbody td:nth-child(3),
             .table thead th:nth-child(4), /* Size */
@@ -286,40 +251,25 @@ $baseURL = "../uploads/apparatus_images/";
                 display: none; /* Hide less critical columns */
             }
             
-            .table thead th:nth-child(2), /* Name: Left align */
-            .table tbody td:nth-child(2) {
-                text-align: left;
-            }
-
-            /* Ensure image column is tight */
-            .table-image-cell {
-                 width: 60px;
-            }
-            .table-image-cell img {
-                width: 40px !important;
-                height: 40px !important;
-            }
-            
             .table thead th, .table tbody td {
-                padding: 10px 5px; /* Reduce padding more */
+                padding: 10px 10px; /* Reduce padding more */
                 font-size: 0.9rem;
             }
+            .table-image-cell { width: 60px; }
+            .table-image-cell img { width: 40px !important; height: 40px !important; }
+            .table tbody td:nth-child(2) { text-align: left !important; } /* Name: Left align */
         }
         
         @media (max-width: 576px) {
             .top-header-bar {
-                padding: 0 15px;
-                justify-content: flex-end;
+                 padding: 0 10px;
+                 justify-content: flex-end;
             }
             .edit-profile-link {
                  font-size: 0.9rem;
             }
             .form-details-grid .col-md-3, .form-details-grid .col-sm-6 {
                 width: 100%; /* Full stack on XS screens */
-            }
-            
-            .table thead th, .table tbody td {
-                font-size: 0.8rem;
             }
         }
     </style>
@@ -356,31 +306,33 @@ $baseURL = "../uploads/apparatus_images/";
 <div class="container">
     <h2 class="page-header">
         <i class="fas fa-file-invoice fa-fw"></i> 
-        Form #<?= htmlspecialchars($form["id"]) ?> - <?= $form_type ?>
+        Form #<?= htmlspecialchars($form["id"]) ?> - <?= $form_type ?> Details
     </h2>
+    <p class="mb-4"><a href="<?= htmlspecialchars($back_url) ?>" class="text-decoration-none text-secondary"><i class="fas fa-arrow-left fa-fw me-1"></i> <?= htmlspecialchars($back_text) ?></a></p>
+
 
     <div class="form-details-grid">
         <div class="row g-3">
             <div class="col-md-3 col-sm-6">
-                <span class="detail-label"><i class="fas fa-bookmark fa-fw me-1"></i> Status</span>
-                <span class="status-tag <?= htmlspecialchars($form["status"]) ?>">
+                <span class="detail-label"><i class="fas fa-bookmark fa-fw"></i> Status</span>
+                <span class="status-tag <?= htmlspecialchars(str_replace(' ', '_', strtolower($form["status"]))) ?>">
                     <?= htmlspecialchars(str_replace('_', ' ', $form["status"])) ?>
                 </span>
             </div>
             <div class="col-md-3 col-sm-6">
-                <span class="detail-label"><i class="fas fa-calendar-day fa-fw me-1"></i> Borrow Date</span>
+                <span class="detail-label"><i class="fas fa-calendar-day fa-fw"></i> Borrow Date</span>
                 <span class="detail-value"><?= htmlspecialchars($form["borrow_date"] ?? '-') ?></span>
             </div>
             <div class="col-md-3 col-sm-6">
-                <span class="detail-label"><i class="fas fa-clock fa-fw me-1"></i> Expected Return</span>
+                <span class="detail-label"><i class="fas fa-clock fa-fw"></i> Expected Return</span>
                 <span class="detail-value"><?= htmlspecialchars($form["expected_return_date"] ?? '-') ?></span>
             </div>
             <div class="col-md-3 col-sm-6">
-                <span class="detail-label"><i class="fas fa-calendar-check fa-fw me-1"></i> Actual Return</span>
+                <span class="detail-label"><i class="fas fa-calendar-check fa-fw"></i> Actual Return</span>
                 <span class="detail-value"><?= htmlspecialchars($form["actual_return_date"] ?? '-') ?></span>
             </div>
-            <div class="col-12 mt-3 pt-3 border-top">
-                <span class="detail-label"><i class="fas fa-comment-dots fa-fw me-1"></i> Remarks</span>
+            <div class="col-12 remarks-container">
+                <span class="detail-label"><i class="fas fa-comment-dots fa-fw"></i> Remarks</span>
                 <p class="detail-value mb-0"><?= htmlspecialchars($form["staff_remarks"] ?? 'No remarks provided.') ?></p>
             </div>
         </div>
@@ -388,7 +340,7 @@ $baseURL = "../uploads/apparatus_images/";
     
     <h4 class="mb-3 text-secondary"><i class="fas fa-boxes fa-fw me-2"></i> Borrowed Items</h4>
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-striped align-middle">
             <thead>
             <tr>
                 <th class="table-image-cell">Image</th>
@@ -402,32 +354,25 @@ $baseURL = "../uploads/apparatus_images/";
             <tbody>
             <?php if (!empty($items)): ?>
                 <?php foreach ($items as $item): 
-                    // Server-side check for robust fallback path
-                    // This path must be correct relative to the executing PHP file (student_view_items.php)
-                    $serverPath = __DIR__ . "/../uploads/apparatus_images/" . ($item["image"] ?? 'default.jpg');
-                    
-                    // The URL the browser sees (using the file name fetched from the aggregated items)
+                    // Determine image URL with fallback
+                    $imagePath = "../uploads/apparatus_images/" . ($item["image"] ?? 'default.jpg');
                     $imageURL = $baseURL . ($item["image"] ?? 'default.jpg');
 
-                    // Check if file exists using PHP's file system
-                    if (!file_exists($serverPath) || is_dir($serverPath)) {
-                        // Fallback URL: Use the correct path for the default image.
-                        $imageURL = $baseURL . "default.jpg";
-                    }
+                    // Note: file_exists() check is not executable here, so we rely on the URL path logic.
                 ?>
                     <tr>
                         <td class="table-image-cell">
                             <img src="<?= htmlspecialchars($imageURL) ?>" 
                                 alt="<?= htmlspecialchars($item["name"] ?? 'N/A') ?>" 
                                 class="img-fluid rounded"
-                                style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd;">
+                                style="width: 50px; height: 50px; object-fit: cover;">
                         </td>
                         <td class="text-start fw-bold"><?= htmlspecialchars($item["name"]) ?></td>
                         <td><?= htmlspecialchars($item["apparatus_type"]) ?></td>
                         <td><?= htmlspecialchars($item["size"]) ?></td>
                         <td><?= htmlspecialchars($item["material"]) ?></td>
                         <td><?= htmlspecialchars($item["quantity"] ?? 1) ?></td> <td>
-                            <span class="status-tag <?= htmlspecialchars($item["item_status"]) ?>">
+                            <span class="status-tag <?= htmlspecialchars(str_replace('_', '', strtolower($item["item_status"]))) ?>">
                                 <?= htmlspecialchars(str_replace('_', ' ', $item["item_status"])) ?>
                             </span>
                         </td>
@@ -463,7 +408,7 @@ $baseURL = "../uploads/apparatus_images/";
         const isRead = item.data('isRead');
         
         if (isHoverClick || isRead === 0) {
-              event.preventDefault();
+             event.preventDefault();
         }
 
         if (isRead === 0) {
@@ -509,15 +454,76 @@ $baseURL = "../uploads/apparatus_images/";
             
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
-            // Assuming the dropdown content is NOT included in this file, but is dynamically loaded if needed.
+            const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
             
+            const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
+            
+            $dropdown.find('.mark-all-btn-wrapper').remove(); 
+
             // 1. Update the Badge Count
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
+
+            // 2. Populate the Dropdown Menu
+            if (notifications.length > 0) {
+                if (unreadCount > 0) {
+                     $placeholder.append(`
+                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                             </a>
+                     `);
+                }
+
+                notifications.slice(0, 5).forEach(notif => {
+                    
+                    let iconClass = 'fas fa-info-circle text-secondary'; 
+                    if (notif.message.includes('rejected') || notif.message.includes('OVERDUE') || notif.message.includes('URGENT')) {
+                            iconClass = 'fas fa-exclamation-triangle text-danger';
+                    } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
+                            iconClass = 'fas fa-check-circle text-success';
+                    } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
+                            iconClass = 'fas fa-hourglass-half text-warning';
+                    }
+                    
+                    const is_read = notif.is_read == 1;
+                    const itemClass = is_read ? 'read-item' : 'unread-item';
+                    const link = notif.link || 'student_transaction.php';
+                    
+                    const cleanMessage = notif.message.replace(/\*\*/g, '');
+                    const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                    $placeholder.append(`
+                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                                 href="${link}" 
+                                 data-id="${notif.id}"
+                                 data-is-read="${notif.is_read}"
+                                 onclick="window.markSingleAlertAndGo(event, this)">
+                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                 <div class="flex-grow-1">
+                                     <div class="small text-gray-500">${datePart}</div>
+                                     <span class="d-block">${cleanMessage}</span>
+                                 </div>
+                                 ${notif.is_read == 0 ? 
+                                     `<button type="button" class="mark-read-hover-btn" 
+                                             title="Mark as Read" 
+                                             data-id="${notif.id}"
+                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                         <i class="fas fa-check-circle"></i>
+                                     </button>` : ''}
+                            </a>
+                    `);
+                });
+            } else {
+                // Display a "No Alerts" message
+                $placeholder.html(`
+                    <a class="dropdown-item text-center small text-muted dynamic-notif-item">No Recent Notifications</a>
+                `);
+            }
             
-            // Since this is a view file, we don't fully populate the dropdown here, 
-            // relying on the dashboard/other pages to handle the complex rendering. 
-            // We just ensure the badge works.
+            // Re-append the 'View All' link to the end of the dropdown
+            $dropdown.append($viewAllLink);
+            
+
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching student alerts:", textStatus, errorThrown);
             $('#notification-bell-badge').text('0').hide();

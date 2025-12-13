@@ -30,56 +30,87 @@ function time_ago($timestamp) {
     return "just now";
 }
 
-// Inline CSS for the rendered content to ensure responsiveness/styling, as this is used in a modal/dropdown.
+// Injecting the theme variables and enhanced CSS
 echo '<style>
+    /* Theme Variables for consistency */
+    :root {
+        --primary-color: #A40404; 
+        --primary-color-dark: #820303; 
+        --secondary-color: #f4b400;
+        --text-dark: #2c3e50;
+        --danger-color: #dc3545;
+        --success-color: #28a745;
+    }
+
     .alert-item {
-        padding: 12px;
+        padding: 15px;
         border-radius: 8px;
         text-decoration: none;
-        color: #333;
-        transition: background-color 0.1s;
+        color: var(--text-dark);
+        transition: background-color 0.1s, box-shadow 0.2s;
+        border: 1px solid #eee;
     }
+    
+    /* Highlight UNREAD items with primary color border */
     .alert-unread {
-        background-color: #f8f8ff; /* Light blue tint for unread */
+        background-color: #fff9f9; /* Very light red tint */
         font-weight: 600;
-        border: 1px solid #e0e0f0;
+        border-left: 5px solid var(--primary-color);
+    }
+    .alert-unread:hover {
+        background-color: #faeaea;
     }
     .alert-read {
         background-color: #fff;
         font-weight: normal;
-        border: 1px solid #eee;
     }
-    .alert-item:hover {
-        background-color: #f0f0ff;
+    .alert-read:hover {
+        background-color: #f9f9f9;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.05); 
     }
     .alert-icon {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         flex-shrink: 0;
-    }
-    .alert-body {
-        /* Ensure the message body respects wrapping */
-        min-width: 0;
+        width: 30px;
     }
     .alert-message {
-        font-size: 0.95rem;
-        line-height: 1.3;
-        word-wrap: break-word; /* Ensure wrapping on small devices */
-        white-space: normal; /* Override potential nowrap */
+        font-size: 1rem;
+        line-height: 1.4;
+        word-wrap: break-word;
+        white-space: normal;
     }
     .alert-timestamp {
         display: block;
         font-size: 0.8em;
+        color: #999;
+        margin-top: 2px;
     }
     .unread-badge {
-        font-size: 0.7em;
-        padding: 0.3em 0.6em;
+        font-size: 0.75em;
+        padding: 0.4em 0.7em;
+        background-color: var(--primary-color) !important; 
     }
-    /* Button inside the content */
-    .btn-outline-secondary {
-        border-color: #ccc;
-        color: #6c757d;
+    /* Mark All Button Styling - Uses accent color */
+    .btn-mark-all {
+        border: 1px solid var(--secondary-color);
+        color: var(--text-dark);
+        background-color: #fff;
+        font-weight: 600;
+        border-radius: 6px;
+        transition: all 0.2s;
+        padding: 5px 10px;
         font-size: 0.9rem;
     }
+    .btn-mark-all:hover {
+        background-color: var(--secondary-color);
+        color: var(--text-dark);
+    }
+
+    /* Override Bootstrap text colors to use theme primary for specific states */
+    .text-danger { color: var(--danger-color) !important; }
+    .text-success { color: var(--success-color) !important; }
+    .text-primary { color: var(--primary-color) !important; }
+    .text-warning { color: var(--secondary-color) !important; }
 </style>';
 
 
@@ -104,12 +135,12 @@ try {
     if ($unread_count > 0) {
         echo '<div class="mb-3 text-end">';
         // CRITICAL: Button calls the global JS function markAllAsRead()
-        echo '  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="markAllAsRead()">';
-        echo '    <i class="fas fa-check-double me-1"></i> Mark All ' . $unread_count . ' as Read';
+        echo '  <button type="button" class="btn-mark-all" onclick="markAllAsRead()">';
+        echo '      <i class="fas fa-check-double me-1"></i> Mark All ' . $unread_count . ' as Read';
         echo '  </button>';
         echo '</div>';
     } else {
-         echo '<div class="mb-3 text-end text-muted small">All messages read.</div>';
+        echo '<div class="mb-3 text-center text-muted small">All caught up! No unread messages.</div>';
     }
 
 
@@ -123,25 +154,28 @@ try {
             // Determine icon and link behavior
             $icon = 'fas fa-info-circle text-secondary'; 
             if (strpos($n['type'], 'approved') !== false || strpos($n['type'], 'good') !== false) {
+                // Approved/Good Status: Success Green
                 $icon = 'fas fa-check-circle text-success';
             } elseif (strpos($n['type'], 'rejected') !== false || strpos($n['type'], 'damaged') !== false || strpos($n['type'], 'late') !== false || strpos($n['type'], 'overdue') !== false) {
+                // Critical/Bad Status: Danger Red
                 $icon = 'fas fa-exclamation-triangle text-danger';
-            } elseif (strpos($n['type'], 'sent') !== false || strpos($n['type'], 'checking') !== false) {
+            } elseif (strpos($n['type'], 'sent') !== false || strpos($n['type'], 'checking') !== false || strpos($n['type'], 'verification') !== false) {
+                // Pending/In-progress Status: Primary Red (Theme Color)
                 $icon = 'fas fa-hourglass-half text-primary';
             }
             ?>
             <a href="<?= htmlspecialchars($n['link']) ?>" 
-               class="alert-item <?= $alert_class ?> d-flex align-items-center mb-2" 
-               data-notification-id="<?= $n['id'] ?>"
-               data-is-read="<?= $is_read ?>"
-               onclick="markSingleAsRead(event, <?= $n['id'] ?>)">
-                <i class="<?= $icon ?> alert-icon me-3"></i>
+                class="alert-item <?= $alert_class ?> d-flex align-items-start mb-2" 
+                data-notification-id="<?= $n['id'] ?>"
+                data-is-read="<?= $is_read ?>"
+                onclick="markSingleAsRead(event, <?= $n['id'] ?>)">
+                <i class="<?= $icon ?> alert-icon me-3 mt-1"></i>
                 <div class="alert-body flex-grow-1">
                     <p class="alert-message mb-0"><?= htmlspecialchars($n['message']) ?></p>
-                    <small class="alert-timestamp text-muted"><?= time_ago($n['created_at']) ?></small>
+                    <small class="alert-timestamp"><?= time_ago($n['created_at']) ?></small>
                 </div>
                 <?php if (!$is_read): ?>
-                <span class="badge bg-danger ms-2 unread-badge">New</span>
+                <span class="badge ms-2 unread-badge">New</span>
                 <?php endif; ?>
             </a>
             <?php

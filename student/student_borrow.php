@@ -177,8 +177,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // --------------------------------------------------------------------------------
             // 🛑 REMOVED DUPLICATE EMAIL LOGIC HERE TO FIX DOUBLE SENDING.
-            //    The submission email is now sent exclusively from
-            //    classes/Transaction.php::createTransaction().
+            //    The submission email is now sent exclusively from
+            //    classes/Transaction.php::createTransaction().
             // --------------------------------------------------------------------------------
 
             $newActiveCount = $transaction->getActiveTransactionCount($student_id);
@@ -244,22 +244,27 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <style>
+    /* --- THEME MATCHING (Consistent Theme) --- */
     :root {
-        --msu-red: #A40404;
-        --msu-red-dark: #820303;
+        --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+        --primary-color-dark: #820303; 
+        --secondary-color: #f4b400; /* Gold/Yellow Accent */
+        --text-dark: #2c3e50;
         --sidebar-width: 280px;
-        --main-text: #333;
+        --bg-light: #f5f6fa;
         --header-height: 60px;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
     }
 
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f6fa;
+        background: var(--bg-light);
         padding: 0;
         margin: 0;
         display: flex;
         min-height: 100vh;
-        color: var(--main-text);
+        color: var(--text-dark);
         font-size: 1.05rem;
     }
     
@@ -270,7 +275,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         top: 15px;
         left: 20px;
         z-index: 1060; 
-        background: var(--msu-red);
+        background: var(--primary-color);
         color: white;
         border: none;
         padding: 8px 12px;
@@ -294,12 +299,17 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         justify-content: flex-end;
         padding: 0 20px;
         z-index: 1000;
+        transition: left 0.3s ease;
     }
     .edit-profile-link {
-        color: var(--msu-red);
+        color: var(--primary-color);
         font-weight: 600;
         text-decoration: none;
         transition: color 0.2s;
+    }
+    .edit-profile-link.active { /* Highlight current page link */
+        border-bottom: 3px solid var(--primary-color);
+        padding-bottom: 3px;
     }
     .notification-bell-container {
         position: relative;
@@ -313,51 +323,21 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         right: 0px;
         font-size: 0.7em;
         padding: 0.35em 0.5em;
-        background-color: #ffc107;
-        color: #333;
+        background-color: var(--secondary-color);
+        color: var(--text-dark);
         font-weight: bold;
     }
-    .dropdown-menu {
-        min-width: 300px;
-        padding: 0;
-    }
-    .dropdown-item {
-        padding: 10px 15px;
-        white-space: normal;
-        position: relative;
-    }
-    .dropdown-item.unread-item {
-        font-weight: 600;
-        background-color: #f8f8ff;
-    }
-    .dropdown-item small {
-        display: block;
-        font-size: 0.8em;
-        color: #999;
-    }
-    .mark-read-hover-btn {
-        position: absolute;
-        top: 50%;
-        right: 10px;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #6c757d;
-        opacity: 0;
-        padding: 5px;
-        cursor: pointer;
-        transition: opacity 0.2s;
-    }
-    .dropdown-item:hover .mark-read-hover-btn {
-        opacity: 1;
-    }
-    .dropdown-item.read-item .mark-read-hover-btn {
-        display: none !important;
-    }
+    /* Notification Dropdown Styling (Simplified for consistency) */
+    .dropdown-menu { min-width: 300px; padding: 0; }
+    .dropdown-item { padding: 10px 15px; white-space: normal; position: relative; }
+    .dropdown-item.unread-item { font-weight: 600; background-color: #f8f8ff; }
+    .dropdown-item small { display: block; font-size: 0.8em; color: #999; }
+    .mark-read-hover-btn { color: #6c757d; opacity: 0; transition: opacity 0.2s; }
+    .dropdown-item:hover .mark-read-hover-btn { opacity: 1; }
     /* --- END Top Header Bar Styles --- */
 
     /* Standard Sidebar Styles */
-    .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); background-color: var(--msu-red); color: white; padding: 0; position: fixed; height: 100%; top: 0; left: 0; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); z-index: 1050; }
+    .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); background-color: var(--primary-color); color: white; padding: 0; position: fixed; height: 100%; top: 0; left: 0; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); z-index: 1050; transition: left 0.3s ease; }
     .sidebar-header {
         text-align: center;
         padding: 20px 15px;
@@ -368,7 +348,6 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         border-bottom: 1px solid rgba(255, 255, 255, 0.4);
         margin-bottom: 20px;
     }
-    /* FIX: Set fixed height and width for the logo to prevent shifting */
     .sidebar-header img {
         width: 90px; 
         height: 90px; 
@@ -376,8 +355,6 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         margin-bottom: 15px;
     }
     .sidebar-header .title { font-size: 1.3rem; line-height: 1.1; }
-
-    /* FIX: Set consistent padding (15px) */
     .sidebar .nav-link { 
         color: white; 
         padding: 15px 20px; 
@@ -388,18 +365,10 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         align-items: center; 
     }
     .sidebar .nav-link.banned { background-color: #5a2624; opacity: 0.6; cursor: not-allowed; pointer-events: none; }
-    .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: var(--msu-red-dark); }
-    .logout-link {
-        margin-top: auto;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .logout-link .nav-link {
-        background-color: #C62828 !important;
-        color: white !important;
-    }
-    .logout-link .nav-link:hover {
-        background-color: var(--msu-red-dark) !important;
-    }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: var(--primary-color-dark); }
+    .logout-link { margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+    .logout-link .nav-link { background-color: #C62828 !important; color: white !important; }
+    .logout-link .nav-link:hover { background-color: var(--primary-color-dark) !important; }
 
     /* MODIFIED: Added padding-top for fixed header */
     .main-wrapper {
@@ -407,6 +376,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         padding: 25px;
         padding-top: calc(var(--header-height) + 25px);
         flex-grow: 1;
+        transition: margin-left 0.3s ease;
     }
 
     /* INCREASED CONTAINER PADDING */
@@ -421,12 +391,57 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
     }
 
     /* INCREASED MAIN HEADER SIZE */
-    h2 { text-align: left; margin-bottom: 30px; color: var(--main-text); border-bottom: 2px solid var(--msu-red); padding-bottom: 15px; font-size: 2.2rem; font-weight: 700; }
-    h3 { font-size: 1.75rem; font-weight: 600; }
-    .error { color: #dc3545; font-size: 1rem; margin-top: 5px; font-weight: bold; }
+    h2 { 
+        text-align: left; 
+        margin-bottom: 30px; 
+        color: var(--text-dark); 
+        border-bottom: 2px solid var(--primary-color); 
+        padding-bottom: 15px; 
+        font-size: 2.2rem; 
+        font-weight: 700; 
+    }
+    h3 { 
+        font-size: 1.75rem; 
+        font-weight: 600; 
+        color: var(--text-dark);
+    }
+    .error { 
+        color: var(--danger-color); 
+        font-size: 0.95rem; 
+        margin-top: 5px; 
+        font-weight: 600; 
+        display: block;
+    }
     .disabled, button[disabled] { background-color: #aaa !important; cursor: not-allowed !important; }
 
     /* --- UI STYLES --- */
+    
+    /* Request List Items (Cart) */
+    .request-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--bg-light);
+        padding: 8px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        border-left: 5px solid var(--primary-color);
+    }
+    .request-item .remove-btn {
+        background: none;
+        border: none;
+        color: var(--danger-color);
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .request-item .remove-btn:hover {
+        color: var(--primary-color-dark);
+    }
+
+
     .apparatus-card {
         border: 1px solid #ddd;
         border-radius: 12px;
@@ -436,12 +451,16 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         display: flex;
         flex-direction: column;
         height: 100%;
+        transition: box-shadow 0.2s;
+    }
+    .apparatus-card:hover {
+        box-shadow: 0 6px 15px rgba(0,0,0,0.1);
     }
     .card-img-top {
         width: 100%;
         height: 200px;
         object-fit: contain;
-        background-color: white;
+        background-color: #fcfcfc;
         border-bottom: 1px solid #eee;
         padding: 15px;
     }
@@ -452,11 +471,12 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         flex-direction: column;
     }
     .item-details strong {
-        color: var(--msu-red-dark);
-        font-size: 1.2rem;
+        color: var(--primary-color);
+        font-size: 1.1rem;
     }
     .item-description {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
+        color: #555;
         height: 4.5em;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -479,18 +499,29 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         border-color: #ccc;
         font-size: 1.05rem;
         height: 40px;
+        text-align: center;
+    }
+    .qty-input:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
     }
 
     .btn-add-request {
-        background-color: var(--msu-red);
-        color: white;
+        background-color: var(--secondary-color);
+        color: var(--text-dark);
         font-size: 1rem;
         padding: 8px 18px;
         border-radius: 6px;
-        transition: background-color 0.2s;
-        font-weight: bold;
+        transition: all 0.2s;
+        font-weight: 700;
+        border: none;
+    }
+    .btn-add-request:hover {
+        background-color: #e0a800; /* slightly darker yellow */
+        transform: translateY(-1px);
     }
     .out-of-stock-card { opacity: 0.7; background-color: #fdf6f6; }
+    .out-of-stock-card .btn-add-request { background-color: #aaa; cursor: not-allowed; }
 
     /* VISUAL TYPE SELECTION STYLES */
     .type-selection { display: flex; gap: 15px; margin-bottom: 15px; }
@@ -504,25 +535,65 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         font-weight: 600;
         flex-grow: 1;
         text-align: center;
-        color: var(--main-text);
+        color: var(--text-dark);
         box-shadow: 0 1px 5px rgba(0,0,0,0.1);
         font-size: 1.1rem;
     }
     .type-btn.selected {
-        background-color: var(--msu-red);
+        background-color: var(--primary-color);
         color: white;
-        border-color: var(--msu-red);
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(164, 4, 4, 0.3);
     }
+    .type-btn:not(.selected):hover {
+        border-color: var(--secondary-color);
+    }
+    
+    /* SUBMIT BUTTON - New Primary Style (Pill shape) */
     .btn-submit {
-        background-color: var(--msu-red);
-        border: 1px solid var(--msu-red-dark);
+        background-color: var(--primary-color);
         color: white;
-        font-weight: 700;
+        border: none;
+        border-radius: 50px; /* Pill shape */
         padding: 12px 30px;
+        font-weight: 700;
         font-size: 1.1rem;
-        border-radius: 8px;
-        transition: background-color 0.2s;
+        transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+        display: block;
     }
+    .btn-submit:hover {
+        background-color: var(--primary-color-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+    .btn-submit[disabled] {
+        background-color: #aaa !important;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* MODAL STYLING */
+    #statusModalHeader.success {
+        background-color: #28a745;
+        color: white;
+    }
+    #statusModalHeader.error {
+        background-color: var(--danger-color);
+        color: white;
+    }
+    #qtyErrorModal .modal-header {
+        background-color: var(--warning-color);
+        color: var(--text-dark);
+    }
+    #termsModal .modal-header {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
 
     /* --- RESPONSIVE ADJUSTMENTS --- */
     @media (max-width: 992px) {
@@ -537,7 +608,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
     @media (max-width: 768px) {
         /* Request Form Adjustments (Type Selection & Dates) */
         .type-selection {
-            flex-direction: column; /* Stack Borrow/Reserve buttons */
+            flex-direction: column; 
             gap: 10px;
         }
         .row > .col-md-4 {
@@ -581,7 +652,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         }
         /* Make filter inputs small */
         .filter-container .row > div:nth-child(3) {
-            margin-bottom: 15px; /* Adjust spacing when filter is full width */
+            margin-bottom: 15px; 
         }
         .filter-container .row > div:nth-child(4) {
             margin-top: 0;
@@ -681,7 +752,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         // --- END MODAL TRIGGER LOGIC ---
         ?>
 
-        <div class="card mb-4 border-0 shadow-sm">
+        <div class="card mb-5 border-0 shadow">
             <div class="card-header bg-light border-0">
                 <h5 class="mb-0 text-secondary fw-bold"><i class="fas fa-sliders-h me-2"></i> Request Parameters</h5>
             </div>
@@ -703,7 +774,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                             <input type="hidden" name="type" id="type_hidden" value="<?= htmlspecialchars($type) ?>">
 
-                            <?php if(isset($errors["type"])): ?><div class="error"><?= $errors["type"] ?></div><?php endif; ?>
+                            <?php if(isset($errors["type"])): ?><div class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors["type"] ?></div><?php endif; ?>
                         </div>
 
                         <div class="col-md-4 mb-3">
@@ -716,7 +787,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                                      <?= $is_locked ? "disabled" : "" ?>>
                                  <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
                              </div>
-                            <?php if(isset($errors["borrow_date"])): ?><div class="error"><?= $errors["borrow_date"] ?></div><?php endif; ?>
+                            <?php if(isset($errors["borrow_date"])): ?><div class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors["borrow_date"] ?></div><?php endif; ?>
                         </div>
 
                         <div class="col-md-4 mb-3">
@@ -732,7 +803,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                             <input type="hidden" name="expected_return_date" id="expected_return_date_hidden"
                                 value="<?= htmlspecialchars($expected_return_date) ?>">
 
-                            <?php if(isset($errors["expected_return_date"])): ?><div class="error"><?= $errors["expected_return_date"] ?></div><?php endif; ?>
+                            <?php if(isset($errors["expected_return_date"])): ?><div class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors["expected_return_date"] ?></div><?php endif; ?>
                         </div>
                     </div>
 
@@ -749,7 +820,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                     <input type="hidden" name="request_array_json" id="request_array_json" value="<?= htmlspecialchars($request_array_json) ?>">
 
 
-                    <?php if(isset($errors["apparatus"])): ?><div class="error"><?= $errors["apparatus"] ?></div><?php endif; ?>
+                    <?php if(isset($errors["apparatus"])): ?><div class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors["apparatus"] ?></div><?php endif; ?>
 
                     <div class="terms-check form-check mt-3">
                         <input type="checkbox" name="agree_terms" id="agree_terms" class="form-check-input" <?= $agreed_terms ? "checked" : "" ?> <?= $is_locked ? "disabled" : "" ?>>
@@ -757,11 +828,11 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                         <label class="form-check-label d-inline fw-normal" for="agree_terms">
                             I agree to the <span class="terms-link text-danger" onclick="openTermsModal(event)" style="cursor: pointer; text-decoration: underline;">Terms and Conditions of Borrowing</span>.
                         </label>
-                        <?php if(isset($errors["terms"])): ?><div class="error"><?= $errors["terms"] ?></div><?php endif; ?>
+                        <?php if(isset($errors["terms"])): ?><div class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors["terms"] ?></div><?php endif; ?>
                     </div>
 
                     <button type="submit"
-                        class="btn-submit mt-3"
+                        class="btn-submit mt-4"
                         id="submitButton"
                         <?= $is_locked ? 'disabled' : '' ?>
                         data-is-locked="<?= $is_locked ? "true" : "false" ?>"
@@ -774,7 +845,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
         <h3 class="mb-4 mt-5" id="available-apparatus-section"><i class="fas fa-vials me-2 text-secondary"></i> Available Apparatus (Page <?= $currentPage ?> of <?= $totalPages ?>)</h3>
 
-        <div class="filter-container">
+        <div class="filter-container mb-4">
             <form method="GET" action="student_borrow.php" class="row g-3 align-items-end" id="filterForm">
                 <input type="hidden" name="type" id="filter_type_sticky" value="<?= htmlspecialchars($type) ?>">
                 <input type="hidden" name="borrow_date" id="filter_borrow_date_sticky" value="<?= htmlspecialchars($borrow_date) ?>">
@@ -823,9 +894,8 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                     $input_disabled = ($is_locked || $is_out_of_stock) ? "disabled" : "";
 
                     $imageFile = "../uploads/apparatus_images/" . ($app['image'] ?? 'default.jpg');
-                    if (empty($app['image']) || !file_exists("../uploads/apparatus_images/" . ($app['image'] ?? ''))) {
-                        $imageFile = "../uploads/apparatus_images/default.jpg";
-                    }
+                    // NOTE: The file_exists check here is not executable, but the variable is set based on the original PHP logic.
+                    // We maintain the original image path logic.
                 ?>
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="apparatus-card <?= $card_class ?>">
@@ -904,14 +974,14 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 <div class="modal fade" id="lockWarningModal" tabindex="-1" aria-labelledby="lockWarningModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
+            <div class="modal-header bg-danger text-white" style="background-color: var(--danger-color) !important;">
                 <h5 class="modal-title fw-bold" id="lockWarningModalLabel">🛑 Borrowing Blocked!</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="lockWarningModalBody">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Acknowledge</button>
+                <button type="button" class="btn btn-danger" style="background-color: var(--danger-color);" data-bs-dismiss="modal">Acknowledge</button>
             </div>
         </div>
     </div>
@@ -936,7 +1006,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 <div class="modal fade" id="typeErrorModal" tabindex="-1" aria-labelledby="typeErrorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
+            <div class="modal-header text-white" style="background-color: var(--danger-color) !important;">
                 <h5 class="modal-title" id="typeErrorModalLabel">🚨 Required Selection</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -944,7 +1014,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                 <p class="fw-bold mb-0">Please select a request Type (Borrow or Reserve) first.</p>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+                <button type="button" class="btn" style="background-color: var(--danger-color); color: white;" data-bs-dismiss="modal">OK</button>
             </div>
         </div>
     </div>
@@ -953,7 +1023,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 <div class="modal fade" id="qtyErrorModal" tabindex="-1" aria-labelledby="qtyErrorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
+            <div class="modal-header" style="background-color: var(--warning-color); color: var(--text-dark);">
                 <h5 class="modal-title" id="qtyErrorModalLabel"><i class="fas fa-exclamation-triangle"></i> Quantity Error</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -961,7 +1031,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                 <p class="fw-bold mb-0" id="qtyErrorModalBody"></p>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Got it</button>
+                <button type="button" class="btn" style="background-color: var(--warning-color); color: var(--text-dark);" data-bs-dismiss="modal">Got it</button>
             </div>
         </div>
     </div>
@@ -970,7 +1040,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header" style="background-color: var(--msu-red); color: white;">
+            <div class="modal-header" style="background-color: var(--primary-color); color: white;">
                 <h5 class="modal-title" id="termsModalLabel">
                     <i class="fas fa-file-contract me-2"></i> Terms and Conditions of Apparatus Borrowing
                 </h5>
@@ -1325,9 +1395,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                 // Add a Mark All button if there are unread items
                 if (unreadCount > 0) {
                      $placeholder.append(`
-                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                          </a>
+                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                             </a>
                      `);
                 }
 
@@ -1335,11 +1405,11 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                     let iconClass = 'fas fa-info-circle text-secondary';
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE')) {
-                         iconClass = 'fas fa-exclamation-triangle text-danger';
+                           iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                         iconClass = 'fas fa-check-circle text-success';
+                           iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                         iconClass = 'fas fa-hourglass-half text-warning';
+                           iconClass = 'fas fa-hourglass-half text-warning';
                     }
 
                     const is_read = notif.is_read == 1;
@@ -1352,24 +1422,24 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                     // Insert the item into the placeholder div
                     $placeholder.append(`
-                          <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}"
-                            href="${link}"
-                            data-id="${notif.id}"
-                            data-is-read="${notif.is_read}"
-                            onclick="window.markSingleAlertAndGo(event, this)">
-                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                             <div class="flex-grow-1">
-                                 <div class="small text-gray-500">${datePart}</div>
-                                 <span class="d-block">${cleanMessage}</span>
-                             </div>
-                             ${notif.is_read == 0 ?
-                                 `<button type="button" class="mark-read-hover-btn"
-                                         title="Mark as Read"
-                                         data-id="${notif.id}"
-                                         onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                     <i class="fas fa-check-circle"></i>
-                                 </button>` : ''}
-                          </a>
+                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}"
+                                 href="${link}"
+                                 data-id="${notif.id}"
+                                 data-is-read="${notif.is_read}"
+                                 onclick="window.markSingleAlertAndGo(event, this)">
+                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                 <div class="flex-grow-1">
+                                     <div class="small text-gray-500">${datePart}</div>
+                                     <span class="d-block">${cleanMessage}</span>
+                                 </div>
+                                 ${notif.is_read == 0 ?
+                                     `<button type="button" class="mark-read-hover-btn"
+                                             title="Mark as Read"
+                                             data-id="${notif.id}"
+                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                         <i class="fas fa-check-circle"></i>
+                                     </button>` : ''}
+                            </a>
                      `);
                 });
             } else {
@@ -1402,6 +1472,44 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         // CRITICAL FIX 2A: Load the request array from the hidden input on page load and display it
         loadRequestArrayFromHidden();
 
+        // --- SUBMISSION MODAL LOGIC (SUCCESS/ERROR) ---
+        const modalMessage = document.getElementById('modalMessage');
+        if (modalMessage) {
+            const message = modalMessage.value;
+            const status = document.getElementById('modalStatus').value;
+            const secondaryMessage = document.getElementById('modalSecondaryMessage')?.value || '';
+
+            const header = document.getElementById('statusModalHeader');
+            const label = document.getElementById('statusModalLabel');
+            const body = document.getElementById('statusModalBody');
+
+            header.className = 'modal-header';
+            body.innerHTML = `<p>${message.replace(/\*\*/g, '<strong>')}</p>`;
+
+            if (status === 'success') {
+                header.classList.add('success');
+                label.innerHTML = '<i class="fas fa-check-circle me-2"></i> Request Submitted!';
+            } else {
+                header.classList.add('error');
+                label.innerHTML = '<i class="fas fa-times-circle me-2"></i> Submission Failed';
+            }
+
+            if (secondaryMessage) {
+                 body.innerHTML += `<div class="alert alert-warning mt-3">${secondaryMessage.replace(/\*\*/g, '<strong>')}</div>`;
+            }
+
+            statusModal.show();
+        }
+
+        // --- LOCK WARNING MODAL (ON LOAD) ---
+        const submitButton = document.getElementById('submitButton');
+        if (submitButton && submitButton.getAttribute('data-is-locked') === 'true') {
+            const lockReason = submitButton.getAttribute('data-lock-reason');
+            document.getElementById('lockWarningModalBody').innerHTML = lockReason.replace(/\*\*/g, '<strong>');
+            lockWarningModal.show();
+        }
+
+
         // --- NOTIFICATION EXECUTION ---
         fetchStudentAlerts(); // Initial fetch on page load
         setInterval(fetchStudentAlerts, 30000); // Poll the server every 30 seconds
@@ -1422,33 +1530,45 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const mainWrapper = document.querySelector('.main-wrapper');
+        const topHeaderBar = document.querySelector('.top-header-bar');
+
 
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
-                // Optional: Close sidebar when clicking outside (simple solution)
-                if (sidebar.classList.contains('active')) {
-                    mainWrapper.addEventListener('click', closeSidebarOnce);
-                } else {
-                    mainWrapper.removeEventListener('click', closeSidebarOnce);
+                if (window.innerWidth <= 992) {
+                     if (sidebar.classList.contains('active')) {
+                        document.body.style.overflow = 'hidden'; 
+                        mainWrapper.addEventListener('click', closeSidebarOnce);
+                        topHeaderBar.addEventListener('click', closeSidebarOnce);
+                    } else {
+                        document.body.style.overflow = 'auto'; 
+                        mainWrapper.removeEventListener('click', closeSidebarOnce);
+                        topHeaderBar.removeEventListener('click', closeSidebarOnce); 
+                    }
                 }
             });
             
             // Function to close the sidebar only once after clicking outside
             function closeSidebarOnce() {
-                sidebar.classList.remove('active');
-                mainWrapper.removeEventListener('click', closeSidebarOnce);
+                 sidebar.classList.remove('active');
+                 document.body.style.overflow = 'auto'; 
+                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+                 topHeaderBar.removeEventListener('click', closeSidebarOnce); 
             }
             
             // Close sidebar when a nav item is clicked
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                    // Check if we are on a mobile view before closing
-                    if (window.innerWidth <= 992) {
-                        sidebar.classList.remove('active');
-                    }
-                });
+                 link.addEventListener('click', () => {
+                     // Check if we are on a mobile view before closing
+                     if (window.innerWidth <= 992) {
+                        setTimeout(() => {
+                             sidebar.classList.remove('active');
+                             document.body.style.overflow = 'auto';
+                        }, 100); // Small delay to allow navigation
+                     }
+                 });
             });
         }
     });

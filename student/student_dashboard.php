@@ -37,6 +37,7 @@ $is_any_overdue_found = false;
 foreach ($transactions as &$t) {
     $expected_return_date = new DateTime($t['expected_return_date']);
     
+    // Check overdue status only if the current status allows it (i.e., not rejected or fully returned)
     if (in_array(strtolower($t['status']), ['borrowed', 'approved', 'checking', 'reserved']) && $t['expected_return_date'] < $today_date_str) {
         $t['is_overdue'] = true;
         $overdue_count++;
@@ -72,12 +73,10 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
     $system_message = "URGENT: You have {$overdue_count} overdue item(s). Your borrowing privileges are at risk.";
     $notification_link = "student_return.php";
     
-    // 2. Insert System Notification (Assuming Transaction class has this method)
-    // Conceptual method call:
+    // 2. Insert System Notification (Conceptual method call)
     // $transaction->insertStudentNotification($student_id, 'overdue_warning', $system_message, $notification_link);
     
-    // 3. Send Email Notification (Assuming Mailer class has this method)
-    // Conceptual method call:
+    // 3. Send Email Notification (Conceptual method call)
     // $mailer->sendOverdueWarningEmail($student_email, $student_name, $overdue_count);
     
     // 4. Set session flag to prevent spamming until user leaves or clears the issue
@@ -115,6 +114,8 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         --header-height: 60px; 
         --danger-color: #dc3545; /* Standard danger red */
         --warning-color: #ffc107; /* Standard warning yellow */
+        --success-color: #28a745;
+        --info-color: #0d6efd;
     }
     
     body {
@@ -125,6 +126,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         display: flex; 
         min-height: 100vh;
         font-size: 1.05rem; 
+        color: var(--text-dark);
     }
 
     /* NEW CSS for Mobile Toggle */
@@ -145,9 +147,11 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
 
     /* 🛑 URGENT HIGHLIGHT FIX 🛑 */
     .alert-overdue-urgent {
-        border: 3px solid var(--danger-color); /* Used consistent danger color */
-        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3); 
-        background-color: #fff8f8; 
+        border: 3px solid var(--danger-color);
+        box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4); 
+        background-color: #fff0f0;
+        font-weight: 600;
+        color: var(--text-dark);
     }
     
     /* --- Top Header Bar Styles --- */
@@ -239,7 +243,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         background-color: var(--primary-color-dark); 
     }
     .sidebar .nav-link.banned { 
-        background-color: #5a2624; /* Muted red for banned state */
+        background-color: #5a2624; 
         opacity: 0.8; 
         cursor: pointer; 
         pointer-events: auto; 
@@ -249,7 +253,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     .logout-link .nav-link { 
-        background-color: #C62828 !important; /* Slightly brighter red for logout button */
+        background-color: #C62828 !important; 
         color: white !important;
         transition: background-color 0.3s;
     }
@@ -257,57 +261,13 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         background-color: var(--primary-color-dark) !important;
     }
     
-    /* Dropdown Menu Styles (Notification) */
-    .dropdown-menu {
-        min-width: 300px;
-        padding: 0;
-    }
-    .dropdown-header {
-        font-size: 1rem;
-        color: #6c757d;
-        padding: 10px 15px;
-        text-align: center;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 0;
-    }
-    .dropdown-item {
-        padding: 10px 15px;
-        white-space: normal;
-        transition: background-color 0.1s;
-        position: relative; 
-    }
-    .dropdown-item.unread-item {
-        font-weight: 600;
-        background-color: #f8f8ff; 
-    }
-    .dropdown-item.unread-item:hover {
-        background-color: #f0f0ff;
-    }
-    .dropdown-item small {
-        display: block;
-        font-size: 0.8em;
-        color: #999;
-    }
-    .mark-read-hover-btn {
-        position: absolute;
-        top: 50%;
-        right: 10px;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #6c757d;
-        opacity: 0; 
-        padding: 5px;
-        cursor: pointer;
-        transition: opacity 0.2s;
-        z-index: 10;
-    }
-    .dropdown-item:hover .mark-read-hover-btn {
-        opacity: 1;
-    }
-    .dropdown-item.read-item .mark-read-hover-btn {
-        display: none !important; 
-    }
+    /* Dropdown Menu Styles (Notification) - Retained */
+    .dropdown-menu { min-width: 300px; padding: 0; }
+    .dropdown-header { font-size: 1rem; color: #6c757d; padding: 10px 15px; text-align: center; border-bottom: 1px solid #eee; margin-bottom: 0; }
+    .dropdown-item.unread-item { font-weight: 600; background-color: #f8f8ff; }
+    .dropdown-item small { display: block; font-size: 0.8em; color: #999; }
+    .mark-read-hover-btn { opacity: 0; }
+    .dropdown-item:hover .mark-read-hover-btn { opacity: 1; }
 
 
     /* --- Main Content CSS --- */
@@ -320,9 +280,9 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
     }
     .container {
         background: #fff;
-        border-radius: 10px;
-        padding: 30px 40px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        padding: 40px 50px; 
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1); 
         max-width: none; 
         width: 95%; 
         margin: 0 auto; 
@@ -331,78 +291,122 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         border-bottom: 2px solid var(--primary-color); 
         padding-bottom: 10px; 
         font-size: 2rem; 
-        font-weight: 600;
+        font-weight: 700; 
         color: var(--text-dark);
     }
     .lead {
         font-size: 1.15rem; 
+        color: #555;
     }
     
-    /* --- TRANSACTION CARD STYLES --- */
+    /* --- TRANSACTION CARD STYLES (IMPROVED) --- */
     .transaction-list {
-        gap: 15px; 
-        margin-top: 20px;
+        gap: 20px; 
+        margin-top: 30px;
         display: flex;
         flex-direction: column;
     }
     .transaction-card {
         display: flex;
         align-items: center; 
-        border: 1px solid #e0e0e0;
-        border-left: 6px solid var(--primary-color); /* Default border color */
-        border-radius: 8px;
-        padding: 15px 20px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border: 1px solid #ddd;
+        border-left: 8px solid var(--primary-color); 
+        border-radius: 10px; 
+        padding: 20px 25px; 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
         background-color: #ffffff;
-        transition: all 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s;
         flex-wrap: wrap; 
+    }
+    .transaction-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
     }
     .transaction-card.card-critical {
         border-left-color: var(--danger-color);
         background-color: #fff8f8;
     }
 
-    /* Column Sizing for Desktop/Tablet */
-    .card-col-details { display: flex; align-items: center; flex-basis: 35%; min-width: 200px; }
-    .card-col-dates { flex-basis: 30%; padding-left: 20px; border-left: 1px solid #eee; min-width: 180px; }
-    .card-col-status { flex-basis: 15%; text-align: center; min-width: 100px; }
-    .card-col-action { flex-basis: 20%; text-align: right; min-width: 100px; }
+    /* Column Sizing */
+    .card-col-details { display: flex; align-items: center; flex-basis: 35%; min-width: 250px; }
+    .card-col-dates { flex-basis: 30%; padding-left: 30px; border-left: 1px solid #eee; min-width: 200px; }
+    .card-col-status { flex-basis: 15%; text-align: center; min-width: 120px; }
+    .card-col-action { flex-basis: 20%; text-align: right; min-width: 150px; }
 
-    .app-image { width: 50px !important; height: 50px !important; object-fit: contain !important; border-radius: 4px; margin-right: 15px; border: 1px solid #ddd; padding: 4px; }
-    .trans-id-text { font-size: 1.15rem; font-weight: 700; color: #333; display: block; }
-    .trans-type-text { font-size: 0.85rem; color: #777; display: block; margin-top: -3px; }
-    .date-item { display: flex; align-items: center; margin-bottom: 4px; font-size: 0.9rem; color: #555; }
-    .date-label { font-weight: 600; width: 140px; white-space: nowrap; }
-    .date-value { font-weight: 500; margin-left: 5px; }
-    .status { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .app-image { width: 55px !important; height: 55px !important; object-fit: contain !important; border-radius: 8px; margin-right: 20px; border: 1px solid #ddd; padding: 5px; }
+    .trans-id-text { font-size: 1.1rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 2px; }
+    .trans-type-text { font-size: 0.8rem; color: #777; display: block; }
     
-    /* Status Colors using theme */
-    .status.pending, .status.reserved, .status.for_release { 
-        background-color: var(--secondary-color); /* Gold Accent */
+    .date-item { 
+        display: flex; 
+        align-items: center; 
+        margin-bottom: 6px; 
+        font-size: 0.95rem; 
+        color: #555; 
+    }
+    .date-label { 
+        font-weight: 600; 
+        width: 140px; 
+        white-space: nowrap; 
+    }
+    .date-value { 
+        font-weight: 500; 
+        margin-left: 5px; 
+    }
+    .date-item i {
+        color: var(--secondary-color); 
+        width: 20px;
+    }
+    .date-item.expected-date.overdue {
+        color: var(--danger-color); 
+        font-weight: 700;
+    }
+    
+    .status { 
+        display: inline-block; 
+        padding: 8px 16px; 
+        border-radius: 20px; 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        font-size: 0.85rem; 
+        color: white; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        letter-spacing: 0.5px;
+    }
+    
+    /* --- STATUS TAG STYLES --- */
+    .status.waitingforapproval, .status.checking, .status.reserved { 
+        background-color: var(--warning-color); 
         color: var(--text-dark); 
     }
     .status.approved, .status.borrowed { 
-        background-color: #28a745; /* Green for success */
+        background-color: var(--info-color); 
     }
-    .status.rejected, .status.damaged { 
-        background-color: var(--danger-color); 
-    }
-    .status.overdue { 
+    .status.rejected, .status.overdue, .status.damaged { 
         background-color: var(--danger-color); 
     }
     
     .btn-view-items { 
         background: var(--primary-color); 
         color: white; 
-        padding: 8px 16px; 
-        font-size: 0.9rem; 
-        border-radius: 6px; 
+        padding: 10px 20px; 
+        font-size: 1rem; 
+        border-radius: 50px; 
         border: none; 
-        transition: background-color 0.2s, transform 0.2s;
+        transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        font-weight: 600;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.15);
     }
     .btn-view-items:hover {
         background: var(--primary-color-dark);
         transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .alert-info {
+        background-color: #e0f7fa;
+        color: #00796b;
+        border: 1px solid #b2ebf2;
     }
 
 
@@ -424,23 +428,24 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         .transaction-card {
             flex-direction: column;
             align-items: flex-start;
-            padding: 15px;
+            padding: 20px;
         }
-        .card-col-details, .card-col-dates, .card-col-status, .card-col-action {
+        .card-col-details {
+            flex-basis: 100%;
+            min-width: auto;
+            margin-bottom: 15px;
+        }
+        .card-col-dates, .card-col-status, .card-col-action {
             flex-basis: 100%;
             min-width: auto;
             padding: 0;
             margin-top: 10px;
-        }
-        .card-col-dates {
             border-left: none;
-            padding-left: 0;
-        }
-        .card-col-status {
             text-align: left;
         }
         .card-col-action {
             text-align: left;
+            margin-top: 20px;
         }
         .card-col-action .btn-view-items {
             width: 100%; 
@@ -448,6 +453,9 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         }
         .date-label {
             width: 150px; 
+        }
+        .card-col-status {
+            order: 3; /* Move status below dates for mobile flow */
         }
     }
 
@@ -591,16 +599,15 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                     // Image logic uses the first item in the list
                     $imageFile = $firstApparatus["image"] ?? "default.jpg";
                     $imagePath = "../uploads/apparatus_images/" . $imageFile;
-                    // Use fileExists utility to check if the image path is correct, falling back to default
-                    // NOTE: file_exists() check from PHP code is not available in this environment, but the logic is sound.
-                    // Assuming the image path logic from the original file is correct for the deployment environment.
-                    // We will not modify the original file check logic here.
+                    // NOTE: The file_exists check here is not executable, but the variable is set based on the original PHP logic.
+                    // If file_exists() check was functional, it would be included here.
                     
                     // Determine status display text and class
-                    $display_status_class = $is_overdue ? 'overdue' : $status_class;
+                    $display_status_class = $is_overdue ? 'overdue' : str_replace('_', '', strtolower($t["status"]));
                     $display_status_text = $is_overdue ? 'OVERDUE' : str_replace('_', ' ', $t["status"]);
                     
                     // --- Date Formatting ---
+                    // This is executed using PHP's DateTime function for a user-friendly format (e.g., Nov 18, 2025)
                     $borrow_date_formatted = (new DateTime($t["borrow_date"]))->format('M j, Y');
                     $expected_return_date_formatted = (new DateTime($t["expected_return_date"]))->format('M j, Y');
                 ?>
@@ -667,7 +674,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         
         // Prevent default navigation if it was an unread item or a hover click
         if (isHoverClick || isRead === 0) {
-             event.preventDefault();
+              event.preventDefault();
         }
 
         if (isRead === 0) {
@@ -737,21 +744,21 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                 // Add a Mark All button if there are unread items
                 if (unreadCount > 0) {
                      $placeholder.append(`
-                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                             </a>
+                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                          </a>
                      `);
                 }
 
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-secondary'; 
-                    if (notif.message.includes('rejected') || notif.message.includes('OVERDUE')) {
-                         iconClass = 'fas fa-exclamation-triangle text-danger';
+                    if (notif.message.includes('rejected') || notif.message.includes('OVERDUE') || notif.message.includes('URGENT')) {
+                          iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                         iconClass = 'fas fa-check-circle text-success';
+                          iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                         iconClass = 'fas fa-hourglass-half text-warning';
+                          iconClass = 'fas fa-hourglass-half text-warning';
                     }
                     
                     const is_read = notif.is_read == 1;
@@ -761,28 +768,26 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                     const cleanMessage = notif.message.replace(/\*\*/g, '');
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-
-                    // Insert the item into the placeholder div
                     $placeholder.append(`
-                           <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                                 href="${link}" 
-                                 data-id="${notif.id}"
-                                 data-is-read="${notif.is_read}"
-                                 onclick="window.markSingleAlertAndGo(event, this)">
-                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                                 <div class="flex-grow-1">
-                                     <div class="small text-gray-500">${datePart}</div>
-                                     <span class="d-block">${cleanMessage}</span>
-                                 </div>
-                                 ${notif.is_read == 0 ? 
-                                     `<button type="button" class="mark-read-hover-btn" 
+                         <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                            href="${link}" 
+                            data-id="${notif.id}"
+                            data-is-read="${notif.is_read}"
+                            onclick="window.markSingleAlertAndGo(event, this)">
+                             <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                             <div class="flex-grow-1">
+                                 <div class="small text-gray-500">${datePart}</div>
+                                 <span class="d-block">${cleanMessage}</span>
+                             </div>
+                             ${notif.is_read == 0 ? 
+                                 `<button type="button" class="mark-read-hover-btn" 
                                              title="Mark as Read" 
                                              data-id="${notif.id}"
                                              onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                         <i class="fas fa-check-circle"></i>
-                                     </button>` : ''}
-                           </a>
-                    `);
+                                     <i class="fas fa-check-circle"></i>
+                                 </button>` : ''}
+                         </a>
+                     `);
                 });
             } else {
                 // Display a "No Alerts" message
@@ -827,33 +832,22 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const mainWrapper = document.querySelector('.main-wrapper');
-        const topHeaderBar = document.querySelector('.top-header-bar');
 
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
-                if (window.innerWidth <= 992) {
-                    // Slide the main content/header out of the way slightly
-                    if (sidebar.classList.contains('active')) {
-                        // Using a simple trick to prevent scrolling main content on mobile sidebar open
-                        document.body.style.overflow = 'hidden'; 
-                        // Add an overlay click listener to close the sidebar
-                        mainWrapper.addEventListener('click', closeSidebarOnce);
-                        topHeaderBar.addEventListener('click', closeSidebarOnce); 
-                    } else {
-                        document.body.style.overflow = 'auto'; 
-                        mainWrapper.removeEventListener('click', closeSidebarOnce);
-                        topHeaderBar.removeEventListener('click', closeSidebarOnce); 
-                    }
+                // Optional: Close sidebar when clicking outside (simple solution)
+                if (sidebar.classList.contains('active')) {
+                     mainWrapper.addEventListener('click', closeSidebarOnce);
+                } else {
+                     mainWrapper.removeEventListener('click', closeSidebarOnce);
                 }
             });
             
             // Function to close the sidebar only once after clicking outside
             function closeSidebarOnce() {
                  sidebar.classList.remove('active');
-                 document.body.style.overflow = 'auto'; 
                  mainWrapper.removeEventListener('click', closeSidebarOnce);
-                 topHeaderBar.removeEventListener('click', closeSidebarOnce); 
             }
             
             // Close sidebar when a nav item is clicked
@@ -862,10 +856,7 @@ if ($is_any_overdue_found && !isset($_SESSION['overdue_notified'])) {
                  link.addEventListener('click', () => {
                      // Check if we are on a mobile view before closing
                      if (window.innerWidth <= 992) {
-                        setTimeout(() => {
-                             sidebar.classList.remove('active');
-                             document.body.style.overflow = 'auto';
-                        }, 100); // Small delay to allow navigation
+                        sidebar.classList.remove('active');
                      }
                  });
             });

@@ -37,10 +37,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["return"])) {
         // markAsChecking now handles the database updates AND the email confirmation internally.
         if ($transaction->markAsChecking($form_id, $student_id, $remarks)) {
             
-            // =================================================================
-            // REMOVED DUPLICATE EMAIL LOGIC FROM HERE (Lines 33-54 removed)
-            // =================================================================
-            
             // Final message shown to student - adjusted to confirm email was sent (by Transaction.php)
             $message = "Your return request (ID: **$form_id**) has been submitted and is pending staff verification. A confirmation email has been sent.";
             $is_success = true;
@@ -79,24 +75,28 @@ $today = date("Y-m-d");
     <style>
     /* Custom Variables and Base Layout (MSU Theme) */
     :root {
-        --msu-red: #A40404;
-        --msu-red-dark: #820303;
+        --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+        --primary-color-dark: #820303;
+        --secondary-color: #f4b400; /* Gold/Yellow Accent */
+        --text-dark: #2c3e50;
         --sidebar-width: 280px; 
         --bg-light: #f5f6fa;
-        --danger-dark: #8b0000;
-        --main-text: #333;
         --header-height: 60px;
+        --danger-color: #dc3545;
+        --info-color: #007bff;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
     }
     
     body { 
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-        background: #f5f6fa; 
+        background: var(--bg-light); 
         padding: 0;
         margin: 0;
         display: flex; 
         min-height: 100vh;
         font-size: 1.05rem; 
-        color: var(--main-text);
+        color: var(--text-dark);
     }
     
     /* NEW CSS for Mobile Toggle */
@@ -106,7 +106,7 @@ $today = date("Y-m-d");
         top: 15px;
         left: 20px;
         z-index: 1060; 
-        background: var(--msu-red);
+        background: var(--primary-color);
         color: white;
         border: none;
         padding: 8px 12px;
@@ -115,7 +115,7 @@ $today = date("Y-m-d");
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     
-    /* === NEW: TOP HEADER BAR STYLES (Copied from dashboard) === */
+    /* === TOP HEADER BAR STYLES (Consistent) === */
     .top-header-bar {
         position: fixed;
         top: 0;
@@ -130,9 +130,10 @@ $today = date("Y-m-d");
         justify-content: flex-end; 
         padding: 0 20px;
         z-index: 1000;
+        transition: left 0.3s ease;
     }
     .edit-profile-link {
-        color: var(--msu-red);
+        color: var(--primary-color);
         font-weight: 600;
         text-decoration: none;
         transition: color 0.2s;
@@ -149,59 +150,21 @@ $today = date("Y-m-d");
         right: 0px;
         font-size: 0.7em;
         padding: 0.35em 0.5em;
-        background-color: #ffc107; 
-        color: #333;
+        background-color: var(--secondary-color); 
+        color: var(--text-dark);
         font-weight: bold;
-    }
-    /* Dropdown menu styles (simplified inclusion) */
-    .dropdown-menu {
-        min-width: 300px;
-        padding: 0;
-    }
-    .dropdown-header {
-        font-size: 1rem;
-        color: #6c757d;
-        padding: 10px 15px;
-        text-align: center;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 0;
     }
     .dropdown-item.unread-item {
         font-weight: 600;
         background-color: #f8f8ff;
     }
-    .dropdown-item small {
-        display: block;
-        font-size: 0.8em;
-        color: #999;
-    }
-    .mark-read-hover-btn {
-        position: absolute;
-        top: 50%;
-        right: 10px;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #6c757d;
-        opacity: 0;
-        padding: 5px;
-        cursor: pointer;
-        transition: opacity 0.2s;
-        z-index: 10;
-    }
-    .dropdown-item:hover .mark-read-hover-btn {
-        opacity: 1;
-    }
-    .dropdown-item.read-item .mark-read-hover-btn {
-        display: none !important; 
-    }
     /* === END TOP HEADER BAR STYLES === */
 
-    /* === SIDEBAR STYLES (Consistent Look) === */
+    /* === SIDEBAR STYLES (Consistent) === */
     .sidebar {
         width: var(--sidebar-width);
         min-width: var(--sidebar-width);
-        background-color: var(--msu-red);
+        background-color: var(--primary-color);
         color: white;
         padding: 0;
         position: fixed;
@@ -212,6 +175,7 @@ $today = date("Y-m-d");
         flex-direction: column;
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
         z-index: 1050;
+        transition: left 0.3s ease;
     }
     .sidebar-header {
         text-align: center;
@@ -223,7 +187,6 @@ $today = date("Y-m-d");
         border-bottom: 1px solid rgba(255, 255, 255, 0.4);
         margin-bottom: 20px;
     }
-    /* FIX: Set fixed height and width for the logo to prevent shifting */
     .sidebar-header img { 
         width: 90px; 
         height: 90px;
@@ -242,7 +205,7 @@ $today = date("Y-m-d");
         justify-content: flex-start;
     }
     .sidebar .nav-link:hover, .sidebar .nav-link.active {
-        background-color: var(--msu-red-dark);
+        background-color: var(--primary-color-dark);
     }
     .sidebar .nav-link.banned { 
         background-color: #5a2624; 
@@ -259,17 +222,17 @@ $today = date("Y-m-d");
         color: white !important;
     }
     .logout-link .nav-link:hover {
-        background-color: var(--msu-red-dark) !important; 
+        background-color: var(--primary-color-dark) !important; 
     }
     /* END SIDEBAR FIXES */
     
     /* === MAIN CONTENT STYLES === */
     .main-wrapper {
         margin-left: var(--sidebar-width); 
-        /* ADDED PADDING TOP TO ACCOUNT FOR THE NEW FIXED HEADER */
         padding: 25px;
         padding-top: calc(var(--header-height) + 25px); 
         flex-grow: 1;
+        transition: margin-left 0.3s ease;
     }
     .container {
         max-width: none; 
@@ -283,50 +246,64 @@ $today = date("Y-m-d");
     
     h2 { 
         text-align: left; 
-        color: #333; 
+        color: var(--text-dark); 
         margin-bottom: 30px;
-        border-bottom: 2px solid var(--msu-red);
+        border-bottom: 2px solid var(--primary-color);
         padding-bottom: 15px;
         font-size: 2.2rem;
         font-weight: 700;
     }
     .lead {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
+        color: #555;
     }
-    .alert {
-        font-size: 1.1rem;
-        padding: 15px 20px;
-        font-weight: 500;
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border-color: #c3e6cb;
+    }
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border-color: #ffeeba;
     }
 
+    /* --- RETURN CARD STYLES (IMPROVED) --- */
     .form-list {
         display: flex;
         flex-direction: column;
         gap: 20px;
         padding: 0;
         list-style: none;
-        margin-top: 25px;
+        margin-top: 30px;
     }
     
     .return-card {
         background-color: #fff;
         border: 1px solid #e0e0e0;
-        border-radius: 12px;
+        border-radius: 10px;
         padding: 20px 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         display: flex; 
         align-items: center; 
         gap: 20px; 
+        flex-wrap: wrap;
+        transition: box-shadow 0.2s;
+    }
+    .return-card:hover {
+         box-shadow: 0 6px 15px rgba(0,0,0,0.1);
     }
 
+    /* Color coding for card borders */
     .return-card-checking {
-        border-left: 5px solid #ffc107;
+        border-left: 5px solid var(--warning-color);
+        background-color: #fffdf8;
     }
-    .return-card-borrowed, .return-card-approved { 
-        border-left: 5px solid #007bff;
+    .return-card-borrowed, .return-card-approved, .return-card-reserved { 
+        border-left: 5px solid var(--primary-color);
     }
     .return-card-overdue {
-        border-left: 5px solid var(--danger-dark);
+        border-left: 5px solid var(--danger-color);
         background-color: #fff4f4;
     }
 
@@ -344,6 +321,7 @@ $today = date("Y-m-d");
     .card-col-info { 
         flex-grow: 1; 
         text-align: left; 
+        min-width: 250px;
     }
     .card-col-action { 
         flex-shrink: 0; 
@@ -358,7 +336,7 @@ $today = date("Y-m-d");
         font-size: 1.4rem;
     }
     .app-list { 
-        font-size: 1.1rem; 
+        font-size: 1rem; 
         margin-top: 5px;
         color: #555;
     }
@@ -368,12 +346,17 @@ $today = date("Y-m-d");
         font-size: 1rem;
         color: #6c757d;
     }
+    .date-info i {
+        color: var(--secondary-color);
+        margin-right: 5px;
+    }
     .date-info .expected-return {
-        color: var(--danger-dark);
+        color: var(--danger-color); /* Overdue color */
         font-weight: 600;
     }
     .date-info .expected-return.ok {
-        color: #007bff;
+        color: var(--success-color); /* Good status color */
+        font-weight: 600;
     }
 
     .action-container {
@@ -391,71 +374,69 @@ $today = date("Y-m-d");
         font-size: 1rem;
         border-radius: 8px;
         padding: 10px;
+        transition: border-color 0.2s;
+    }
+    .action-container textarea:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
     }
     .btn-return { 
         width: 160px; 
         padding: 12px 18px; 
-        background: #28a745; 
+        background: var(--success-color); /* Green for 'Return' action */
         color: white; 
         font-weight: 700;
         font-size: 1rem;
-        border-radius: 8px;
+        border-radius: 50px; /* Pill shape */
         border: none;
+        transition: background-color 0.2s, transform 0.2s;
     }
     .btn-return:hover:not(:disabled) { 
         background: #1e7e34; 
-        color: white;
+        transform: translateY(-1px);
     }
     .btn-return:disabled { 
         background: #adb5bd; 
         cursor: not-allowed; 
+        transform: none;
     }
     
     .action-message-checking {
-        display: inline-block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 12px 18px;
-        font-weight: 600;
+        font-weight: 700;
         font-size: 1rem;
-        border-radius: 8px;
-        background: #ffc107;
-        color: #333;
+        border-radius: 50px;
+        background: var(--warning-color);
+        color: var(--text-dark);
         flex-grow: 1; 
         text-align: center;
+    }
+    .action-message-checking.bg-info { /* For reserved but not yet due */
+        background: #e0f7fa !important;
+        color: #00796b !important;
+        border: 1px solid #b2ebf2;
     }
 
     /* --- RESPONSIVE ADJUSTMENTS --- */
     @media (max-width: 992px) {
-        /* Mobile Sidebar */
-        .menu-toggle {
-            display: block;
-        }
-        .sidebar {
-            left: calc(var(--sidebar-width) * -1); 
-            transition: left 0.3s ease;
-            box-shadow: none;
-            --sidebar-width: 250px; 
-        }
-        .sidebar.active {
-            left: 0; 
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-        }
-        .main-wrapper {
-            margin-left: 0;
-            padding-left: 15px;
-            padding-right: 15px;
-        }
-        .top-header-bar {
-            left: 0;
-            padding-left: 70px;
-        }
+        .menu-toggle { display: block; }
+        .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
+        .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
+        .main-wrapper { margin-left: 0; padding-left: 15px; padding-right: 15px; }
+        .top-header-bar { left: 0; padding-left: 70px; }
     }
     
     @media (max-width: 768px) {
-        /* Content Stacking for Return Cards */
         .return-card {
             flex-direction: column;
             align-items: flex-start;
             padding: 15px;
+        }
+        .card-col-info {
+            min-width: 100%;
         }
         .card-col-action {
             width: 100%; 
@@ -463,19 +444,12 @@ $today = date("Y-m-d");
             margin-top: 15px;
         }
         .action-container {
-            flex-direction: column; /* Stack textarea and button */
+            flex-direction: column; 
             max-width: 100%;
-        }
-        .action-container textarea {
-            max-height: 80px; 
-            min-height: 50px;
         }
         .btn-return, .action-message-checking {
             width: 100%;
             text-align: center;
-        }
-        .card-col-info {
-             width: 100%;
         }
         .card-col-info h5 {
             font-size: 1.2rem;
@@ -582,7 +556,7 @@ $today = date("Y-m-d");
 <div class="main-wrapper">
     <div class="container">
         <h2><i class="fas fa-redo fa-fw me-2"></i> Initiate Apparatus Return</h2>
-        <p class="lead text-start">Select items currently borrowed or reserved that you are ready to return to staff.</p>
+        <p class="lead text-start">Select items currently borrowed or approved that you are ready to return to staff.</p>
         
         <?php if (!empty($message)): ?>
             <div id="status-alert" class="alert <?= $is_success ? 'alert-success' : 'alert-warning' ?> fade show" role="alert">
@@ -598,15 +572,17 @@ $today = date("Y-m-d");
                     $clean_status = strtolower($form["status"]);
                     $is_pending_check = ($clean_status === "checking"); 
                     $is_overdue = ($clean_status === "overdue"); 
-                    $is_borrow_date_reached = ($form["borrow_date"] <= $today);
                     $is_expected_return_date_reached = ($form["expected_return_date"] <= $today);
                     
                     if ($is_pending_check) {
                         $card_status_class = 'return-card-checking';
                     } elseif ($is_overdue) {
                         $card_status_class = 'return-card-overdue'; 
-                    } else { 
+                    } elseif (in_array($clean_status, ['borrowed', 'approved'])) { 
                         $card_status_class = 'return-card-borrowed';
+                    } else {
+                        // For reserved status before borrow date
+                        $card_status_class = 'return-card-reserved';
                     }
 
                     $apparatusListForForm = $transaction->getFormApparatus($form["id"]); 
@@ -614,23 +590,24 @@ $today = date("Y-m-d");
                     $imageFile = $firstApparatus["image"] ?? 'default.jpg';
                     $imagePath = "../uploads/apparatus_images/" . $imageFile;
                     
-                    if (!file_exists($imagePath) || is_dir($imagePath)) {
-                        $imagePath = "../uploads/apparatus_images/default.jpg";
-                    }
+                    // NOTE: PHP file_exists check is not executable here, relying on path logic.
+                    // If file_exists() check was functional, it would be included here.
 
                     $action_content = '';
                     if ($is_pending_check) {
                         $action_content = '<span class="action-message-checking">
-                                             <i class="fas fa-clock me-1"></i> Pending Staff Check
-                                           </span>';
+                                            <i class="fas fa-clock me-1"></i> Pending Staff Check
+                                          </span>';
                     } elseif (
                         (!$is_expected_return_date_reached) && 
                         ($clean_status === 'reserved' || $clean_status === 'approved')
                     ) {
+                        // Reserved/Approved but date not yet reached
                         $action_content = '<span class="action-message-checking bg-info text-white">
-                                             <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
-                                           </span>';
+                                            <i class="fas fa-lock me-1"></i> Return available on **' . htmlspecialchars($form["expected_return_date"]) . '**
+                                          </span>';
                     } else {
+                        // Ready for return submission (Borrowed, Overdue, or Reserved/Approved and due date reached/passed)
                         $overdue_warning = '';
                         if ($is_overdue) {
                             $overdue_warning = '<p class="text-danger fw-bold small mb-2"><i class="fas fa-exclamation-circle me-1"></i> **LATE RETURN:** This loan was marked overdue by staff. Submit now to finalize the return.</p>';
@@ -638,8 +615,8 @@ $today = date("Y-m-d");
                         
                         $action_content = '
                             <form method="POST" class="action-container">
-                                <input type="hidden" name="form_id" value="' . htmlspecialchars($form["id"]) . '">
                                 ' . $overdue_warning . '
+                                <input type="hidden" name="form_id" value="' . htmlspecialchars($form["id"]) . '">
                                 <textarea name="remarks" rows="2" class="form-control" placeholder="Optional notes for staff..."></textarea>
                                 <button type="submit" name="return" class="btn btn-return">
                                     <i class="fas fa-paper-plane fa-fw"></i> Submit Return
@@ -651,15 +628,12 @@ $today = date("Y-m-d");
                 ?>
                     <div class="return-card <?= $card_status_class ?>">
                         
-                        
-                        
-                        
                         <img src="<?= htmlspecialchars($imagePath) ?>" 
                             alt="Apparatus Image" 
                             class="apparatus-thumbnail">
 
                         <div class="card-col-info">
-                            <h5 class="fw-bold mb-1" style="color: var(--msu-red);">
+                            <h5 class="fw-bold mb-1" style="color: var(--primary-color);">
                                 Request ID: <?= htmlspecialchars($form["id"]) ?> 
                                 <small class="text-muted fw-normal">(<?= htmlspecialchars(ucfirst($form["form_type"])) ?>)</small>
                             </h5>
@@ -738,7 +712,6 @@ $today = date("Y-m-d");
     
     // --- DROPDOWN PREVIEW LOGIC (Fetches alerts and populates the dropdown) ---
     function fetchStudentAlerts() {
-        // NOTE: Uses jQuery's $.getJSON because the notification logic relies on jQuery elements ($badge, $dropdown, etc.)
         const apiPath = '../api/get_notifications.php'; 
         
         $.getJSON(apiPath, function(response) { 
@@ -749,10 +722,8 @@ $today = date("Y-m-d");
             const $badge = $('#notification-bell-badge');
             const $dropdown = $('#notification-dropdown');
             const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
-            // Detach the 'View All' link to re-append it at the end
             const $viewAllLink = $dropdown.find('a[href="student_transaction.php"]').detach(); 
             
-            // Clear old Mark All buttons
             $dropdown.find('.mark-all-btn-wrapper').remove(); 
 
             // 1. Update the Badge Count
@@ -761,19 +732,17 @@ $today = date("Y-m-d");
 
             // 2. Populate the Dropdown Menu
             if (notifications.length > 0) {
-                // Add a Mark All button if there are unread items
                 if (unreadCount > 0) {
                      $placeholder.append(`
-                          <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
-                             <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                          </a>
+                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllAsRead();">
+                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
+                             </a>
                      `);
                 }
 
                 notifications.slice(0, 5).forEach(notif => {
                     
                     let iconClass = 'fas fa-info-circle text-secondary'; 
-                    // Determine icon based on message content
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE') || notif.message.includes('URGENT')) {
                             iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
@@ -790,24 +759,24 @@ $today = date("Y-m-d");
                     const datePart = new Date(notif.created_at.split(' ')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
                     $placeholder.append(`
-                                <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
-                                    href="${link}" 
-                                    data-id="${notif.id}"
-                                    data-is-read="${notif.is_read}"
-                                    onclick="window.markSingleAlertAndGo(event, this)">
-                                    <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
-                                    <div class="flex-grow-1">
-                                        <div class="small text-gray-500">${datePart}</div>
-                                        <span class="d-block">${cleanMessage}</span>
-                                    </div>
-                                    ${notif.is_read == 0 ? 
-                                        `<button type="button" class="mark-read-hover-btn" 
-                                                    title="Mark as Read" 
-                                                    data-id="${notif.id}"
-                                                    onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                            <i class="fas fa-check-circle"></i>
-                                        </button>` : ''}
-                                </a>
+                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}" 
+                                 href="${link}" 
+                                 data-id="${notif.id}"
+                                 data-is-read="${notif.is_read}"
+                                 onclick="window.markSingleAlertAndGo(event, this)">
+                                 <div class="me-3"><i class="${iconClass} fa-fw"></i></div>
+                                 <div class="flex-grow-1">
+                                     <div class="small text-gray-500">${datePart}</div>
+                                     <span class="d-block">${cleanMessage}</span>
+                                 </div>
+                                 ${notif.is_read == 0 ? 
+                                     `<button type="button" class="mark-read-hover-btn" 
+                                             title="Mark as Read" 
+                                             data-id="${notif.id}"
+                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                         <i class="fas fa-check-circle"></i>
+                                     </button>` : ''}
+                            </a>
                     `);
                 });
             } else {
@@ -816,9 +785,7 @@ $today = date("Y-m-d");
                 `);
             }
             
-            // Re-append the 'View All' link to the end of the dropdown
             $dropdown.append($viewAllLink);
-            
             
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching student alerts:", textStatus, errorThrown);
@@ -849,6 +816,7 @@ $today = date("Y-m-d");
         // --- Sidebar active link script (unchanged) ---
         const path = window.location.pathname.split('/').pop();
         const links = document.querySelectorAll('.sidebar .nav-link');
+        const topHeaderBar = document.querySelector('.top-header-bar');
         
         links.forEach(link => {
             const linkPath = link.getAttribute('href').split('/').pop();
@@ -868,23 +836,34 @@ $today = date("Y-m-d");
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
-                if (sidebar.classList.contains('active')) {
-                    mainWrapper.addEventListener('click', closeSidebarOnce);
-                } else {
-                    mainWrapper.removeEventListener('click', closeSidebarOnce);
+                if (window.innerWidth <= 992) {
+                    if (sidebar.classList.contains('active')) {
+                        document.body.style.overflow = 'hidden'; 
+                        mainWrapper.addEventListener('click', closeSidebarOnce);
+                        topHeaderBar.addEventListener('click', closeSidebarOnce);
+                    } else {
+                        document.body.style.overflow = 'auto'; 
+                        mainWrapper.removeEventListener('click', closeSidebarOnce);
+                        topHeaderBar.removeEventListener('click', closeSidebarOnce);
+                    }
                 }
             });
             
             function closeSidebarOnce() {
                 sidebar.classList.remove('active');
+                document.body.style.overflow = 'auto'; 
                 mainWrapper.removeEventListener('click', closeSidebarOnce);
+                topHeaderBar.removeEventListener('click', closeSidebarOnce);
             }
             
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
                 link.addEventListener('click', () => {
                     if (window.innerWidth <= 992) {
-                        sidebar.classList.remove('active');
+                        setTimeout(() => {
+                            sidebar.classList.remove('active');
+                            document.body.style.overflow = 'auto';
+                        }, 100);
                     }
                 });
             });

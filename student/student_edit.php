@@ -5,7 +5,7 @@ require_once "../classes/Transaction.php";
 
 // 1. Redirect if not logged in or not a student
 if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'student') {
-    header("Location: ../pages/login.php");
+    header("Location: ../pages/logout.php"); // Redirect to logout to ensure proper session clearing
     exit;
 }
 
@@ -14,6 +14,7 @@ $transaction = new Transaction();
 $user_id = $_SESSION['user']['id'];
 $errors = [];
 $message = "";
+$message_type = ""; 
 
 // --- Ban Check for Sidebar Logic ---
 $isBanned = $transaction->isStudentBanned($user_id); 
@@ -35,84 +36,153 @@ $contact_number = $db_contact['contact_number'] ?? '';
 // Set initial values for form fields
 $current_data['contact_number'] = $contact_number;
 
+// Variables for password form submission
+$pass_errors = [];
+$pass_message = "";
+$pass_message_type = "";
 
-// Check if form was submitted
+
+// --- Handle Form Submissions ---
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
-    $new_firstname = trim($_POST["firstname"]);
-    $new_lastname = trim($_POST["lastname"]);
-    $new_course = trim($_POST["course"]);
-    $new_email = trim($_POST["email"]);
-    $new_contact_number = trim($_POST["contact_number"]); 
-    
-    // --- Validation (Server-side validation remains to enforce data integrity) ---
-    if (empty($new_firstname)) $errors["firstname"] = "Your first name cannot be empty. Please provide your official first name.";
-    if (empty($new_lastname)) $errors["lastname"] = "Your last name is required for identification. Please enter it.";
-    if (empty($new_course)) $errors["course"] = "Your course/program is mandatory.";
-
-    if (empty($new_contact_number)) {
-        $errors["contact_number"] = "Contact number is required for laboratory communication.";
-    } else {
-        $clean_number = preg_replace('/[^0-9\+]/', '', $new_contact_number); 
-        if (strlen($clean_number) < 8 || strlen( $clean_number) > 20) {
-            $errors["contact_number"] = "The contact number seems invalid. Please ensure it includes the country code (e.g., +639xxxxxxxxx) and is between 8 and 20 characters long.";
+    // Determine which form was submitted
+    if (isset($_POST['action']) && $_POST['action'] === 'update_profile') {
+        
+        // --- 1. HANDLE PROFILE DETAILS UPDATE ---
+        $new_firstname = trim($_POST["firstname"]);
+        $new_lastname = trim($_POST["lastname"]);
+        $new_course = trim($_POST["course"]);
+        $new_email = trim($_POST["email"]);
+        $new_contact_number = trim($_POST["contact_number"]); 
+        
+        // --- Validation (Retaining logic from previous steps) ---
+        if (empty($new_firstname)) $errors["firstname"] = "Your first name cannot be empty. Please provide your official first name.";
+        if (empty($new_lastname)) $errors["lastname"] = "Your last name is required for identification. Please enter it.";
+        if (empty($new_course)) $errors["course"] = "Your course/program is mandatory.";
+        
+        // Contact Validation
+        if (empty($new_contact_number)) {
+            $errors["contact_number"] = "Contact number is required for laboratory communication.";
+        } else {
+            // Clean number allowing only digits and '+'
+            $clean_number = preg_replace('/[^0-9\+]/', '', $new_contact_number); 
+            // Basic length validation
+            if (empty($clean_number) || strlen($clean_number) < 8 || strlen( $clean_number) > 20) {
+                $errors["contact_number"] = "The contact number seems invalid. Please ensure it includes the country code (e.g., +639xxxxxxxxx) and is between 8 and 20 characters long.";
+            }
         }
-    }
-
-    if (empty($new_email)) {
-        $errors["email"] = "Email address is essential for account recovery and notifications.";
-    } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
-        $errors["email"] = "The email format is invalid. Please double-check for typos (e.g., user@example.com).";
-    }
-    
-    // --- Duplicate Email Check (Only if email changed) ---
-    if (empty($errors) && $new_email !== $_SESSION['user']['email']) {
-        if ($student->isEmailExist($new_email)) {
+        
+        // Email Validation & Duplication Check
+        if (empty($new_email)) {
+            $errors["email"] = "Email address is essential for account recovery and notifications.";
+        } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
+            $errors["email"] = "The email format is invalid. Please double-check for typos (e.g., user@example.com).";
+        } elseif ($new_email !== $_SESSION['user']['email'] && $student->isEmailExist($new_email)) {
             $errors['email'] = "This Email address is already linked to another user account. Please use a unique email.";
         }
-    }
 
-    // 3. Process Update
-    if (empty($errors)) {
-        $full_contact = $clean_number; 
-        
-        $result = $student->updateStudentProfile(
-            $user_id, $new_firstname, $new_lastname, $new_course, $full_contact, $new_email
-        );
-        
-        if ($result) {
-            $message = "✅ Success! Your profile details have been updated.";
+        // 3. Process Update
+        if (empty($errors)) {
+            $full_contact = $clean_number; 
             
-            // 4. Update Session variables on success
-            $_SESSION['user']['firstname'] = $new_firstname;
-            $_SESSION['user']['lastname'] = $new_lastname;
-            $_SESSION['user']['course'] = $new_course;
-            $_SESSION['user']['email'] = $new_email;
+            $result = $student->updateStudentProfile(
+                $user_id, $new_firstname, $new_lastname, $new_course, $full_contact, $new_email
+            );
             
-            // Re-initialize local form variables with new data
-            $current_data['firstname'] = $new_firstname;
-            $current_data['lastname'] = $new_lastname;
-            $current_data['course'] = $new_course;
-            $current_data['email'] = $new_email;
-            $current_data['contact_number'] = $new_contact_number; 
-            
-            // Set a flag to bypass the 'unsaved changes' warning after successful submission
-            echo '<script>sessionStorage.setItem("formSubmitted", "true");</script>';
+            if ($result) {
+                $message = "✅ Success! Your profile details have been updated.";
+                $message_type = 'success';
+                
+                // Update Session variables immediately
+                $_SESSION['user']['firstname'] = $new_firstname;
+                $_SESSION['user']['lastname'] = $new_lastname;
+                $_SESSION['user']['course'] = $new_course;
+                $_SESSION['user']['email'] = $new_email;
+                
+                // Trigger success modal on reload
+                echo '<script>sessionStorage.setItem("profileUpdated", "true");</script>';
 
+            } else {
+                $message = "❌ System Error: We encountered an issue while saving to the database. Please try again or contact support.";
+                $message_type = 'danger';
+            }
         } else {
-            $message = "❌ System Error: We encountered an issue while saving to the database. Please try again or contact support.";
+            $message = "⚠️ Validation Failed: Please review and correct the marked fields below before proceeding.";
+            $message_type = 'danger';
         }
-    } else {
-        $message = "⚠️ Validation Failed: Please review and correct the marked fields below before proceeding.";
         
-        // Retain user input in case of error
+        // Retain user input for current form in case of error
         $current_data['firstname'] = $new_firstname;
         $current_data['lastname'] = $new_lastname;
         $current_data['course'] = $new_course;
         $current_data['email'] = $new_email;
         $current_data['contact_number'] = $new_contact_number;
+        
+    } elseif (isset($_POST['action']) && $_POST['action'] === 'change_password') {
+        
+        // --- 2. HANDLE CHANGE PASSWORD ---
+        $current_password = $_POST["current_password"];
+        $new_password = $_POST["new_password"];
+        $confirm_password = $_POST["confirm_password"];
+        
+        if (empty($current_password)) $pass_errors["current_password"] = "Current password is required.";
+        if (empty($new_password)) {
+             $pass_errors["new_password"] = "New password is required.";
+        } elseif (strlen($new_password) < 8) {
+            $pass_errors["new_password"] = "New password must be at least 8 characters."; 
+        }
+        if (empty($confirm_password)) {
+             $pass_errors["confirm_password"] = "Confirmation password is required.";
+        } elseif ($new_password !== $confirm_password) {
+            $pass_errors["confirm_password"] = "New passwords do not match.";
+        }
+        
+        if (empty($pass_errors)) {
+            $result = $student->changeStudentPassword($user_id, $current_password, $new_password);
+            
+            if ($result === true) {
+                // Set flag to trigger success modal/logout on reload
+                echo '<script>sessionStorage.setItem("passUpdated", "true");</script>';
+                // Clear POST and force reload to show modal and then log out
+                header("Location: student_edit.php#password_modal_trigger");
+                exit;
+            } elseif ($result === 'invalid_password') {
+                $pass_errors['current_password'] = "The current password you entered is incorrect.";
+                $pass_message = "❌ Password change failed. Please review errors.";
+                $pass_message_type = 'danger';
+            } else {
+                $pass_message = "❌ System Error: Failed to update password. Please try again or contact support.";
+                $pass_message_type = 'danger';
+            }
+        } else {
+            $pass_message = "⚠️ Validation Failed: Please check the highlighted fields.";
+            $pass_message_type = 'danger';
+        }
     }
 }
+
+// Check for successful submission flags to trigger modals on page load
+$trigger_profile_success = isset($_SESSION['profileUpdated']) ? true : false;
+unset($_SESSION['profileUpdated']);
+
+$trigger_pass_success = false;
+
+// If we hit a successful password update, we redirect and handle it in JS below.
+// This block processes errors only.
+if (isset($_SESSION['password_status'])) {
+    $pass_message = $_SESSION['password_status']['message'];
+    $pass_message_type = $_SESSION['password_status']['type'];
+    $pass_errors = $_SESSION['password_status']['errors'];
+    
+    if($pass_message_type === 'success') {
+        $trigger_pass_success = true;
+    }
+    unset($_SESSION['password_status']);
+}
+
+// FIX: Changed from 'disabled' to 'readonly'
+// If there are errors in the profile form, the state must be enabled (i.e., not readonly)
+$initial_readonly_state = !empty($errors) ? '' : 'readonly';
 ?>
 
 <!DOCTYPE html>
@@ -125,7 +195,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
     <style>
-        /* --- COPYING STYLES FROM DASHBOARD --- */
+        /* --- THEME MATCHING (Consistent Theme) --- */
         :root {
             --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
             --primary-color-dark: #820303; 
@@ -148,7 +218,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         /* NEW CSS for Mobile Toggle */
         .menu-toggle {
-            display: none; /* Hidden on desktop */
+            display: none; 
             position: fixed;
             top: 15px;
             left: 20px;
@@ -202,7 +272,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             z-index: 1000;
             transition: left 0.3s ease;
         }
-        /* Notification Bell (Restored) */
         .notification-bell-container {
             position: relative;
             margin-right: 25px;
@@ -215,11 +284,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             right: 0px;
             font-size: 0.7em;
             padding: 0.35em 0.5em;
-            background-color: var(--secondary-color); /* Use accent color */
+            background-color: var(--secondary-color);
             color: var(--text-dark);
             font-weight: bold;
         }
-        /* Active Link Styling for Edit Profile */
         .edit-profile-link {
             color: var(--primary-color);
             font-weight: 700;
@@ -256,7 +324,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: var(--text-dark); 
             margin-bottom: 30px;
             padding-bottom: 15px;
-            border-bottom: 2px solid var(--primary-color); /* Use primary color */
+            border-bottom: 2px solid var(--primary-color); 
             font-weight: 700;
             font-size: 2.2rem;
         }
@@ -264,13 +332,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         /* --- Form Styles --- */
         .form-container-wrapper {
             width: 95%; 
-            max-width: 800px; 
+            max-width: 850px; 
             margin: 0 auto; 
         }
+        .form-section-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--secondary-color); 
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
         .form-group {
             display: flex;
             margin-bottom: 20px;
             align-items: flex-start;
+            position: relative; 
         }
         .form-group label {
             flex: 0 0 160px; 
@@ -280,8 +360,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-weight: 600;
             font-size: 1rem;
         }
-        .form-control, .contact-input { 
+        .input-wrapper {
             flex: 1;
+            position: relative;
+        }
+        .form-control, .contact-input { 
+            width: 100%;
             padding: 10px 12px; 
             border-radius: 6px; 
             box-sizing: border-box; 
@@ -293,13 +377,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
             outline: none;
         }
+        .form-control.is-invalid, .contact-input.is-invalid {
+             border-color: var(--danger-color);
+        }
         
-        /* --- Disabled/Read-Only Styling for Student ID --- */
-        input[disabled] {
-            background-color: #f5f5f5; 
-            border-color: #e0e0e0; 
-            opacity: 1; 
+        /* Readonly/Disabled Input Styles */
+        input:read-only {
+            background-color: #f5f5f5; /* Light grey background */
+            color: #555;
             cursor: default;
+            border: 1px solid #ddd;
+        }
+        input:disabled { /* Keep disabled style for Student ID field */
+             background-color: #eee;
+             color: #777;
+             cursor: not-allowed;
+        }
+
+
+        /* Password toggle icon placement (Modal and Main) */
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+            z-index: 10; 
         }
         
         /* Centering the Form Actions */
@@ -307,17 +411,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             padding-left: 0; 
             margin-top: 30px;
             text-align: center; 
+            display: flex;
+            justify-content: center;
+            gap: 15px; /* Space between Save and Cancel */
         }
+        /* Adjusted error alignment to align with input field */
         .error {
-            color: var(--primary-color); /* Use primary color for errors */
+            color: var(--primary-color); 
             font-size: 0.95rem;
-            margin-top: -15px; 
+            margin-top: 5px; 
             margin-bottom: 20px; 
             padding-left: 180px; 
             font-weight: 600;
             display: block;
+            text-align: left;
         }
         
+        /* Error for fields inside the password form */
+        .error-inline {
+             color: var(--primary-color); 
+             font-size: 0.9rem;
+             font-weight: 600;
+             display: block;
+             margin-top: 5px;
+             text-align: left;
+        }
+
         /* Alert styling - Consistent with login/signup pages */
         .alert-custom {
             margin-bottom: 20px;
@@ -327,16 +446,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 1.05rem;
             text-align: left;
         }
-        .alert-success {
-            background-color: #d4edda; 
-            color: #155724; 
-            border: 1px solid #c3e6cb;
-        }
-        .alert-danger { /* Used for validation and system errors */
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         
         /* Button styling - New Primary Style (Pill shape) */
         .btn-theme-primary {
@@ -356,24 +467,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
         
-        /* Modal button styling (Updated to use theme colors) */
-        .modal-footer .btn-secondary {
+        .btn-cancel {
             background-color: #6c757d;
-            border-color: #6c757d;
             color: white;
-            font-weight: 600;
-        }
-        .modal-footer .btn-custom-ok {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
             font-weight: 700;
+            font-size: 1.1rem;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
+        .btn-cancel:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        /* Modal Header Styles for Status Modals */
+        .modal-header.alert-success { background-color: #28a745; color: white; }
+        .modal-header.alert-danger { background-color: var(--danger-color); color: white; }
 
 
         /* --- RESPONSIVE ADJUSTMENTS --- */
         @media (max-width: 992px) {
-            /* Mobile Sidebar */
             .menu-toggle { display: block; }
             .sidebar { left: calc(var(--sidebar-width) * -1); transition: left 0.3s ease; box-shadow: none; --sidebar-width: 250px; }
             .sidebar.active { left: 0; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); }
@@ -384,11 +500,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         @media (max-width: 768px) {
             .content-area { padding: 20px 15px; }
             .page-header { font-size: 2rem; }
-            /* Stack form elements */
-            .form-group {
-                flex-direction: column;
-                margin-bottom: 10px;
-            }
+            
+            .form-group { flex-direction: column; margin-bottom: 10px; }
             .form-group label {
                 flex: none;
                 text-align: left;
@@ -396,35 +509,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 padding-top: 0;
                 margin-bottom: 5px;
             }
-            /* Adjust error messages to start from the left */
-            .error {
-                padding-left: 0;
-                margin-top: 5px;
-                margin-bottom: 15px;
-            }
-            .form-control, .contact-input {
-                 padding: 8px 10px;
-                 font-size: 0.95rem;
-            }
-            .form-actions button {
-                 width: 100%;
-            }
-            .top-header-bar {
-                 /* Re-adjust for better spacing */
-                 padding: 0 15px;
-                 justify-content: space-between;
-                 padding-left: 70px;
-            }
+            
+            .error { padding-left: 0; margin-top: 5px; margin-bottom: 15px; }
+            .form-control, .contact-input { padding: 8px 10px; font-size: 0.95rem; }
+            
+            /* Stack action buttons vertically on mobile */
+            .form-actions { flex-direction: column; gap: 10px; }
+            .form-actions button { width: 100%; }
+            .top-header-bar { padding: 0 15px; justify-content: space-between; padding-left: 70px; }
         }
         @media (max-width: 576px) {
-            .top-header-bar {
-                 padding: 0 15px;
-                 justify-content: flex-end;
-                 padding-left: 65px;
-            }
-            .top-header-bar .notification-bell-container {
-                 margin-right: 10px;
-            }
+            .top-header-bar { padding: 0 15px; justify-content: flex-end; padding-left: 65px; }
+            .top-header-bar .notification-bell-container { margin-right: 10px; }
         }
     </style>
 </head>
@@ -455,7 +551,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </li>
         <li class="nav-item">
             <a href="student_return.php" class="nav-link">
-                <i class="fas fa-undo-alt fa-fw me-2"></i> Initiate Return
+                <i class="fas fa-redo fa-fw me-2"></i> Initiate Return
             </a>
         </li>
         <li class="nav-item">
@@ -491,10 +587,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="content-area">
         <div class="form-container-wrapper">
             <h2 class="page-header">
-                <i class="fas fa-user-edit fa-fw me-2 text-secondary"></i> Edit Profile Details
+                <i class="fas fa-user-cog fa-fw me-2 text-secondary"></i> Account Management
             </h2>
             
             <?php 
+            // Display PROFILE message if set
             $alert_class = '';
             if (strpos($message, '✅') !== false) {
                 $alert_class = 'alert-success';
@@ -507,172 +604,352 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <?= htmlspecialchars($message) ?>
                 </div>
             <?php endif; ?>
-
+            
+            <div class="form-section-header">
+                <i class="fas fa-info-circle me-2"></i> Personal & Contact Details
+            </div>
+            
             <form id="profileForm" method="POST" action="">
+                <input type="hidden" name="action" value="update_profile">
 
                 <div class="form-group">
                     <label>Student ID</label>
-                    <input type="text" class="form-control" value="<?= htmlspecialchars($current_data['student_id']) ?>" disabled>
+                    <div class="input-wrapper">
+                        <input type="text" class="form-control" value="<?= htmlspecialchars($current_data['student_id']) ?>" disabled>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label for="firstname">First Name</label>
-                    <input type="text" id="firstname" name="firstname" class="form-control <?= isset($errors['firstname']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['firstname']) ?>">
+                    <div class="input-wrapper">
+                        <input type="text" id="firstname" name="firstname" class="form-control <?= isset($errors['firstname']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['firstname']) ?>" <?= $initial_readonly_state ?>>
+                    </div>
                 </div>
                 <?php if (isset($errors['firstname'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['firstname'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="lastname">Last Name</label>
-                    <input type="text" id="lastname" name="lastname" class="form-control <?= isset($errors['lastname']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['lastname']) ?>">
+                    <div class="input-wrapper">
+                        <input type="text" id="lastname" name="lastname" class="form-control <?= isset($errors['lastname']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['lastname']) ?>" <?= $initial_readonly_state ?>>
+                    </div>
                 </div>
                 <?php if (isset($errors['lastname'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['lastname'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="course">Course</label>
-                    <input type="text" id="course" name="course" class="form-control <?= isset($errors['course']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['course']) ?>">
+                    <div class="input-wrapper">
+                        <input type="text" id="course" name="course" class="form-control <?= isset($errors['course']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['course']) ?>" <?= $initial_readonly_state ?>>
+                    </div>
                 </div>
                 <?php if (isset($errors['course'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['course'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['email']) ?>">
+                    <div class="input-wrapper">
+                        <input type="email" id="email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['email']) ?>" <?= $initial_readonly_state ?>>
+                    </div>
                 </div>
                 <?php if (isset($errors['email'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['email'] ?></span><?php endif; ?>
 
                 <div class="form-group">
                     <label for="contact_number">Contact Number</label>
-                    <input type="text" id="contact_number" name="contact_number" class="contact-input form-control <?= isset($errors['contact_number']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['contact_number']) ?>" placeholder="e.g., +639123456789">
+                    <div class="input-wrapper">
+                        <input type="text" id="contact_number" name="contact_number" class="contact-input form-control <?= isset($errors['contact_number']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars($current_data['contact_number']) ?>" placeholder="e.g., +639123456789" <?= $initial_readonly_state ?>>
+                    </div>
                 </div>
                 <?php if (isset( $errors['contact_number'])): ?><span class="error"><i class="fas fa-exclamation-circle"></i> <?= $errors['contact_number'] ?></span><?php endif; ?>
 
                 <div class="form-actions">
-                    <button type="button" id="openConfirmModal" class="btn-theme-primary"> 
+                    <button type="button" id="editProfileButton" class="btn-theme-primary" style="<?= !empty($errors) ? 'display: none;' : '' ?>"> 
+                        <i class="fas fa-edit me-2"></i> Edit Account Information
+                    </button>
+                    <button type="submit" id="saveProfileButton" class="btn-theme-primary" style="display: none;"> 
                         <i class="fas fa-save me-2"></i> Save Changes
+                    </button>
+                    <button type="button" id="cancelEditButton" class="btn-cancel" style="<?= !empty($errors) ? 'display: inline-block;' : 'display: none;' ?>">
+                        <i class="fas fa-times me-2"></i> Cancel
                     </button>
                 </div>
             </form>
+            
+            <div class="form-section-header">
+                <i class="fas fa-lock me-2"></i> Password & Security
+            </div>
+            
+            <form id="passwordForm" method="POST" action="">
+                <input type="hidden" name="action" value="change_password">
+                
+                <?php 
+                // Display password-specific message if errors were present on page load
+                if (!empty($pass_message)): 
+                ?>
+                    <div class="alert-custom <?= $pass_message_type === 'success' ? 'alert-success' : 'alert-danger' ?>">
+                        <?= htmlspecialchars($pass_message) ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="current_password" name="current_password" 
+                            class="form-control <?= isset($pass_errors['current_password']) ? 'is-invalid' : '' ?>" placeholder="Enter current password">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('current_password', this)"></i>
+                    </div>
+                </div>
+                <?php if (isset($pass_errors['current_password'])): ?><span class="error-inline"><i class="fas fa-exclamation-circle"></i> <?= $pass_errors['current_password'] ?></span><?php endif; ?>
+
+                <div class="form-group">
+                    <label for="new_password">New Password (Min 8 Chars)</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="new_password" name="new_password" 
+                            class="form-control <?= isset($pass_errors['new_password']) ? 'is-invalid' : '' ?>" placeholder="Enter new password">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('new_password', this)"></i>
+                    </div>
+                </div>
+                <?php if (isset($pass_errors['new_password'])): ?><span class="error-inline"><i class="fas fa-exclamation-circle"></i> <?= $pass_errors['new_password'] ?></span><?php endif; ?>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="confirm_password" name="confirm_password" 
+                            class="form-control <?= isset($pass_errors['confirm_password']) ? 'is-invalid' : '' ?>" placeholder="Confirm new password">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('confirm_password', this)"></i>
+                    </div>
+                </div>
+                <?php if (isset($pass_errors['confirm_password'])): ?><span class="error-inline"><i class="fas fa-exclamation-circle"></i> <?= $pass_errors['confirm_password'] ?></span><?php endif; ?>
+
+                <div class="form-actions" style="justify-content: center;">
+                    <button type="submit" id="submitPasswordButton" class="btn-theme-primary"> 
+                        <i class="fas fa-key me-2"></i> Change Password
+                    </button>
+                </div>
+            </form>
+            
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md modal-dialog-centered"> 
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-body text-center">
-                Are you sure you want to apply these profile changes? This will update your account details.
+            <div class="modal-header" id="statusModalHeader">
+                <h5 class="modal-title fw-bold" id="statusModalLabel"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm btn-custom-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger btn-sm btn-custom-ok" id="confirmSubmit">OK</button>
+            <div class="modal-body text-center" id="statusModalBody">
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let formChanged = false; // Flag to track if the form content has been modified
-    let formSubmitting = false; // Flag to track if the form is intentionally being submitted
+    let profileFormChanged = false;
+    let formSubmitting = false; 
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('profileForm');
-        const openModalButton = document.getElementById('openConfirmModal');
-        const confirmSubmitButton = document.getElementById('confirmSubmit');
-        const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-        
-        // --- Sidebar Activation Logic ---
-        const links = document.querySelectorAll('.sidebar .nav-link');
-        const currentPath = 'student_edit.php'; 
-        
-        links.forEach(link => {
-             const linkPath = link.getAttribute('href').split('/').pop();
-            
-             if (linkPath === currentPath) {
-                 link.classList.add('active');
-             } else {
-                 link.classList.remove('active');
-             }
-        });
-
-        // --- 1. Track Form Changes ---
-        const inputFields = form.querySelectorAll('input:not([type="hidden"]):not([disabled])');
-        
-        // Store initial values to compare later
-        const initialValues = {};
-        inputFields.forEach(input => {
-             initialValues[input.id] = input.value;
-        });
-        
-        // Check for changes on input/change events
-        inputFields.forEach(input => {
-            input.addEventListener('input', () => {
-                let changed = false;
-                inputFields.forEach(i => {
-                    if (initialValues[i.id] !== i.value) {
-                        changed = true;
-                    }
-                });
-                formChanged = changed;
-            });
-        });
-
-        // --- 2. Save Confirmation Modal Logic ---
-        openModalButton.addEventListener('click', () => {
-            // Re-check changes immediately before showing modal
-            let changed = false;
-            inputFields.forEach(i => {
-                if (initialValues[i.id] !== i.value) {
-                    changed = true;
-                }
-            });
-            formChanged = changed;
-
-            if (formChanged) {
-                confirmationModal.show();
-            } else {
-                alert("No changes detected in your profile. Nothing to save.");
+    function togglePasswordVisibility(id, iconElement) {
+        const input = document.getElementById(id);
+        if (input.type === "password") {
+            input.type = "text";
+            iconElement.classList.remove('fa-eye');
+            iconElement.classList.add('fa-eye-slash');
+        } else {
+            input.type = "password";
+            iconElement.classList.remove('fa-eye-slash');
+            iconElement.classList.add('fa-eye');
+        }
+    }
+    
+    function checkFormChanges(form, initialValues) {
+        let changed = false;
+        // Loop through inputs that were initially editable (which are the ones we track by ID)
+        // We ensure we only check fields that are NOT the disabled Student ID field.
+        form.querySelectorAll('#firstname, #lastname, #course, #email, #contact_number').forEach(input => {
+            if (initialValues[input.id] !== input.value) {
+                changed = true;
             }
         });
+        return changed;
+    }
 
-        // 3. Handle the "OK" click inside the modal
-        confirmSubmitButton.addEventListener('click', () => {
-            confirmationModal.hide(); 
-            formSubmitting = true; // Set flag to bypass beforeunload check
-            form.submit();
+    function displayStatus(message, type, redirectOnSuccess = false) {
+        const statusModalElement = document.getElementById('statusModal');
+        const statusModal = new bootstrap.Modal(statusModalElement);
+        const header = document.getElementById('statusModalHeader');
+        const label = document.getElementById('statusModalLabel');
+        const body = document.getElementById('statusModalBody');
+
+        header.className = 'modal-header';
+        body.innerHTML = `<p>${message.replace(/✅|❌|⚠️/g, '<strong>')}</p>`;
+
+        if (type === 'success') {
+            header.classList.add('alert-success');
+            header.classList.remove('alert-danger');
+            label.innerHTML = '<i class="fas fa-check-circle me-2"></i> Success!';
+        } else {
+            header.classList.add('alert-danger');
+            header.classList.remove('alert-success');
+            label.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> Notification'; // Changed to Notification for generic errors
+        }
+        
+        statusModal.show();
+        
+        if (redirectOnSuccess && type === 'success') {
+             // Handle the logout redirect after password change
+             statusModalElement.addEventListener('hidden.bs.modal', function () {
+                window.location.href = '../pages/logout.php';
+             }, { once: true });
+        }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const profileForm = document.getElementById('profileForm');
+        const editButton = document.getElementById('editProfileButton');
+        const saveButton = document.getElementById('saveProfileButton');
+        const cancelButton = document.getElementById('cancelEditButton');
+        
+        // Select only the editable inputs
+        const profileInputs = profileForm.querySelectorAll('#firstname, #lastname, #course, #email, #contact_number'); 
+        
+        // --- Store Initial Profile Values for Cancellation/Change Detection ---
+        const profileInitialValues = {};
+        profileInputs.forEach(input => { 
+             profileInitialValues[input.id] = input.value; 
+        });
+
+        // Function to set fields back to read-only, revert values, and hide action buttons
+        function disableProfileFieldsAndRevert() {
+            profileInputs.forEach(input => {
+                input.value = profileInitialValues[input.id]; // Revert value
+                // FIX: Set 'readonly' attribute
+                input.setAttribute('readonly', 'readonly'); 
+                input.classList.remove('is-invalid'); // Remove error styles
+            });
+            // Clear inline errors below fields
+            profileForm.querySelectorAll('.error').forEach(span => span.textContent = '');
+            
+            editButton.style.display = 'inline-block';
+            saveButton.style.display = 'none';
+            cancelButton.style.display = 'none';
+            profileFormChanged = false; // Reset flag
+        }
+
+        // --- Event Listeners ---
+        
+        // If there are errors on load, the fields are automatically NOT readonly, so we need to hide the EDIT button and show save/cancel
+        const initialReadonly = '<?= $initial_readonly_state ?>';
+        if (initialReadonly === '') {
+             // Fields are enabled due to validation failure, adjust buttons
+             editButton.style.display = 'none';
+             saveButton.style.display = 'inline-block';
+             cancelButton.style.display = 'inline-block';
+        }
+
+
+        // 1. Profile Change Detection
+        profileInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                profileFormChanged = checkFormChanges(profileForm, profileInitialValues);
+            });
         });
         
-        // --- 4. Unsaved Changes Warning (beforeunload) ---
+        // 2. EDIT Button Logic (Removes Readonly/Enables fields)
+        if (editButton) {
+            editButton.addEventListener('click', () => {
+                profileInputs.forEach(input => {
+                    // FIX: Remove 'readonly' attribute
+                    input.removeAttribute('readonly'); 
+                });
+                editButton.style.display = 'none';
+                saveButton.style.display = 'inline-block';
+                cancelButton.style.display = 'inline-block';
+            });
+        }
+        
+        // 3. CANCEL Button Logic (Reverts changes and disables fields)
+        if (cancelButton) {
+            cancelButton.addEventListener('click', disableProfileFieldsAndRevert);
+        }
+
+        // 4. SAVE Button Logic (Requires form changes)
+        if (saveButton) {
+            saveButton.addEventListener('click', (e) => {
+                profileFormChanged = checkFormChanges(profileForm, profileInitialValues);
+                if (profileFormChanged) {
+                    // Set flag to bypass beforeunload check
+                    formSubmitting = true;
+                    // Allow submission to proceed normally
+                } else {
+                    e.preventDefault(); // Stop form submission
+                    
+                    // FIX: Replace alert() with displayStatus() using the modal
+                    displayStatus("⚠️ Action Cancelled: No changes were detected in your profile. Nothing to save.", 'danger', false);
+                }
+            });
+        }
+        
+        // 5. Submission Result Handlers (Modals)
+        
+        // --- A. Profile Submission Success/Error ---
+        const profileMessage = '<?= addslashes($message) ?>';
+        const profileMessageType = '<?= $message_type ?>';
+
+        if (profileMessage && profileMessageType) {
+             if (profileMessageType === 'success') {
+                // Show modal for success
+                displayStatus(profileMessage, profileMessageType, false); 
+                // After successful update, revert to read-only state and update stored values
+                disableProfileFieldsAndRevert();
+                profileInputs.forEach(input => {
+                     profileInitialValues[input.id] = input.value;
+                });
+             } else if (profileMessageType === 'danger') {
+                 // Show modal for validation failure
+                 displayStatus(profileMessage, profileMessageType, false); 
+             }
+        }
+
+        // --- B. Password Submission Success/Logout Trigger ---
+        if (sessionStorage.getItem("passUpdated") === "true") {
+            sessionStorage.removeItem("passUpdated");
+            // Show success modal and trigger logout upon closing
+            displayStatus("✅ Success! Your password has been updated. You will be logged out upon closing this window.", 'success', true);
+        }
+        
+        // --- Unsaved Changes Warning (beforeunload) ---
         window.addEventListener('beforeunload', function (e) {
-            // Check if the page is being left and the form has unsaved changes AND 
-            // the user is NOT intentionally clicking the save button.
-            if (formChanged && !formSubmitting) {
+            // Check if fields are currently NOT readonly and if changes were made
+            const isEditing = profileInputs[0].hasAttribute('readonly') === false;
+            if (isEditing && profileFormChanged && !formSubmitting) {
                 e.preventDefault(); 
                 return e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
             }
         });
-        
-        // --- Reset formSubmitting flag if successful (from PHP session flag) ---
-        if (sessionStorage.getItem("formSubmitted") === "true") {
-            formChanged = false;
-            sessionStorage.removeItem("formSubmitted");
-        }
 
-        // New Mobile Toggle Logic
+        // Mobile Toggle Logic (Remains unchanged)
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const mainWrapper = document.querySelector('.main-wrapper');
+        const topHeaderBar = document.querySelector('.top-header-bar');
 
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('active');
                 if (window.innerWidth <= 992) {
                      if (sidebar.classList.contains('active')) {
-                        document.body.style.overflow = 'hidden'; 
-                        mainWrapper.addEventListener('click', closeSidebarOnce);
-                    } else {
-                        document.body.style.overflow = 'auto'; 
-                        mainWrapper.removeEventListener('click', closeSidebarOnce);
-                    }
+                         document.body.style.overflow = 'hidden'; 
+                         mainWrapper.addEventListener('click', closeSidebarOnce);
+                         topHeaderBar.addEventListener('click', closeSidebarOnce);
+                     } else {
+                         document.body.style.overflow = 'auto'; 
+                         mainWrapper.removeEventListener('click', closeSidebarOnce);
+                         topHeaderBar.removeEventListener('click', closeSidebarOnce);
+                     }
                 }
             });
             
@@ -680,6 +957,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                  sidebar.classList.remove('active');
                  document.body.style.overflow = 'auto'; 
                  mainWrapper.removeEventListener('click', closeSidebarOnce);
+                 topHeaderBar.removeEventListener('click', closeSidebarOnce);
             }
             
             const navLinks = sidebar.querySelectorAll('.nav-link');
@@ -689,7 +967,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                          setTimeout(() => {
                              sidebar.classList.remove('active');
                              document.body.style.overflow = 'auto';
-                        }, 100);
+                         }, 100);
                      }
                  });
             });

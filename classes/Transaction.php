@@ -1,5 +1,6 @@
 <?php
 require_once "Database.php";
+require_once "Mailer.php"; // <--- CRITICAL FIX: ADDED MAILER INCLUDE
 
 class Transaction extends Database
 {
@@ -370,11 +371,14 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
         return false;
     }
 }
-    /**
-     * Approve a borrow or reservation request (UNIT ASSIGNMENT LOGIC).
-     */
-   public function approveForm($form_id, $staff_id, $remarks = null) {
+ 
+/**
+ * Approve a borrow or reservation request (UNIT ASSIGNMENT LOGIC).
+ */
+public function approveForm($form_id, $staff_id, $remarks = null) {
     $conn = $this->connect();
+    // Start Transaction Mode
+    $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 0); 
     $conn->beginTransaction(); 
 
     try {
@@ -386,20 +390,24 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
         // CRITICAL STEP: Lock the involved apparatus_type rows *now* to serialize concurrent access.
         foreach ($type_ids_to_lock as $type_id) {
             $conn->prepare("SELECT id FROM apparatus_type WHERE id = ? FOR UPDATE")
-                   ->execute([$type_id]);
+                ->execute([$type_id]);
         }
 
         // Lock the borrow form data itself
-        $stmt = $conn->prepare("SELECT * FROM borrow_forms WHERE id = :id FOR UPDATE");
+        $stmt = $conn->prepare("SELECT user_id, form_type, status, request_date, expected_return_date FROM borrow_forms WHERE id = :id FOR UPDATE");
         $stmt->bindParam(":id", $form_id);
         $stmt->execute();
-        $form = $stmt->fetch();
+        $form = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        $student_id = $form['user_id']; // <--- Save student ID here
-        $form_type = $form['form_type']; // <--- Save form type here
+        $student_id = $form['user_id']; 
+        $form_type = $form['form_type']; 
+        $request_date = $form['request_date'];
+        $expected_return_date = $form['expected_return_date'];
+        $approval_date_str = date('Y-m-d');
 
         if (!$form || $form['status'] !== 'waiting_for_approval') { 
             $conn->rollBack(); 
+            $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
             return false; 
         }
 
@@ -417,48 +425,44 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
             if (!in_array($row['type_id'], $type_ids_to_refresh)) $type_ids_to_refresh[] = $row['type_id'];
         }
 
-        // 2. Assign specific units and update their status
+        // 2. Assign specific units and update their status 
         $update_item_stmt = $conn->prepare("UPDATE borrow_items SET unit_id = :unit_id, item_status = 'borrowed' WHERE id = :item_id AND unit_id IS NULL");
         
         foreach ($items_by_type as $type_id => $item_ids) {
             $quantity_needed = count($item_ids);
             
-            // CRITICAL CHECK: Re-confirm available unit count while under lock
-            $available_units_count = $this->countAvailableUnits($type_id, $conn); // USE TRANSACTIONAL CONNECTION
+            $available_units_count = $this->countAvailableUnits($type_id, $conn); 
             if ($available_units_count < $quantity_needed) {
                 $conn->rollBack();
-                // Fail safely if stock was taken by a concurrent process
+                $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
                 return 'stock_mismatch_on_approval'; 
             }
 
-
-            // 🟢 CRITICAL CONCURRENCY FIX: Use explicit PDO::PARAM_INT for LIMIT.
             $stmt_find_units = $conn->prepare("
                 SELECT unit_id 
                 FROM apparatus_unit 
                 WHERE type_id = :type_id AND current_status = 'available'
-                ORDER BY unit_id ASC -- Added order by for deterministic unit selection
+                ORDER BY unit_id ASC
                 LIMIT :quantity
                 FOR UPDATE
             ");
             
             $stmt_find_units->bindValue(':type_id', $type_id);
-            $stmt_find_units->bindValue(':quantity', $quantity_needed, PDO::PARAM_INT);
+            // *** FIX: Explicitly bind quantity as integer for LIMIT clause ***
+            $stmt_find_units->bindValue(':quantity', $quantity_needed, PDO::PARAM_INT); 
+            // ***************************************************************
 
             $stmt_find_units->execute();
             $units = $stmt_find_units->fetchAll(PDO::FETCH_COLUMN);
 
-            // FINAL CHECK: This should now rarely fail if the explicit count check passed above.
             if (count($units) !== $quantity_needed) {
-                     $conn->rollBack();
-                     return 'stock_mismatch_on_approval'; // Trigger stock failure message
+                $conn->rollBack();
+                $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
+                return 'stock_mismatch_on_approval';
             }
 
-            // Assign units to borrow_items and update unit status
             foreach ($units as $index => $unit_id) {
                 $item_id = $item_ids[$index]; 
-
-                // Claim the unit by setting status to 'borrowed'
                 $this->updateUnitStatus([$unit_id], 'borrowed', $conn); 
                 
                 $update_item_stmt->execute([
@@ -468,41 +472,91 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
             }
         }
 
-        // 3. Update form status
+        // 3. Update form status - ADD approval_date
         $updateForm = $conn->prepare("
                 UPDATE borrow_forms 
-                SET status = :status, staff_id = :staff_id, staff_remarks = :remarks 
+                SET status = :status, staff_id = :staff_id, staff_remarks = :remarks, approval_date = :approval_date 
                 WHERE id = :id
         ");
-        $updateForm->execute([":status" => $status, ":staff_id" => $staff_id, ":remarks" => $remarks, ":id" => $form_id]);
+        $updateForm->execute([
+            ":status" => $status, 
+            ":staff_id" => $staff_id, 
+            ":remarks" => $remarks, 
+            ":id" => $form_id,
+            ":approval_date" => $approval_date_str
+        ]);
 
-        // 4. Final Stock Refresh (Moves items from 'pending' count to 'out' count)
-        // This is safe because the apparatus_type row is already locked from step 0.
+        // 4. Final Stock Refresh
         foreach ($type_ids_to_refresh as $type_id) {
             $this->refreshAvailableStockColumn($type_id, $conn);
         }
         
         $this->addLog($form_id, $staff_id, 'approved', $remarks, $conn);
         
+        // 5. Get student details (Needed for notifications/email)
+        $student_details = $this->getUserDetails($student_id, $conn);
+        
+        // 6. Get list of items for the email (NEW)
+        $item_list_for_email = $this->getFormItemsForEmail($form_id); 
+        
         // =================================================================
-        // >> NEW NOTIFICATION LOGIC (NEED 2 - APPROVE) <<
+        // >> CRITICAL FIX: COMMIT THE TRANSACTION BEFORE EXTERNAL CALLS <<
         // =================================================================
-        // 1. Notification for Student (System)
+        $conn->commit();
+        // Return to normal mode
+        $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1); 
+
+        // =================================================================
+        // >> NOTIFICATION LOGIC (Internal System Notification) <<
+        // =================================================================
+        // Using null for $conn argument to use a fresh connection, as the transaction is closed.
         $this->createNotification(
             $student_id, 
             'form_approved', 
             "Your {$form_type} request (#{$form_id}) has been **approved** by staff.", 
             "/student/student_view_items.php?form_id={$form_id}", 
-            $conn
+            null
         );
         // =================================================================
 
-        $conn->commit();
+        // =================================================================
+        // >> EMAIL: Send approval email (External Communication) <<
+        // =================================================================
+        $mailer = new Mailer(); 
+
+        $mail_success = $mailer->sendTransactionStatusEmail(
+            $student_details['email'],
+            $student_details['firstname'],
+            $form_id,
+            'approved',
+            $remarks,
+            $request_date,
+            $expected_return_date,
+            $approval_date_str,
+            $item_list_for_email 
+        );
+        
+        if (!$mail_success) {
+            // Log the email failure, but still return true for the main transaction success
+            error_log("Approval Email FAILED for Form #{$form_id}. Check Mailer logs.");
+        }
+        // =================================================================
+
         return true;
 
     } catch (Exception $e) {
+        // Ensure rollback and autocommit reset on failure
         $conn->rollBack();
-        error_log("Approval failed: " . $e->getMessage());
+        $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
+        
+        // ENHANCED ERROR LOGGING for debugging the database error
+        $error_message = "Approval failed for Form #{$form_id}: " . $e->getMessage();
+        if ($e instanceof PDOException) {
+            $error_info = $conn->errorInfo();
+            $error_message .= " [PDO Error: SQLSTATE {$e->getCode()}, Driver Error: {$error_info[1]}, Detail: {$error_info[2]}]";
+        }
+        error_log($error_message);
+        
         return false;
     }
 }
@@ -562,7 +616,7 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
                 
                 // 1. Mark unit condition as 'lost' and status as 'unavailable'
                 $conn->prepare("UPDATE apparatus_unit SET current_condition = 'lost', current_status = 'unavailable' WHERE unit_id = ?")
-                        ->execute([$unit_id]);
+                    ->execute([$unit_id]);
                 
                 // 2. Increment apparatus_type.lost_stock count (Lock must be acquired before this, or rely on unit lock)
                 $conn->prepare("
@@ -632,7 +686,7 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
     }
 }
     
- public function confirmReturn($form_id, $staff_id, $remarks = "") {
+public function confirmReturn($form_id, $staff_id, $remarks = "") {
     $conn = $this->connect();
     $conn->beginTransaction();
 
@@ -662,7 +716,7 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
         // 1. STOCK REVERSAL AND UNIT RESTORATION LOGIC
         $is_late = FALSE;
 
-        if ($old_status === 'overdue') {    
+        if ($old_status === 'overdue') {   
             
             // 1a. CRITICAL FIX: The item was returned late, but is confirmed 'good'. 
             // Reset condition from 'lost' to 'good' AND ensure status is 'available'.
@@ -676,11 +730,11 @@ public function rejectForm($form_id, $staff_id, $remarks = null) {
             if (!$stmt_unit_condition_reset->execute($unit_ids)) {
                 $conn->rollBack();  
                 error_log("CRITICAL FAILURE: Unit condition reset failed for form {$form_id} on return.");
-                return false;    
+                return false;   
             }
             
             // Treat the return as late return since it was marked overdue
-            $is_late = TRUE;    
+            $is_late = TRUE;   
             
             // 1b. CRITICAL FIX: REVERSE LOST STOCK COUNTER (Needed if markAsOverdue included stock decrement)
             $stmt_units_by_type = $conn->prepare("
@@ -834,7 +888,7 @@ public function confirmLateReturn($form_id, $staff_id, $remarks = "") {
         $is_late = TRUE; // Since we are in confirmLateReturn
         
         // 2. REVERSE LOST STOCK AND RESTORE CONDITION (for units that were LOST)
-        if (!empty($units_to_restore_from_loss)) {    
+        if (!empty($units_to_restore_from_loss)) {   
             $restore_placeholders = implode(',', array_fill(0, count($units_to_restore_from_loss), '?'));
             
             // 2a. Restore unit condition to 'good' AND status to 'available' for recovered units.
@@ -846,7 +900,7 @@ public function confirmLateReturn($form_id, $staff_id, $remarks = "") {
             if (!$stmt_unit_condition_reset->execute($units_to_restore_from_loss)) {
                 $conn->rollBack();  
                 error_log("CRITICAL FAILURE: Unit condition reset failed for form {$form_id} on late return.");
-                return false;    
+                return false;   
             }
             
             // 2b. Reverse permanent stock changes (DECREMENT LOST_STOCK COUNT in apparatus_type).
@@ -927,7 +981,7 @@ public function confirmLateReturn($form_id, $staff_id, $remarks = "") {
     }
 }
 
- public function markAsDamaged($form_id, $staff_id, $remarks = "", $unit_id = null) {
+public function markAsDamaged($form_id, $staff_id, $remarks = "", $unit_id = null) {
     $conn = $this->connect();
     $conn->beginTransaction();
 
@@ -1065,19 +1119,8 @@ public function confirmLateReturn($form_id, $staff_id, $remarks = "") {
     }
     
     /**
-     * Restores a damaged unit back to good condition and updates stock counts.
+     * Restores a unit (from Damaged or Lost) back to good condition and updates stock counts.
      */
-   // File: classes/Transaction.php (Add or replace with this improved method)
-
-/**
- * Restores a unit (from Damaged or Lost) back to good condition and updates stock counts.
- */
-/**
- * Restores a unit (from Damaged or Lost) back to good condition and updates stock counts.
- */
-/**
- * Restores a unit (from Damaged or Lost) back to good condition and updates stock counts.
- */
 public function restoreUnit($unit_id, $staff_id)  
 {
     $conn = $this->connect();
@@ -1108,7 +1151,7 @@ public function restoreUnit($unit_id, $staff_id)
         // 2. Update apparatus_unit: Restore to good/available
         $stmt_unit_update = $conn->prepare("
             UPDATE apparatus_unit  
-            SET current_condition = 'good', current_status = 'available'  // <--- FIXED: Set condition AND status
+            SET current_condition = 'good', current_status = 'available' 
             WHERE unit_id = ?
         ");
         $stmt_unit_update->execute([$unit_id]);
@@ -1573,158 +1616,18 @@ public function updateApparatusDetailsAndStock($id, $name, $type, $size, $materi
     $conn->beginTransaction();
 
     try {
-        // 0. Lock the apparatus_type row
-        $stmt_get_old = $conn->prepare("
-            SELECT total_stock, damaged_stock, lost_stock 
-            FROM apparatus_type 
-            WHERE id = :id FOR UPDATE
-        ");
-        $stmt_get_old->execute([':id' => $id]);
-        $old_data = $stmt_get_old->fetch(PDO::FETCH_ASSOC);
-
-        if (!$old_data) {
-            $conn->rollBack();
-            return false; // Apparatus not found
-        }
-        
-        // Current counts based on the type table
-        $old_total = (int)$old_data['total_stock'];
-        $old_damaged = (int)$old_data['damaged_stock'];
-        $old_lost = (int)$old_data['lost_stock'];
-
-        // Get in-use counts for the check
         $currently_out = $this->getCurrentlyOutCount($id, $conn); 
         $pending_quantity = $this->getPendingQuantity($id, $conn); 
 
-        // New stock calculations
         $available_physical_stock = $total_stock - $damaged_stock - $lost_stock;
+        
         $new_available_stock = $available_physical_stock - $currently_out - $pending_quantity; 
         
         if ($new_available_stock < 0) {
             $conn->rollBack();
-            return 'stock_too_low'; // Cannot reduce stock below in-use/pending count
-        }
-        
-        // 1. DETERMINE UNIT-LEVEL CHANGES
-        $net_total_change = $total_stock - $old_total;
-        $net_damaged_change = $damaged_stock - $old_damaged;
-        $net_lost_change = $lost_stock - $old_lost;
-
-        // Fetch all non-borrowed/non-checking unit IDs
-        $stmt_units_to_change = $conn->prepare("
-            SELECT unit_id, current_condition 
-            FROM apparatus_unit 
-            WHERE type_id = :id AND current_status NOT IN ('borrowed', 'checking') 
-            ORDER BY unit_id DESC -- Prioritize newest units for deletion/marking damaged
-            FOR UPDATE
-        ");
-        $stmt_units_to_change->execute([':id' => $id]);
-        $available_units = $stmt_units_to_change->fetchAll(PDO::FETCH_ASSOC);
-
-        $available_unit_ids = array_column($available_units, 'unit_id');
-        $available_count = count($available_unit_ids); // The units we can freely change
-
-        // --- A. Handle Total Stock Change (Creation/Deletion) ---
-        if ($net_total_change > 0) {
-            // Add new units (always 'good' and 'available')
-            $stmt_insert = $conn->prepare("INSERT INTO apparatus_unit (type_id, current_condition, current_status) VALUES (:type_id, 'good', 'available')");
-            for ($i = 0; $i < $net_total_change; $i++) {
-                $stmt_insert->execute([':type_id' => $id]);
-            }
-        } elseif ($net_total_change < 0) {
-            $units_to_delete_count = abs($net_total_change);
-            if ($units_to_delete_count > $available_count) {
-                $conn->rollBack();
-                return 'delete_blocked_by_use'; // Cannot delete units currently in use/pending/damaged/lost
-            }
-            // Delete the last N 'available' units
-            $units_to_delete = array_slice($available_unit_ids, 0, $units_to_delete_count);
-            $delete_placeholders = implode(',', array_fill(0, count($units_to_delete), '?'));
-            $conn->prepare("DELETE FROM apparatus_unit WHERE unit_id IN ({$delete_placeholders})")
-                 ->execute($units_to_delete);
-            
-            // Remove deleted units from the working pool
-            $available_unit_ids = array_slice($available_unit_ids, $units_to_delete_count);
-            $available_count -= $units_to_delete_count;
+            return 'stock_too_low'; 
         }
 
-        // --- B. Handle Damaged/Lost Stock Change (Condition Update) ---
-        
-        // Get units currently marked as 'damaged' or 'lost' that we are now restoring to 'good'
-        $units_to_restore = [];
-        foreach ($available_units as $unit) {
-            if ($unit['current_condition'] === 'damaged' && $damaged_stock < $old_damaged) {
-                $units_to_restore[] = $unit['unit_id'];
-                $old_damaged--; // Keep track of how many we are restoring
-            } elseif ($unit['current_condition'] === 'lost' && $lost_stock < $old_lost) {
-                $units_to_restore[] = $unit['unit_id'];
-                $old_lost--; // Keep track of how many we are restoring
-            }
-        }
-
-        // Restore units to 'good'/'available'
-        if (!empty($units_to_restore)) {
-            $restore_placeholders = implode(',', array_fill(0, count($units_to_restore), '?'));
-            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'good', current_status = 'available' WHERE unit_id IN ({$restore_placeholders})")
-                 ->execute($units_to_restore);
-        }
-
-        // Get available/good units that can be marked 'damaged' or 'lost'
-        $units_to_mark = $conn->prepare("
-            SELECT unit_id FROM apparatus_unit 
-            WHERE type_id = :id 
-              AND current_condition = 'good' 
-              AND current_status = 'available'
-            ORDER BY unit_id DESC
-            LIMIT :limit
-            FOR UPDATE
-        ");
-
-        // Mark NEWLY Damaged units
-        $units_to_mark_damaged_count = max(0, $damaged_stock - $old_damaged);
-        if ($units_to_mark_damaged_count > 0) {
-            $units_to_mark->bindValue(':id', $id);
-            $units_to_mark->bindValue(':limit', $units_to_mark_damaged_count, PDO::PARAM_INT);
-            $units_to_mark->execute();
-            $units_to_mark_damaged = $units_to_mark->fetchAll(PDO::FETCH_COLUMN);
-
-            if (count($units_to_mark_damaged) !== $units_to_mark_damaged_count) {
-                $conn->rollBack(); return 'unit_allocation_error'; // Should not happen if stock check is solid
-            }
-            
-            $damage_placeholders = implode(',', array_fill(0, count($units_to_mark_damaged), '?'));
-            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'damaged', current_status = 'unavailable' WHERE unit_id IN ({$damage_placeholders})")
-                 ->execute($units_to_mark_damaged);
-        }
-
-        // Mark NEWLY Lost units (must be separate call to limit query)
-        $units_to_mark_lost_count = max(0, $lost_stock - $old_lost);
-        if ($units_to_mark_lost_count > 0) {
-            // Need to re-run the good/available unit selection to account for newly damaged units
-            $units_to_mark_lost_query = $conn->prepare("
-                SELECT unit_id FROM apparatus_unit 
-                WHERE type_id = :id 
-                  AND current_condition = 'good' 
-                  AND current_status = 'available'
-                ORDER BY unit_id DESC
-                LIMIT :limit
-                FOR UPDATE
-            ");
-            $units_to_mark_lost_query->bindValue(':id', $id);
-            $units_to_mark_lost_query->bindValue(':limit', $units_to_mark_lost_count, PDO::PARAM_INT);
-            $units_to_mark_lost_query->execute();
-            $units_to_mark_lost = $units_to_mark_lost_query->fetchAll(PDO::FETCH_COLUMN);
-
-            if (count($units_to_mark_lost) !== $units_to_mark_lost_count) {
-                $conn->rollBack(); return 'unit_allocation_error';
-            }
-
-            $lost_placeholders = implode(',', array_fill(0, count($units_to_mark_lost), '?'));
-            $conn->prepare("UPDATE apparatus_unit SET current_condition = 'lost', current_status = 'unavailable' WHERE unit_id IN ({$lost_placeholders})")
-                 ->execute($units_to_mark_lost);
-        }
-
-        // 2. Final Update to apparatus_type aggregate row
         $item_condition = ($damaged_stock > 0 || $lost_stock > 0) ? 'mixed' : 'good';
         $status = ($new_available_stock > 0) ? 'available' : 'unavailable';
         
@@ -1881,7 +1784,7 @@ public function updateApparatusDetailsAndStock($id, $name, $type, $size, $materi
         return $query->fetchAll();
     }
 
-   // File: classes/Transaction.php
+    // File: classes/Transaction.php
 
 public function getBorrowFormById($form_id) {
     $conn = $this->connect();
@@ -1891,8 +1794,9 @@ public function getBorrowFormById($form_id) {
             bf.user_id,          
             bf.form_type, 
             bf.status, 
+            bf.request_date,            
             bf.borrow_date, 
-            bf.expected_return_date, 
+            bf.expected_return_date,    
             bf.actual_return_date, 
             bf.staff_remarks,
             bf.is_late_return, 
@@ -1901,8 +1805,7 @@ public function getBorrowFormById($form_id) {
         WHERE bf.id = ?
     ");
     $query->execute([$form_id]);
-    // NOTE: PDO::fetch() returns FALSE if no row is found, which is safe.
-    return $query->fetch(PDO::FETCH_ASSOC); // Fetch as associative array for consistency
+    return $query->fetch(PDO::FETCH_ASSOC);
 }
     
     // File: classes/Transaction.php
@@ -2041,7 +1944,17 @@ public function logOverdueNotice($form_id, $date) {
 }
 protected function createNotification($userId, $type, $message, $link, $conn)
 {
-    $stmt = $conn->prepare("
+    // Use the provided connection if available, otherwise get a new one
+    $used_conn = $conn ?? $this->connect();
+    
+    // *** FIX: Check if the connection is null before calling prepare() ***
+    if ($used_conn === null) {
+        error_log("FATAL: Failed to establish database connection for notification system (User ID: {$userId}).");
+        return false;
+    }
+    // *******************************************************************
+    
+    $stmt = $used_conn->prepare("
         INSERT INTO notifications (user_id, type, message, link, is_read, created_at)
         VALUES (:user_id, :type, :message, :link, 0, NOW())
     ");
@@ -2135,6 +2048,29 @@ public function clearNotificationsByFormId($form_id) {
         error_log("DB Error clearing notification for form {$form_id}: " . $e->getMessage());
         return false;
     }
+}
+
+public function getFormItemsForEmail($form_id)
+{
+    $conn = $this->connect();
+    // This query is similar to getBorrowFormItems but focuses on the apparatus details for display
+    $stmt = $conn->prepare("
+        SELECT 
+            at.name, 
+            at.apparatus_type, 
+            at.size, 
+            at.material, 
+            COUNT(bi.id) AS quantity 
+        FROM borrow_items bi
+        JOIN apparatus_type at ON bi.type_id = at.id
+        WHERE bi.form_id = :form_id
+        GROUP BY at.id, at.name, at.apparatus_type, at.size, at.material
+        ORDER BY at.name
+    ");
+    $stmt->execute([':form_id' => $form_id]);
+    
+    // Return the raw array of items for templating flexibility
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 }

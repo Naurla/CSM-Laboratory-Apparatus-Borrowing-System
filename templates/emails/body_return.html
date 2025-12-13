@@ -2,13 +2,7 @@
 
 <p>Your return request (ID: **#{{ FORM_ID }}**) has been successfully processed and finalized by the laboratory staff.</p>
 
-{{ IF CONDITION == "damaged" }}
-    <div class="status-box status-issue">⚠️ Return Processed: DAMAGE/ISSUE NOTED</div>
-{{ ELSEIF CONDITION == "late" }}
-    <div class="status-box status-late">Return Processed: LATE</div>
-{{ ELSE }}
-    <div class="status-box status-approved">Return Complete! All items in GOOD condition.</div>
-{{ ENDIF }}
+{{ STATUS_BOX_HTML }}
 
 
 <h2 style="margin-top: 30px;">Item Condition Summary</h2>
@@ -21,46 +15,16 @@
         </tr>
     </thead>
     <tbody>
-        {{ FOR item IN RETURNED_ITEMS }} 
-        <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>
-                {{ IF item.condition == 'Damaged' OR item.condition == 'Lost' }}
-                    <strong style="color: #b8312d;">{{ item.condition | uppercase }}</strong>
-                {{ ELSE }}
-                    Good
-                {{ ENDIF }}
-            </td>
-        </tr>
-        {{ ENDFOR }}
+        {{ ITEM_ROWS_HTML }}
     </tbody>
 </table>
 
 
-{{ IF CONDITION == "damaged" OR CONDITION == "late" }}
-    <div class="remarks-box">
-        <h3 style="color: #8d4500; margin-top: 0;">Reasoning & Next Steps</h3>
-        
-        <p>The following official report was recorded by the staff regarding the condition of your return:</p>
-        
-        <strong style="display: block; margin-bottom: 10px;">Staff Remarks:</strong>
-        <div style="border: 1px solid #ddd; padding: 10px; background-color: white; border-radius: 4px;">
-            {{ REMARKS }}
-        </div>
-        
-        {{ IF DAMAGE_FINE > 0 }}
-            <p style="margin-top: 15px; padding: 10px; background-color: #f8d7da; border-left: 3px solid #721c24;">
-                <strong style="color: #721c24;">ACTION REQUIRED: A financial liability of {{ DAMAGE_FINE }} has been assessed due to the issue(s) noted above. Please contact the College Office immediately to settle this amount.</strong>
-            </p>
-        {{ ENDIF }}
-
-    </div>
-{{ ENDIF }}
+{{ REMARKS_SECTION_HTML }}
 
 
 <p style="margin-top: 30px; text-align: center;">
-    <!-- <a href="{{ VIEW_TRANSACTION_URL }}" class="button">View Full Transaction Record Online</a> -->
+    <a href="{{ VIEW_TRANSACTION_URL }}" class="button">View Full Transaction Record Online</a>
 </p>
 
 <p style="margin-top: 20px;">For any questions or clarification, please contact the laboratory staff or reply to this email.</p>

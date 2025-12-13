@@ -1,51 +1,42 @@
 <p>Dear **{{ RECIPIENT_NAME }}**:</p>
 
-<p>We are writing to provide an update on your apparatus request with ID **#{{ FORM_ID }}**.</p>
+<p style="margin-bottom: 20px;">We are writing to provide an update on your apparatus request with ID **#{{ FORM_ID }}**.</p>
 
-<div class="status-box {{ STATUS_CLASS }}">
-    TRANSACTION STATUS: **{{ STATUS_TEXT | uppercase }}**
+{{ STATUS_BOX_HTML }}
+
+{{ ITEM_TABLE_HTML }}
+
+<h3 style="margin-top: 25px; margin-bottom: 15px; color: #333;">Request Summary</h3>
+
+<div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
+        <tr>
+            <td style="padding: 5px 0; width: 40%; font-weight: bold; color: #555;">Request Date:</td>
+            <td style="padding: 5px 0; color: #333;">{{ REQUEST_DATE }}</td>
+        </tr>
+        {{ IF APPROVAL_DATE }}
+        <tr>
+            <td style="padding: 5px 0; width: 40%; font-weight: bold; color: #555;">Approval Date:</td>
+            <td style="padding: 5px 0; color: #333;">{{ APPROVAL_DATE }}</td>
+        </tr>
+        {{ ENDIF }}
+        <tr>
+            <td style="padding: 5px 0; width: 40%; font-weight: bold; color: #555;">Due Date:</td>
+            <td style="padding: 5px 0; color: #b8312d; font-weight: bold;">{{ DUE_DATE }}</td>
+        </tr>
+    </table>
 </div>
 
-<h2 style="margin-top: 30px;">Request Summary</h2>
-<table class="details-table">
-    <tr>
-        <th>Request Date:</th>
-        <td>{{ REQUEST_DATE }}</td>
-    </tr>
-    <tr>
-        <th>Due Date:</th>
-        <td>{{ DUE_DATE }}</td>
-    </tr>
-    {{ IF APPROVAL_DATE }} 
-    <tr>
-        <th>Approval Date:</th>
-        <td>{{ APPROVAL_DATE }}</td>
-    </tr>
-    {{ ENDIF }}
-</table>
-
-
-<h3 style="margin-top: 30px;">Next Steps</h3>
-<p>**{{ DYNAMIC_MESSAGE }}**</p> 
-
-{{ IF STATUS_CLASS == 'status-approved' }}
-<p>You may now proceed to the laboratory to pick up your requested items. Please ensure you present your ID and transaction details.</p>
-{{ ELSEIF STATUS_CLASS == 'status-rejected' }}
-<p style="color: #721c24;">Your request was declined. Please review the staff remarks below for the specific reason and consider submitting a new request with modifications.</p>
-{{ ELSEIF STATUS_CLASS == 'status-waiting' }}
-<p>Your request is currently pending review by the laboratory staff. We will notify you again once a decision has been made. Thank you for your patience.</p>
-{{ ENDIF }}
-
-
 {{ IF REMARKS }}
-    <h4 style="margin-top: 30px;">Staff Reasoning/Remarks:</h4>
-    <div class="remarks-box">
-        {{ REMARKS }}
-    </div>
+<h3 style="margin-top: 25px; margin-bottom: 10px; color: #333;">Staff Remarks / Note</h3>
+<div style="border: 1px solid #ddd; padding: 15px; background-color: #fff; border-radius: 4px; white-space: pre-wrap;">
+    {{ REMARKS }}
+</div>
 {{ ENDIF }}
 
-<p style="margin-top: 30px; text-align: center;">
-    <!-- <a href="{{ VIEW_TRANSACTION_URL }}" class="button">View Full Transaction Details</a> -->
-</p>
+<h3 style="margin-top: 25px; margin-bottom: 15px; color: #333;">Next Steps</h3>
+<p>**{{ DYNAMIC_MESSAGE }}**</p>
 
-<p style="margin-top: 20px;">If you have any concerns or require further clarification, please contact the laboratory staff immediately.</p>
+<p style="margin-top: 20px; font-size: 0.9em; color: #777;">
+    Please contact the College Office if you have any questions regarding this status change.
+</p>

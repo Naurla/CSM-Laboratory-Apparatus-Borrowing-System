@@ -58,12 +58,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{ FOR item IN OVERDUE_ITEMS }}
-                    <tr>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.quantity }}</td>
-                    </tr>
-                    {{ ENDFOR }}
+                    {{ OVERDUE_ITEMS_HTML }}
                 </tbody>
             </table>
             

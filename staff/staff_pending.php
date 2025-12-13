@@ -20,6 +20,7 @@ if (!isset($_SESSION["user"]) || $_SESSION["user"]["role"] != "staff") {
 
 $transaction = new Transaction();
 $mailer = new Mailer(); 
+// NOTE: Assuming Student class has the method getUserById used below.
 $student_class = new Student(); 
 $message = "";
 $is_success = false; 
@@ -27,7 +28,7 @@ $is_success = false;
 $db_conn = $transaction->connect(); 
 $staff_id = $_SESSION["user"]["id"];
 
-// --- HELPER FUNCTION 1: Mark Staff Notification as Read (Re-added for legacy code compatibility) ---
+// --- HELPER FUNCTION 1: Mark Staff Notification as Read (For legacy compatibility) ---
 function markNotificationAsRead($db_conn, $form_id, $staff_id) {
     // This function is generally deprecated by $transaction->clearNotificationsByFormId
     $form_link_pattern = "%staff_pending.php?view={$form_id}%"; 
@@ -44,7 +45,7 @@ function markNotificationAsRead($db_conn, $form_id, $staff_id) {
 // --- HELPER FUNCTION 2: Insert a Student Notification (System Alert) ---
 function insertStudentNotification($db_conn, $student_id, $type, $msg, $link) {
     $sql = "INSERT INTO notifications (user_id, type, message, link, is_read, created_at) 
-             VALUES (:user_id, :type, :message, :link, 0, NOW())";
+            VALUES (:user_id, :type, :message, :link, 0, NOW())";
     try {
         $stmt = $db_conn->prepare($sql);
         $stmt->execute([
@@ -65,7 +66,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $form_id = $_POST["form_id"];
     $remarks = $_POST["staff_remarks"] ?? ''; 
     
-    // --- CRITICAL PRE-FETCH: Get Student Details ---
+    // --- CRITICAL PRE-FETCH: Get Form and Student Details ---
+    // This uses the improved getBorrowFormById (fixed date selection)
     $form_data = $transaction->getBorrowFormById($form_id); 
     
     if (!$form_data) {
@@ -81,19 +83,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $student_name = $student_details['firstname'] ?? 'Borrower';
     $student_link = "../student/student_view_items.php?form_id={$form_id}&context=dashboard";
 
+    // --- NEW: FETCH DATES AND ITEM LIST FOR MAILER ---
+    // Ensure these variables are populated from the fixed $form_data
+    $request_date = $form_data['request_date'] ?? date('Y-m-d');
+    $expected_return_date = $form_data['expected_return_date'] ?? date('Y-m-d');
+    $item_list_for_email = $transaction->getFormItemsForEmail($form_id);
+    // ----------------------------------------------------
+
 
     if (isset($_POST["approve"])) {
+        
         $result = $transaction->approveForm($form_id, $staff_id, $remarks);
         
         if ($result === true) {
             // CRITICAL FIX: Clear the notification for this form_id (using the central method)
             $transaction->clearNotificationsByFormId($form_id); 
             
-            // --- EMAIL ONLY ---
-            if ($student_email) {
-                $mailer->sendTransactionStatusEmail($student_email, $student_name, $form_id, 'approved', $remarks);
-            }
-            // ------------------
+            // NOTE: The actual sendTransactionStatusEmail for 'approved' is handled INSIDE Transaction::approveForm. 
             
             $message = "✅ Borrow request approved successfully! Items marked as borrowed.";
             $is_success = true;
@@ -101,6 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $message = "❌ Approval Failed: Stock was depleted before approval could be finalized. Please review the item availability.";
             $is_success = false;
         } else {
+            // This captures the "database error during finalization" from Transaction::approveForm
             $message = "❌ Approval Failed: A database error occurred during finalization.";
             $is_success = false;
         }
@@ -114,9 +121,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $message = "Borrow request rejected.";
         $is_success = true;
 
-        // --- EMAIL ONLY ---
+        // --- EMAIL ONLY (Using the consistently fetched date variables) ---
         if ($student_email) {
-            $mailer->sendTransactionStatusEmail($student_email, $student_name, $form_id, 'rejected', $remarks);
+            $mailer->sendTransactionStatusEmail(
+                $student_email, 
+                $student_name, 
+                $form_id, 
+                'rejected', 
+                $remarks, 
+                $request_date, 
+                $expected_return_date, 
+                '', // No approval date for rejection
+                $item_list_for_email
+            );
         }
         // ------------------
         
@@ -127,9 +144,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // CRITICAL FIX: Clear the notification for this form_id
             $transaction->clearNotificationsByFormId($form_id); 
             
-            // --- EMAIL ONLY ---
+            // --- EMAIL ONLY (Using the consistently fetched date variables) ---
             if ($student_email) {
-                $mailer->sendTransactionStatusEmail($student_email, $student_name, $form_id, 'returned', $remarks);
+                // Since this is confirming return (good condition), we use the actual return date as approval date
+                $actual_return_date = date('Y-m-d');
+                $mailer->sendTransactionStatusEmail(
+                    $student_email, 
+                    $student_name, 
+                    $form_id, 
+                    'returned', // Using 'returned' status for the email template
+                    $remarks, 
+                    $request_date, // ADDED
+                    $expected_return_date, // ADDED
+                    $actual_return_date, // Using actual return date here
+                    $item_list_for_email // ADDED
+                );
             }
             // ------------------
             
@@ -139,10 +168,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } elseif (isset($_POST["confirm_late_return"])) {
         if ($form_data) {
-            $expected_return_date = new DateTime($form_data["expected_return_date"]);
-            $expected_return_date->setTime(0, 0, 0); 
+            $expected_return_date_dt = new DateTime($form_data["expected_return_date"]);
+            $expected_return_date_dt->setTime(0, 0, 0); 
             
-            if ($expected_return_date < $today) { 
+            if ($expected_return_date_dt < $today) { 
                 $result = $transaction->confirmLateReturn($form_id, $staff_id, $remarks);
                 if ($result === true) {
                     
@@ -152,10 +181,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $message = "✅ Late return confirmed and status finalized as RETURNED (Penalty Applied).";
                     $is_success = true;
                     
-                    // --- STUDENT NOTIFICATION & EMAIL ---
+                    // --- STUDENT NOTIFICATION & EMAIL (Using the consistently fetched date variables) ---
                     insertStudentNotification($db_conn, $student_id_to_notify, 'return_late', "Your late return for request #{$form_id} was confirmed.", $student_link); 
                     if ($student_email) {
-                        $mailer->sendTransactionStatusEmail($student_email, $student_name, $form_id, 'returned', $remarks . " (Note: This was a late return.)");
+                        $actual_return_date = date('Y-m-d');
+                        $mailer->sendTransactionStatusEmail(
+                            $student_email, 
+                            $student_name, 
+                            $form_id, 
+                            'returned', // Using 'returned' status for the email template
+                            $remarks . " (Note: This was a late return.)",
+                            $request_date, // ADDED
+                            $expected_return_date, // ADDED
+                            $actual_return_date, // Using actual return date here
+                            $item_list_for_email // ADDED
+                        );
                     }
                     // ------------------------------------
                 } else { $message = "❌ Failed to confirm late return due to a database error."; $is_success = false; }
@@ -175,10 +215,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $message = "✅ Marked as returned with issues. Damaged unit status updated.";
                 $is_success = true;
                 
-                // --- STUDENT NOTIFICATION & EMAIL ---
+                // --- STUDENT NOTIFICATION & EMAIL (Using the consistently fetched date variables) ---
                 insertStudentNotification($db_conn, $student_id_to_notify, 'return_damaged', "A unit from request #{$form_id} was marked damaged/returned with issues.", $student_link);
                 if ($student_email) {
-                    $mailer->sendTransactionStatusEmail($student_email, $student_name, $form_id, 'damaged', $remarks);
+                    $actual_return_date = date('Y-m-d');
+                    $mailer->sendTransactionStatusEmail(
+                        $student_email, 
+                        $student_name, 
+                        $form_id, 
+                        'damaged', // Using 'damaged' status for the email template
+                        $remarks,
+                        $request_date, // ADDED
+                        $expected_return_date, // ADDED
+                        $actual_return_date, // Using actual return date here
+                        $item_list_for_email // ADDED
+                    );
                 }
                 // ------------------------------------
             } else { $message = "❌ Failed to mark as damaged due to a database error."; $is_success = false; }
@@ -186,10 +237,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } elseif (isset($_POST["manually_mark_overdue"])) {
         if ($form_data) {
-            $expected_return_date = new DateTime($form_data["expected_return_date"]);
-            $expected_return_date->setTime(0, 0, 0); 
+            $expected_return_date_dt = new DateTime($form_data["expected_return_date"]);
+            $expected_return_date_dt->setTime(0, 0, 0); 
             
-            if ($expected_return_date < $today) {
+            if ($expected_return_date_dt < $today) {
                 $result = $transaction->markAsOverdue($form_id, $staff_id, $remarks);
                 if ($result === true) {
                     
@@ -199,10 +250,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $message = "✅ Marked as overdue (Units restored & ban checked).";
                     $is_success = true;
 
-                    // --- STUDENT NOTIFICATION & EMAIL ---
+                    // --- STUDENT NOTIFICATION & EMAIL (Using the consistently fetched date variables) ---
                     insertStudentNotification($db_conn, $student_id_to_notify, 'form_overdue', "Your request #{$form_id} was marked OVERDUE. Your account is suspended.", $student_link);
                     if ($student_email) {
-                        $mailer->sendTransactionStatusEmail($student_email, $student_name, $form_id, 'overdue', $remarks);
+                        $mailer->sendTransactionStatusEmail(
+                            $student_email, 
+                            $student_name, 
+                            $form_id, 
+                            'overdue', // Using 'overdue' status for the email template
+                            $remarks,
+                            $request_date, // ADDED
+                            $expected_return_date, // ADDED
+                            '', // No approval date for overdue
+                            $item_list_for_email // ADDED
+                        );
                     }
                     // ------------------------------------
                 } else { $message = "❌ Failed to mark as overdue due to a database error."; $is_success = false; }
@@ -791,12 +852,13 @@ $pendingForms = $transaction->getPendingForms();
                         $display_status = ucfirst(str_replace('_', ' ', $clean_status));
                         
                         // Fetch the full form details to get the student's remarks 
+                        // Note: $full_form_data['staff_remarks'] holds the student's message if status is 'checking'
                         $full_form_data = $transaction->getBorrowFormById($form["id"]); 
                         
                         // FIX 1: Display student remarks by pulling from the staff_remarks column (since there is no student_remarks column).
                         $student_remarks = ($clean_status === 'checking') ? 
-                                                    ($full_form_data['staff_remarks'] ?? '-') : 
-                                                    'N/A';
+                                                 ($full_form_data['staff_remarks'] ?? '-') : 
+                                                 'N/A';
                         
                         // Fetch unit-level items for the "Mark Damaged" dropdown
                         $items = $transaction->getTransactionItems($form["id"]);
@@ -839,9 +901,9 @@ $pendingForms = $transaction->getPendingForms();
                             <form method="POST" class="pending-form" data-form-id="<?= htmlspecialchars($form["id"]) ?>">
                                 <td data-label="Staff Remarks:" class="remarks-cell">
                                     <?php if ($clean_status == "checking" || $clean_status == "waiting_for_approval"): ?>
-                                                    <textarea name="staff_remarks" rows="2" placeholder="Enter staff remarks..."></textarea>
+                                                   <textarea name="staff_remarks" rows="2" placeholder="Enter staff remarks..."></textarea>
                                     <?php else: ?>
-                                                    -
+                                                   -
                                     <?php endif; ?>
                                     <input type="hidden" name="form_id" value="<?= htmlspecialchars($form["id"]) ?>">
                                     <input type="hidden" name="action_type" value=""> 
@@ -855,9 +917,9 @@ $pendingForms = $transaction->getPendingForms();
                                                 // FIX: Iterate through unit-level items. The Transaction method now returns 'unit_id' and 'name'.
                                                 foreach ($items as $item):
                                                 ?>
-                                                    <option value="<?= htmlspecialchars($item["unit_id"]) ?>">
-                                                        <?= htmlspecialchars($item["name"]) ?> (Unit ID: <?= htmlspecialchars($item["unit_id"]) ?>)
-                                                    </option>
+                                                     <option value="<?= htmlspecialchars($item["unit_id"]) ?>">
+                                                         <?= htmlspecialchars($item["name"]) ?> (Unit ID: <?= htmlspecialchars($item["unit_id"]) ?>)
+                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
@@ -1055,10 +1117,10 @@ $pendingForms = $transaction->getPendingForms();
             if (notifications.length > 0) {
                 // Prepend Mark All button if there are unread items
                 if (unreadCount > 0) {
-                     $header.after(`
-                             <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
+                   $header.after(`
+                            <a class="dropdown-item text-center small text-muted dynamic-notif-item mark-all-btn-wrapper" href="#" onclick="event.preventDefault(); window.markAllStaffAsRead();">
                                 <i class="fas fa-check-double me-1"></i> Mark All ${unreadCount} as Read
-                             </a>
+                            </a>
                         `);
                 }
 
@@ -1068,9 +1130,9 @@ $pendingForms = $transaction->getPendingForms();
                     // Determine icon based on notification type
                     let iconClass = 'fas fa-info-circle text-info'; 
                     if (notif.type.includes('form_pending')) {
-                         iconClass = 'fas fa-hourglass-half text-warning';
+                           iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                         iconClass = 'fas fa-redo text-primary';
+                           iconClass = 'fas fa-redo text-primary';
                     }
                     
                     // Style unread items slightly differently
@@ -1147,7 +1209,7 @@ $pendingForms = $transaction->getPendingForms();
             navLinks.forEach(link => {
                  link.addEventListener('click', () => {
                      if (window.innerWidth <= 992) {
-                        sidebar.classList.remove('active');
+                         sidebar.classList.remove('active');
                      }
                  });
             });

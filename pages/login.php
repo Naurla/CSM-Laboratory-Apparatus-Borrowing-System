@@ -71,12 +71,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSM LABORATORY BORROWING APPARATUS SYSTEM</title>
+    <title>CSM LABORATORY BORROWING APPARATUS SYSTEM - Login</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"> 
     <style>
+        /* CSS VARIABLES from index.php */
+        :root {
+            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --text-dark: #2c3e50;
+            --text-light: #ecf0f1;
+            --background-light: #f8f9fa;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Consistent font */
+            color: var(--text-dark);
             margin: 0;
             padding: 0;
             display: flex;
@@ -84,144 +93,152 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             align-items: center;
             min-height: 100vh;
             
-            /* === START BACKGROUND IMAGE FIX === */
+            /* Consistent background image and overlay from index.php */
             background: 
                 linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
                 url("../uploads/Western_Mindanao_State_University_College_of_Teacher_Education_(Normal_Road,_Baliwasan,_Zamboanga_City;_10-06-2023).jpg") 
                 no-repeat center center fixed; 
             background-size: cover;
-            /* === END BACKGROUND IMAGE FIX === */
         }
+        
         .login-card {
-            background: rgba(255, 255, 255, 0.98); 
-            padding: 45px; 
-            border-radius: 8px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4); 
+            background: rgba(255, 255, 255, 0.95); /* Slightly transparent white card */
+            padding: 50px; /* Increased padding */
+            border-radius: 12px; /* Consistent rounded corners */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); /* Stronger, modern shadow */
             width: 100%;
-            max-width: 500px; 
+            max-width: 420px; /* Slightly narrower card for login */
             text-align: center;
             z-index: 10; 
+            
+            /* Add an initial subtle fade-in effect */
+            animation: fadeIn 0.8s ease-out;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .logo-container img {
-            max-width: 130px; 
+            max-width: 100px; /* Adjusted logo size */
             height: auto;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
+        
         .digital-education {
-            font-size: 16px; 
-            color: #A40404; /* CHANGED FROM #b8312d */
+            font-size: 1.1rem; 
+            color: var(--primary-color);
             margin-bottom: 30px; 
-            font-weight: bold;
-            letter-spacing: 1px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
         }
+        
+        /* Form Inputs */
         .input-group {
-            margin-bottom: 20px; 
+            margin-bottom: 25px; /* Increased spacing */
             text-align: left;
         }
         .input-group label {
             display: block;
-            font-size: 16px; 
-            color: #333; 
-            margin-bottom: 5px; 
-            line-height: 1.2;
-            font-weight: bold;
+            font-size: 0.95rem; 
+            color: var(--text-dark); 
+            margin-bottom: 8px; 
+            font-weight: 600;
         }
         
         .input-field-wrapper {
             position: relative;
-            width: 100%; 
-            margin-top: -2px; 
         }
         
         .input-field {
             width: 100%;
-            padding: 10px 12px; 
-            height: 44px; 
-            border: 1px solid #aaa;
-            border-radius: 4px;
+            padding: 12px 15px; /* Better padding */
+            height: 48px; /* Standardized height */
+            border: 1px solid #ddd;
+            border-radius: 6px; /* Slightly more rounded inputs */
             box-sizing: border-box; 
-            font-size: 17px; 
+            font-size: 1rem; 
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-field:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
+            outline: none;
         }
         
         .input-field-wrapper .input-field {
-             padding-right: 50px; 
+            padding-right: 50px; 
         }
 
         .input-field.error-border {
-            border-color: #A40404 !important; /* CHANGED FROM #b8312d */
+            border-color: var(--primary-color) !important;
         }
         
         .toggle-password {
             position: absolute;
             top: 50%;
-            right: 12px; 
+            right: 15px; /* Adjusted position */
             transform: translateY(-50%);
             cursor: pointer;
             color: #888;
-            font-size: 18px; 
+            font-size: 1.1rem; 
             z-index: 10;
+            transition: color 0.2s;
         }
         .toggle-password:hover {
-            color: #A40404; /* CHANGED FROM #b8312d */
+            color: var(--primary-color);
         }
 
+        /* Primary Button - Matches index.php CTA */
         .btn-continue {
             width: 100%;
-            padding: 14px; 
-            background-color: #A40404; /* CHANGED FROM #b8312d */
+            padding: 15px; 
+            background-color: var(--primary-color);
             border: none;
-            border-radius: 4px;
+            border-radius: 50px; /* Pill shape */
             color: white;
-            font-weight: bold;
-            font-size: 17px; 
+            font-weight: 700;
+            font-size: 1.1rem; 
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
             margin-top: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
         .btn-continue:hover {
-            background-color: #820303; /* CHANGED FROM #a82e2a (approx darker shade) */
+            background-color: #820303; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn-continue:active {
+            transform: translateY(0);
         }
 
-        .bottom-links-container {
-            display: flex;
-            justify-content: space-between; 
-            align-items: center;
-            margin-top: 20px;
-            font-size: 16px; 
-            width: 100%; 
+        /* Error/Message Styling */
+        .general-error-message, .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            font-weight: 600;
+            text-align: left;
         }
-        .bottom-links-container a {
-            color: #A40404; /* CHANGED FROM #b8312d */
-            text-decoration: none;
-        }
-        .bottom-links-container a:hover {
-            text-decoration: underline;
-        }
-
+        
         .general-error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-weight: bold;
+            background-color: #f8d7da; /* Light Red */
+            color: #721c24; /* Dark Red Text */
+            border: 1px solid #f5c6cb;
         }
 
         .specific-error {
-            color: #A40404; /* CHANGED FROM #b8312d */
-            font-size: 14px;
+            color: var(--primary-color);
+            font-size: 0.85rem;
             margin-top: 5px;
-            font-weight: bold;
+            font-weight: 600;
         }
 
         /* Flash Message Styles */
-        .alert {
-            padding: 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: left;
-            margin-bottom: 20px;
-        }
         .alert-success {
             background-color: #d4edda; 
             color: #155724; 
@@ -237,19 +254,51 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-        /* ADD STYLE FOR BACK TO HOME LINK */
+        
+        /* Bottom Links */
+        .bottom-links-container {
+            display: flex;
+            justify-content: space-between; 
+            align-items: center;
+            margin-top: 25px;
+            font-size: 0.95rem; 
+            width: 100%; 
+        }
+        .bottom-links-container a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s, text-decoration 0.2s;
+        }
+        .bottom-links-container a:hover {
+            text-decoration: underline;
+        }
+
         .back-to-home-link {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 20px;
         }
         .back-to-home-link a {
-            color: #A40404; /* CHANGED FROM #b8312d */
+            color: var(--text-dark); /* Changed to dark text for contrast with red links */
             text-decoration: none;
-            font-size: 0.95em;
-            font-weight: bold;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
         }
         .back-to-home-link a:hover {
+            color: var(--primary-color);
             text-decoration: underline;
+        }
+
+        @media (max-width: 500px) {
+            .login-card {
+                margin: 20px;
+                padding: 30px;
+            }
+            .bottom-links-container {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -266,7 +315,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <form method="POST" action="">
         <?php if ($flash_message): ?>
-            <div class="alert alert-<?= htmlspecialchars($flash_message['type']) ?> fade show" role="alert">
+            <div class="alert alert-<?= htmlspecialchars($flash_message['type']) ?>" role="alert">
                 <?= htmlspecialchars($flash_message['content']) ?>
             </div>
         <?php endif; ?>
@@ -276,9 +325,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         <div class="input-group">
             <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" class="input-field <?= !empty($error_email) ? 'error-border' : '' ?>" placeholder="Enter your email" required 
+            <input type="email" id="email" name="email" class="input-field <?= !empty($error_email) ? 'error-border' : '' ?>" placeholder="e.g., your.email@gmail.com" required 
                          value="<?= $entered_email ?>"> 
-            <?php if (!empty($error_email)): ?><p class="specific-error"><?= $error_email ?></p><?php endif; ?>
+            <?php if (!empty($error_email)): ?><p class="specific-error"><i class="fas fa-exclamation-circle"></i> <?= $error_email ?></p><?php endif; ?>
         </div>
 
         <div class="input-group">
@@ -287,26 +336,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <input type="password" id="password" name="password" class="input-field <?= !empty($error_password) ? 'error-border' : '' ?>" placeholder="Enter your password" required>
                 <i class="fas fa-eye toggle-password" id="togglePassword"></i>
             </div>
-            <?php if (!empty($error_password)): ?><p class="specific-error"><?= $error_password ?></p><?php endif; ?>
+            <?php if (!empty($error_password)): ?><p class="specific-error"><i class="fas fa-exclamation-circle"></i> <?= $error_password ?></p><?php endif; ?>
         </div>
 
-        <button type="submit" name="login" class="btn-continue">Continue</button>
+        <button type="submit" name="login" class="btn-continue">
+            <i class="fas fa-sign-in-alt"></i> Login to Dashboard
+        </button>
     </form>
 
     <div class="bottom-links-container">
         <a href="forgot_password.php">Forgot Password?</a>
-        <a href="signup.php">Create an Account</a>
+        <a href="signup.php"><i class="fas fa-user-plus"></i> Create an Account</a>
     </div>
 
     <div class="back-to-home-link">
         <a href="index.php">
-            <i class="fas fa-home"></i> Back to Home
+            <i class="fas fa-arrow-left"></i> Back to Home
         </a>
     </div>
-    </div>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Toggle password script remains the same
     document.getElementById('togglePassword').addEventListener('click', function() {
         const passwordInput = document.getElementById('password');
         const icon = this;

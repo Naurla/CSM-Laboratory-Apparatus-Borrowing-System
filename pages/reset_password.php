@@ -107,21 +107,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password</title>
+    <title>Reset Password - CSM Laboratory</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
-        /* --- CARD THEME MATCHING (From Forgot Password Images) --- */
+        /* --- THEME MATCHING (Consistent Theme) --- */
         
-        /* Global & Layout Styles */
+        :root {
+            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --text-dark: #2c3e50;
+            --text-light: #ecf0f1;
+        }
+
+        /* Global Styles */
         body {
-            /* === START BACKGROUND IMAGE FIX === */
+            /* Consistent background image and overlay */
             background: 
-                linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), /* Dark overlay for contrast */
+                linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
                 url("../uploads/Western_Mindanao_State_University_College_of_Teacher_Education_(Normal_Road,_Baliwasan,_Zamboanga_City;_10-06-2023).jpg") 
-                no-repeat center center fixed; /* Center, cover viewport, fixed position */
+                no-repeat center center fixed; 
             background-size: cover;
-            /* === END BACKGROUND IMAGE FIX === */
 
             display: flex;
             justify-content: center;
@@ -129,41 +135,46 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             min-height: 100vh;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
+            color: var(--text-dark);
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .card {
-            background-color: #ffffff;
-            border-radius: 10px; /* Matched radius */
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); /* Stronger shadow to pop against the background */
-            padding: 40px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px; /* Consistent rounded corners */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); /* Stronger, modern shadow */
+            padding: 50px; /* Consistent padding */
             width: 100%;
-            max-width: 400px;
+            max-width: 420px; /* Consistent card width with login.php */
             text-align: center;
-            z-index: 10;
+            z-index: 10; 
+            animation: fadeIn 0.8s ease-out; /* Subtle animation */
         }
         
         /* Header and Branding */
         .logo {
-            max-width: 90px;
-            margin: 0 auto 15px auto;
+            max-width: 100px; /* Consistent logo size */
+            margin: 0 auto 5px auto;
         }
         .app-title {
-            color: #8B0000; /* Main Red Color */
-            font-size: 1.1em;
-            font-weight: 600;
+            color: var(--primary-color); 
+            font-size: 1.1rem; 
+            font-weight: 700;
             line-height: 1.3;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             text-transform: uppercase;
+            letter-spacing: 1.5px;
         }
-        /* --- CORRECTED HEADING STYLE --- */
         h2 {
-            font-size: 1.75rem; /* Same size as before */
+            font-size: 1.75rem; 
             margin-bottom: 15px;
-            color: #333;
-            /* REDUCED FONT WEIGHT to 600 (Semi-Bold) for better balance with the card */
-            font-weight: 600; 
+            color: var(--text-dark);
+            font-weight: 600;
         }
-        /* ------------------------------- */
         .instruction-text {
             margin-bottom: 25px;
             font-size: 0.95rem;
@@ -171,14 +182,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             line-height: 1.5;
         }
 
-        /* Alerts */
+        /* Alerts - Consistent color palette */
         .alert {
-            padding: 12px;
+            padding: 15px;
             border-radius: 6px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             text-align: left;
-            font-size: 0.9em;
+            font-size: 0.95em;
             border: 1px solid transparent;
+            font-weight: 600;
         }
         .alert-error {
             color: #721c24;
@@ -189,6 +201,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             color: #0c5460;
             background-color: #d1ecf1;
             border-color: #bee5eb;
+            text-align: center; /* Center info alert content */
         }
         .alert-success {
             color: #155724;
@@ -200,11 +213,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
              background-color: #fff3cd;
              border-color: #ffeeba;
         }
-        .alert-security {
-             color: #004085;
-             background-color: #cce5ff;
-             border-color: #b8daff;
-        }
 
         /* Form Elements */
         .input-group {
@@ -214,31 +222,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         }
         .input-group label {
             display: block;
-            color: #333;
+            color: var(--text-dark);
             font-weight: 600;
             margin-bottom: 8px;
+            font-size: 0.95rem;
         }
         .input-field {
             width: 100%;
-            padding: 12px 15px; /* Matched padding */
-            border: 1px solid #ced4da;
-            border-radius: 6px; /* Matched radius */
+            padding: 12px 15px; 
+            height: 48px; /* Consistent height */
+            border: 1px solid #ddd;
+            border-radius: 6px; 
             font-size: 1rem;
             box-sizing: border-box;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .input-field:focus {
-            border-color: #8B0000;
+            border-color: var(--secondary-color);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.15);
+            box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
         }
         
-        /* Code Input Specifics (Stage 1) */
+        /* Code Input Specifics (Stage 1) - Preserving the unique look */
         .input-field[name="code"] {
             text-align: center;
             font-size: 1.5rem;
             letter-spacing: 5px; 
             padding: 15px 10px; 
+            height: 60px; /* Slightly taller for code input */
             font-weight: bold;
         }
         /* New Password Fields (Stage 2) */
@@ -247,31 +258,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         }
 
 
-        /* Button Style */
-        .btn-primary {
-            background-color: #8B0000; /* Main button color */
+        /* Primary Button - Matches login.php CTA */
+        .btn-continue {
+            background-color: var(--primary-color); 
             color: #ffffff;
-            padding: 12px 15px;
+            padding: 15px; /* Consistent button padding */
             border: none;
-            border-radius: 6px;
-            font-size: 1.05rem;
-            font-weight: bold;
+            border-radius: 50px; /* Pill shape */
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
             width: 100%;
-            transition: background-color 0.2s ease, transform 0.1s;
+            transition: background-color 0.3s ease, transform 0.2s, box-shadow 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        .btn-primary:hover {
-            background-color: #6a0000;
+        .btn-continue:hover {
+            background-color: #820303; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
-        .btn-primary:active {
-            transform: scale(0.99);
+        .btn-continue:active {
+            transform: translateY(0);
         }
         
         /* Links */
         .link-text {
-            color: #8B0000; 
+            color: var(--primary-color); 
             text-decoration: none;
             font-size: 0.95rem;
+            font-weight: 600;
             transition: text-decoration 0.2s;
         }
         .link-text:hover {
@@ -282,11 +297,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         .password-toggle {
             position: absolute;
             right: 15px;
-            top: 55%; 
+            top: 50%; /* Center vertically with input field */
             transform: translateY(-50%);
             cursor: pointer;
             color: #666;
+            font-size: 1.1rem;
             z-index: 10;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                margin: 20px;
+                padding: 30px;
+            }
         }
     </style>
 </head>
@@ -298,16 +321,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         <h2>Reset Your Password</h2>
         
         <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <?php if ($flash_message): // Display flash message set by forgot_password.php or resend_reset_code.php ?>
             <div class="alert alert-<?php echo htmlspecialchars($flash_message['type']); ?>">
-                <?php echo $flash_message['content']; ?>
+                <i class="fas fa-info-circle"></i> <?php echo $flash_message['content']; ?>
             </div>
         <?php endif; ?>
+        
         <?php if ($message): // Success Message Stage (after successful reset) ?>
-            <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
+            <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($message); ?></div>
             <p style="margin-top: 25px;"><a href="login.php" class="link-text">Go to Login Page</a></p>
         <?php endif; ?>
 
@@ -323,18 +347,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     
                     <div class="input-group">
                         <label for="password">New Password (Min 8 characters):</label>
-                        <input type="password" id="password" name="password" class="input-field" required autocomplete="new-password" placeholder="Enter new password">
-                        <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('password', this)"></i>
+                        <div style="position: relative;">
+                            <input type="password" id="password" name="password" class="input-field" required autocomplete="new-password" placeholder="Enter new password">
+                            <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('password', this)"></i>
+                        </div>
                     </div>
                     
                     <div class="input-group">
                         <label for="confirm_password">Confirm New Password:</label>
-                        <input type="password" id="confirm_password" name="confirm_password" class="input-field" required autocomplete="new-password" placeholder="Confirm new password">
-                        <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('confirm_password', this)"></i>
+                        <div style="position: relative;">
+                            <input type="password" id="confirm_password" name="confirm_password" class="input-field" required autocomplete="new-password" placeholder="Confirm new password">
+                            <i class="fas fa-eye password-toggle" onclick="togglePasswordVisibility('confirm_password', this)"></i>
+                        </div>
                     </div>
                     
                     <div style="margin-top: 30px;">
-                        <button type="submit" class="btn-primary">Set New Password</button>
+                        <button type="submit" class="btn-continue"><i class="fas fa-key"></i> Set New Password</button>
                     </div>
                     
                     <p style="margin-top: 20px; margin-bottom: 0; font-size: 0.95em;">
@@ -347,7 +375,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     Enter the 6-digit code sent to **<?= htmlspecialchars($email_from_get) ?>**.
                 </p>
                 
-                <div class="alert alert-info" style="font-weight: 600; text-align: center;">
+                <div class="alert alert-info">
                     This code is valid for only **<?= TOKEN_EXPIRY_MINUTES ?> minutes**.
                 </div>
 
@@ -357,12 +385,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     
                     <div class="input-group">
                         <input type="text" id="code" name="code" class="input-field" maxlength="6" 
-                                 required placeholder="Enter Code" autofocus
-                                 inputmode="numeric" pattern="[0-9]*">
+                                required placeholder="Enter 6-digit Code" autofocus
+                                inputmode="numeric" pattern="[0-9]*" value="<?php echo htmlspecialchars($code_from_get); ?>">
                     </div>
                     
                     <div style="margin-top: 30px;">
-                        <button type="submit" class="btn-primary">Verify Code</button>
+                        <button type="submit" class="btn-continue"><i class="fas fa-arrow-right"></i> Verify Code</button>
                     </div>
                 </form>
                 
@@ -416,15 +444,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         const selectionEnd = codeInput.selectionEnd;
 
                         const newVal = currentVal.substring(0, selectionStart) + 
-                                             filteredPaste.substring(0, 6 - currentVal.length + (selectionEnd - selectionStart)) + 
-                                             currentVal.substring(selectionEnd);
+                                            filteredPaste.substring(0, 6 - currentVal.length + (selectionEnd - selectionStart)) + 
+                                            currentVal.substring(selectionEnd);
                         
                         codeInput.value = newVal.substring(0, 6);
                     }
                 });
                 
-                   // Autofocus the code input on load
-                   codeInput.focus();
+                // Autofocus the code input on load
+                // Only autofocus if the code hasn't been validated yet
+                <?php if (!$is_code_validated): ?>
+                    codeInput.focus();
+                <?php endif; ?>
             }
         });
 

@@ -145,18 +145,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         /* --- CARD THEME MATCHING (Consistent Theme) --- */
         
         :root {
-            --msu-red: #8B0000; /* Consistent WMSU Red */
+            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --text-dark: #2c3e50;
+            --text-light: #ecf0f1;
+            --background-light: #f8f9fa;
         }
         
         /* Global & Layout Styles */
         body {
-            /* === START BACKGROUND IMAGE FIX === */
+            /* Consistent background image and overlay from index.php/login.php */
             background: 
                 linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
                 url("../uploads/Western_Mindanao_State_University_College_of_Teacher_Education_(Normal_Road,_Baliwasan,_Zamboanga_City;_10-06-2023).jpg") 
                 no-repeat center center fixed; 
             background-size: cover;
-            /* === END BACKGROUND IMAGE FIX === */
             
             display: flex;
             justify-content: center;
@@ -164,62 +167,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             min-height: 100vh;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
+            color: var(--text-dark);
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .card {
-            background-color: #ffffff;
-            border-radius: 10px; 
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); 
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px; /* Consistent rounded corners */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); /* Stronger, modern shadow */
             padding: 40px;
             width: 100%;
-            max-width: 450px; 
+            max-width: 500px; /* Slightly wider card for longer registration form */
             text-align: center;
             z-index: 10; 
+            animation: fadeIn 0.8s ease-out; /* Subtle animation */
         }
         
         /* Header and Branding */
         .logo {
-            max-width: 80px;
-            margin: 0 auto 10px auto;
+            max-width: 100px; /* Consistent logo size */
+            margin: 0 auto 5px auto;
         }
         .app-title {
-            color: var(--msu-red); 
-            font-size: 1.1em;
-            font-weight: 600;
+            color: var(--primary-color); 
+            font-size: 1.1rem; /* Consistent font size */
+            font-weight: 700;
             line-height: 1.3;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             text-transform: uppercase;
+            letter-spacing: 1.5px;
         }
         h2 {
             font-size: 1.75rem; 
             margin-bottom: 25px;
-            color: #333;
+            color: var(--text-dark);
             font-weight: 600;
         }
         
         .section-title {
-            color: var(--msu-red); 
+            color: var(--primary-color); 
             font-size: 1.15em; 
             font-weight: 700; 
             text-align: left;
             padding-bottom: 8px; 
-            border-bottom: 2px solid var(--msu-red); 
+            border-bottom: 2px solid var(--secondary-color); /* Use accent color for separator */
             margin: 30px 0 20px 0;
         }
 
         /* Alerts */
         .message-box {
-            padding: 12px;
+            padding: 15px;
             border-radius: 6px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             text-align: left;
-            font-size: 0.9em;
+            font-size: 0.95em;
             border: 1px solid transparent;
             font-weight: 600;
         }
         .message-box.error {
-            color: #721c24;
-            background-color: #f8d7da;
+            color: #721c24; /* Dark red text */
+            background-color: #f8d7da; /* Light red background */
             border-color: #f5c6cb;
         }
 
@@ -231,7 +242,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .input-group label {
             display: block;
-            color: #333;
+            color: var(--text-dark);
             font-weight: 600;
             margin-bottom: 8px;
             font-size: 0.95em;
@@ -239,57 +250,66 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .input-field {
             width: 100%;
             padding: 12px 15px; 
-            border: 1px solid #ced4da;
+            height: 48px; /* Consistent height */
+            border: 1px solid #ddd;
             border-radius: 6px; 
             font-size: 1rem;
             box-sizing: border-box;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .input-field:focus {
-            border-color: var(--msu-red);
+            border-color: var(--secondary-color); /* Consistent focus color */
             outline: none;
-            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.15);
+            box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
+        }
+        .input-field.error {
+            border-color: var(--primary-color) !important;
         }
         
         /* Password Toggle Icon */
         .toggle-password {
             position: absolute;
             right: 15px;
+            /* Recalculate based on input field height (48px) to center it */
             top: 50%; 
-            transform: translateY(0%);
+            transform: translateY(-50%); 
             cursor: pointer;
             color: #666;
+            font-size: 1.1rem;
             z-index: 10;
         }
         
         /* Error Text */
         .error-text {
-            color: var(--msu-red); 
+            color: var(--primary-color); 
             font-size: 0.85em;
             margin-top: 5px; 
             display: block;
-            font-weight: 500;
+            font-weight: 600;
         }
 
-        /* Button Style */
-        .btn-primary {
-            background-color: var(--msu-red); 
+        /* Button Style (Updated to pill shape and new class) */
+        .btn-continue {
+            background-color: var(--primary-color); 
             color: #ffffff;
-            padding: 12px 15px;
+            padding: 15px 15px; /* Consistent button padding */
             border: none;
-            border-radius: 6px;
-            font-size: 1.05rem;
-            font-weight: bold;
+            border-radius: 50px; /* Pill shape */
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
             width: 100%;
-            transition: background-color 0.2s ease, transform 0.1s;
+            transition: background-color 0.3s ease, transform 0.2s, box-shadow 0.3s;
             margin-top: 30px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        .btn-primary:hover {
-            background-color: #6a0000;
+        .btn-continue:hover {
+            background-color: #820303; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
-        .btn-primary:active {
-            transform: scale(0.99);
+        .btn-continue:active {
+            transform: translateY(0);
         }
         
         /* Links */
@@ -299,7 +319,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 0.95em;
         }
         .link-text {
-            color: var(--msu-red); 
+            color: var(--primary-color); 
             text-decoration: none;
             font-weight: 600;
             transition: text-decoration 0.2s;
@@ -308,19 +328,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-decoration: underline;
         }
         
-        /* ADD STYLE FOR BACK TO HOME LINK */
+        /* Back to Home Link (Consistent with login.php) */
         .back-to-home-link {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 20px;
         }
         .back-to-home-link a {
-            color: #8B0000;
+            color: var(--text-dark);
             text-decoration: none;
-            font-size: 0.95em;
-            font-weight: bold;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
         }
         .back-to-home-link a:hover {
+            color: var(--primary-color);
             text-decoration: underline;
+        }
+
+        @media (max-width: 550px) {
+            .card {
+                margin: 20px;
+                padding: 30px;
+            }
         }
     </style>
 </head>
@@ -334,79 +363,79 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <?php if (!empty($global_message)): ?>
         <div class="message-box <?= $global_message_type ?>">
-            <?= htmlspecialchars($global_message) ?>
+            <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($global_message) ?>
         </div>
     <?php endif; ?>
 
     <form method="POST" action="">
         
-        <div class="section-title">Account Details</div>
+        <div class="section-title"><i class="fas fa-lock"></i> Account Details</div>
 
         <div class="input-group">
             <label for="student_id">Student ID</label>
-            <input type="text" id="student_id" name="student_id" class="input-field" 
-                   value="<?= htmlspecialchars($student_id) ?>" placeholder="e.g., 2024-01203">
-            <?php if (isset($errors["student_id"])): ?><span class="error-text"><?= $errors["student_id"] ?></span><?php endif; ?>
+            <input type="text" id="student_id" name="student_id" class="input-field <?= isset($errors["student_id"]) ? 'error' : '' ?>" 
+                    value="<?= htmlspecialchars($student_id) ?>" placeholder="e.g., 2024-01203">
+            <?php if (isset($errors["student_id"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["student_id"] ?></span><?php endif; ?>
         </div>
         
         <div class="input-group">
             <label for="email">Email address</label>
-            <input type="email" id="email" name="email" class="input-field" 
-                   value="<?= htmlspecialchars($email) ?>" >
-            <?php if (isset($errors["email"])): ?><span class="error-text"><?= $errors["email"] ?></span><?php endif; ?>
+            <input type="email" id="email" name="email" class="input-field <?= isset($errors["email"]) ? 'error' : '' ?>" 
+                    value="<?= htmlspecialchars($email) ?>" placeholder="e.g., email@wmsu.edu.ph" >
+            <?php if (isset($errors["email"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["email"] ?></span><?php endif; ?>
         </div>
 
         <div class="input-group">
             <label for="password">Password (Min 8 characters)</label>
             <div style="position: relative;">
-                <input type="password" id="password" name="password" class="input-field" >
+                <input type="password" id="password" name="password" class="input-field <?= isset($errors["password"]) ? 'error' : '' ?>" >
                 <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('password', this)"></i>
             </div>
-            <?php if (isset($errors["password"])): ?><span class="error-text"><?= $errors["password"] ?></span><?php endif; ?>
+            <?php if (isset($errors["password"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["password"] ?></span><?php endif; ?>
         </div>
 
         <div class="input-group">
             <label for="confirm_password">Confirm Password</label>
             <div style="position: relative;">
-                <input type="password" id="confirm_password" name="confirm_password" class="input-field" >
+                <input type="password" id="confirm_password" name="confirm_password" class="input-field <?= isset($errors["confirm_password"]) ? 'error' : '' ?>" >
                 <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('confirm_password', this)"></i>
             </div>
-            <?php if (isset($errors["confirm_password"])): ?><span class="error-text"><?= $errors["confirm_password"] ?></span><?php endif; ?>
+            <?php if (isset($errors["confirm_password"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["confirm_password"] ?></span><?php endif; ?>
         </div>
 
-        <div class="section-title">Personal Details</div>
+        <div class="section-title"><i class="fas fa-user"></i> Personal Details</div>
 
         <div class="input-group">
             <label for="firstname">First name</label>
-            <input type="text" id="firstname" name="firstname" class="input-field" 
-                   value="<?= htmlspecialchars($firstname) ?>" >
-            <?php if (isset($errors["firstname"])): ?><span class="error-text"><?= $errors["firstname"] ?></span><?php endif; ?>
+            <input type="text" id="firstname" name="firstname" class="input-field <?= isset($errors["firstname"]) ? 'error' : '' ?>" 
+                    value="<?= htmlspecialchars($firstname) ?>" >
+            <?php if (isset($errors["firstname"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["firstname"] ?></span><?php endif; ?>
         </div>
 
         <div class="input-group">
             <label for="lastname">Last name</label>
-            <input type="text" id="lastname" name="lastname" class="input-field" 
-                   value="<?= htmlspecialchars($lastname) ?>" >
-            <?php if (isset($errors["lastname"])): ?><span class="error-text"><?= $errors["lastname"] ?></span><?php endif; ?>
+            <input type="text" id="lastname" name="lastname" class="input-field <?= isset($errors["lastname"]) ? 'error' : '' ?>" 
+                    value="<?= htmlspecialchars($lastname) ?>" >
+            <?php if (isset($errors["lastname"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["lastname"] ?></span><?php endif; ?>
         </div>
         
         <div class="input-group">
             <label for="course">Course</label>
-            <input type="text" id="course" name="course" class="input-field" 
-                   value="<?= htmlspecialchars($course) ?>" >
-            <?php if (isset($errors["course"])): ?><span class="error-text"><?= $errors["course"] ?></span><?php endif; ?>
+            <input type="text" id="course" name="course" class="input-field <?= isset($errors["course"]) ? 'error' : '' ?>" 
+                    value="<?= htmlspecialchars($course) ?>" >
+            <?php if (isset($errors["course"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["course"] ?></span><?php endif; ?>
         </div>
 
         <div class="input-group">
             <label for="contact_number">Contact Number</label>
             <input type="text" id="contact_number" name="contact_number" 
-                   value="<?= htmlspecialchars($contact_number) ?>" class="input-field" 
-                   placeholder="e.g., +639171234567 or 09171234567">
-            <?php if (isset($errors["contact_number"])): ?><span class="error-text"><?= $errors["contact_number"] ?></span><?php endif; ?>
+                    value="<?= htmlspecialchars($contact_number) ?>" class="input-field <?= isset($errors["contact_number"]) ? 'error' : '' ?>" 
+                    placeholder="e.g., +639171234567 or 09171234567">
+            <?php if (isset($errors["contact_number"])): ?><span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $errors["contact_number"] ?></span><?php endif; ?>
         </div>
         
-        <button type="submit" class="btn-primary">
-            Create my new account
+        <button type="submit" class="btn-continue">
+            <i class="fas fa-check-circle"></i> Create my new account
         </button>
     </form>
     
@@ -416,13 +445,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="back-to-home-link">
         <a href="index.php">
-            <i class="fas fa-home"></i> Back to Home
+            <i class="fas fa-arrow-left"></i> Back to Home
         </a>
     </div>
     </div>
 
 <script>
     // === PASSWORD TOGGLE ===
+    // This function handles the toggle for multiple password fields
     function togglePasswordVisibility(id, iconElement) {
         const input = document.getElementById(id);
         

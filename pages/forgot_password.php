@@ -73,161 +73,187 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password - CSM Borrowing</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
     <style>
-        /* General Styles */
+        /* --- THEME MATCHING (Consistent Theme) --- */
+        
+        :root {
+            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --text-dark: #2c3e50;
+            --text-light: #ecf0f1;
+        }
+
+        /* Global Styles */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            
-            /* === START BACKGROUND IMAGE FIX === */
+            /* Consistent background image and overlay */
             background: 
-                linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), /* Dark overlay for contrast */
+                linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
                 url("../uploads/Western_Mindanao_State_University_College_of_Teacher_Education_(Normal_Road,_Baliwasan,_Zamboanga_City;_10-06-2023).jpg") 
-                no-repeat center center fixed; /* Center, cover viewport, fixed position */
+                no-repeat center center fixed; 
             background-size: cover;
-            /* === END BACKGROUND IMAGE FIX === */
 
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-dark);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Card Container - Matching Login Card */
-        .login-card {
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 8px; /* Slightly less rounded than the original CSS */
-            /* Adjusted box-shadow for contrast against dark background */
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); 
+        /* Card Container - Consistent with login.php */
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 50px;
+            border-radius: 12px; 
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); 
             width: 100%;
-            max-width: 400px; /* Slightly narrower to match the login screen proportions */
+            max-width: 420px; /* Consistent card width */
             text-align: center;
             z-index: 10;
+            animation: fadeIn 0.8s ease-out;
         }
 
         /* Logo and Title */
         .logo {
-            /* FIX: Assuming wmsu_logo is parallel to uploads/ and classes/ */
-            width: 80px;
-            margin-bottom: 10px;
+            width: 100px; /* Consistent logo size */
+            margin: 0 auto 5px auto;
         }
         .app-title {
-            /* Consistent WMSU red */
-            color: #8B0000; 
-            font-size: 1.1em;
-            font-weight: 500; /* Slightly lighter weight */
+            color: var(--primary-color); 
+            font-size: 1.1rem;
+            font-weight: 700;
             line-height: 1.3;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             text-transform: uppercase;
+            letter-spacing: 1.5px;
         }
         .main-heading {
-            font-size: 1.75em;
+            font-size: 1.75rem;
             margin-bottom: 15px;
-            color: #333;
+            color: var(--text-dark);
+            font-weight: 600;
         }
         .instruction-text {
             margin-bottom: 30px;
-            font-size: 0.9em; /* Slightly smaller text */
-            color: #666; /* Slightly darker text for contrast */
+            font-size: 0.95rem; 
+            color: #666; 
             line-height: 1.5;
         }
 
-        /* Form Elements */
-        .form-group {
+        /* Form Elements - Consistent with login.php */
+        .input-group {
             margin-bottom: 25px;
             text-align: left;
         }
         label {
             display: block;
-            font-weight: 500; /* Medium weight, less bold */
-            margin-bottom: 5px; /* Less space between label and input */
-            color: #333;
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            color: var(--text-dark);
             font-size: 0.95em;
         }
         input[type="email"] {
             width: 100%;
-            padding: 10px 12px; /* Slightly less padding */
-            border: 1px solid #ccc; /* Lighter border color */
-            border-radius: 4px; /* Slightly less rounded inputs */
+            padding: 12px 15px; 
+            height: 48px; /* Consistent height */
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
             box-sizing: border-box;
-            font-size: 1em;
-            transition: border-color 0.2s;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
         input[type="email"]:focus {
-            /* Keep focus color consistent with the theme */
-            border-color: #8B0000;
+            border-color: var(--secondary-color);
             outline: none;
-            box-shadow: 0 0 0 1px #8B0000; /* More subtle focus ring */
+            box-shadow: 0 0 0 3px rgba(244, 180, 0, 0.2);
         }
-        /* Placeholder styling to match the login screen */
         input::placeholder {
             color: #aaa;
         }
 
-        /* Button - Matching Login Button Style */
-        .btn-submit {
+        /* Button - Consistent with login.php CTA */
+        .btn-continue {
             width: 100%;
-            padding: 12px;
-            background-color: #8B0000; /* WMSU Red */
+            padding: 15px;
+            background-color: var(--primary-color); 
             color: white;
             border: none;
-            border-radius: 6px; 
+            border-radius: 50px; /* Pill shape */
             cursor: pointer;
-            font-size: 1.05em;
-            font-weight: 600; /* Bold text for the button */
-            text-transform: capitalize; /* Consistent with the login button's look */
-            transition: background-color 0.3s, box-shadow 0.2s;
-            margin-top: 10px; /* Added a little margin on top */
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: capitalize; 
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+            margin-top: 10px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        .btn-submit:hover {
-            background-color: #6a0000;
+        .btn-continue:hover {
+            background-color: #820303;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
-        .btn-submit:active {
-            transform: translateY(0); /* Removed the scale effect for consistency */
-            box-shadow: 0 0 0 0;
+        .btn-continue:active {
+            transform: translateY(0);
         }
 
-        /* Alerts */
+        /* Alerts - Replicating styles from reset_password.php */
         .alert {
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 25px;
             text-align: left;
-            font-size: 0.9em;
+            font-size: 0.95em;
+            border: 1px solid transparent;
+            font-weight: 600;
         }
         .alert-error {
             color: #721c24;
             background-color: #f8d7da;
             border: 1px solid #f5c6cb;
         }
-        .alert-security {
+        .alert-security { /* Used for the generic "check your email" message */
             color: #004085;
             background-color: #cce5ff;
             border: 1px solid #b8daff;
         }
 
-        /* Back Link - Matching the small links on the login screen */
+        /* Back Link - Consistent with login.php */
         .back-link {
             display: inline-block; 
             margin-top: 25px;
-            color: #8B0000; /* Consistent red color */
+            color: var(--text-dark); /* Use dark text for "Back to Login" */
             text-decoration: none;
             font-size: 0.9em; 
             font-weight: 500;
+            transition: color 0.2s;
         }
         .back-link:hover {
+            color: var(--primary-color);
             text-decoration: underline;
+        }
+        
+        @media (max-width: 480px) {
+            .card {
+                margin: 20px;
+                padding: 30px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-card">
+    <div class="card">
         <img src="../wmsu_logo/wmsu.png" alt="WMSU Logo" class="logo"> 
         
         <div class="app-title">
-            CSM LABORATORY<br>
-            BORROWING APPARATUS
+            CSM LABORATORY BORROWING APPARATUS
         </div>
 
         <h2 class="main-heading">Forgot Your Password?</h2>
@@ -236,23 +262,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </p>
 
         <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <form action="forgot_password.php" method="POST">
-            <div class="form-group">
+            <div class="input-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" name="email" required 
                         placeholder="e.g. student@gmail.com"
                         value="<?php echo htmlspecialchars($email); ?>">
             </div>
             
-            <button type="submit" class="btn-submit">
-                Request Password Reset Code
+            <button type="submit" class="btn-continue">
+                <i class="fas fa-arrow-right"></i> Request Password Reset Code
             </button>
         </form>
         
-        <a href="login.php" class="back-link">Back to Login</a>
+        <a href="login.php" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Login
+        </a>
     </div>
 </body>
 </html>

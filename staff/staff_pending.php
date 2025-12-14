@@ -1006,7 +1006,7 @@ $pendingForms = $transaction->getPendingForms();
                                     <?php if ($clean_status == "checking"): ?>
                                             <div class="mt-2 text-start">
                                                 <label for="damaged_unit_id_<?= $form['id'] ?>" class="fw-bold mb-1">Mark Damaged Unit:</label>
-                                                <select name="damaged_unit_id" id="damaged_unit_id_<?= $form['id'] ?>" class="form-select-sm">
+                                                <select name="damaged_unit_id" id="damaged_unit_id_<?= $form['id'] ?>" class="form-select-sm damaged-unit-select">
                                                     <option value="">-- None / All Good --</option>
                                                         <?php
                                                         foreach ($items as $item):
@@ -1028,32 +1028,33 @@ $pendingForms = $transaction->getPendingForms();
 
                                     <?php elseif ($clean_status == "checking"): ?>
                                             <?php if ($is_currently_overdue): ?>
-                                                 <button type="button"
-                                                               class="btn warning late-return-btn"
-                                                               data-bs-toggle="modal"
-                                                               data-bs-target="#lateReturnModal"
-                                                               data-form-id="<?= htmlspecialchars($form["id"]) ?>">
-                                                               Confirm LATE Return
-                                                 </button>
+                                                   <button type="button"
+                                                                                                class="btn warning late-return-btn"
+                                                                                                data-bs-toggle="modal"
+                                                                                                data-bs-target="#lateReturnModal"
+                                                                                                data-form-id="<?= htmlspecialchars($form["id"]) ?>">
+                                                                                                Confirm LATE Return
+                                                   </button>
                                             <?php else: ?>
-                                                 <button type="submit" name="approve_return" class="btn approve">Mark Returned (Good)</button>
+                                                   <button type="submit" name="approve_return" class="btn approve approve-return-btn-<?= $form['id'] ?>">Mark Returned (Good)</button>
                                             <?php endif; ?>
 
                                             <button type="submit" 
-                                                    name="mark_damaged" 
-                                                    id="mark_damaged_btn_<?= $form['id'] ?>" 
-                                                    class="btn secondary"
-                                                    onclick="return validateDamagedSelection(<?= $form['id'] ?>);">
+                                                             name="mark_damaged" 
+                                                             id="mark_damaged_btn_<?= $form['id'] ?>" 
+                                                             class="btn secondary"
+                                                             onclick="return validateDamagedSelection(<?= $form['id'] ?>);">
                                                 Returned with Issues
                                             </button>
-                                            <?php elseif ($clean_status == "borrowed" && $is_ban_eligible_now): ?>
-                                                 <button type="button"
-                                                               class="btn reject overdue-btn"
-                                                               data-bs-toggle="modal"
-                                                               data-bs-target="#overdueModal"
-                                                               data-form-id="<?= htmlspecialchars($form["id"]) ?>">
-                                                               Manually Mark OVERDUE
-                                                 </button>
+                                            
+                                    <?php elseif ($clean_status == "borrowed" && $is_ban_eligible_now): ?>
+                                                   <button type="button"
+                                                                                                class="btn reject overdue-btn"
+                                                                                                data-bs-toggle="modal"
+                                                                                                data-bs-target="#overdueModal"
+                                                                                                data-form-id="<?= htmlspecialchars($form["id"]) ?>">
+                                                                                                Manually Mark OVERDUE
+                                                   </button>
                                             
                                     <?php else: ?>
                                             <button type="button" class="btn secondary" disabled>No Action Needed</button>
@@ -1160,6 +1161,27 @@ $pendingForms = $transaction->getPendingForms();
         
         // If a unit is selected, allow the form to submit to the server logic for 'mark_damaged'.
         return true; 
+    };
+    // FIX END
+
+
+    // FIX START: New function to toggle button state based on select input
+    window.toggleReturnButtons = function(formId) {
+        const unitSelect = document.getElementById(`damaged_unit_id_${formId}`);
+        const approveReturnBtn = document.querySelector(`.approve-return-btn-${formId}`);
+        const lateReturnBtn = document.querySelector(`.late-return-btn[data-form-id="${formId}"]`);
+        
+        if (!unitSelect || (!approveReturnBtn && !lateReturnBtn)) return; // Skip if elements aren't present (e.g., if status is not 'checking')
+
+        const selectedUnit = unitSelect.value;
+        const isDisabled = !!selectedUnit; // True if a unit is selected (value is not ""), False otherwise.
+
+        if (approveReturnBtn) {
+            approveReturnBtn.disabled = isDisabled;
+        }
+        if (lateReturnBtn) {
+            lateReturnBtn.disabled = isDisabled;
+        }
     };
     // FIX END
 
@@ -1433,9 +1455,15 @@ $pendingForms = $transaction->getPendingForms();
             submissionForm.submit();
         });
         
-        // FIX: Removed the old broken .mark-damaged-btn click handler.
-        // The new function validateDamagedSelection(formId) handles the validation
-        // when the button with type="submit" and name="mark_damaged" is clicked.
+        // FIX START: Event listener for the new toggle function
+        document.querySelectorAll('.damaged-unit-select').forEach(selectElement => {
+            const formId = selectElement.id.replace('damaged_unit_id_', '');
+            // Initial check on page load
+            window.toggleReturnButtons(formId); 
+            // Listen for changes
+            selectElement.addEventListener('change', () => window.toggleReturnButtons(formId));
+        });
+        // FIX END
         
     });
 </script>

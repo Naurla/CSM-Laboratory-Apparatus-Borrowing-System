@@ -2140,16 +2140,17 @@ public function markAsChecking($form_id, $student_id, $remarks = null)
     // --- Inside classes/Transaction.php ---
 
 // 1. Fetch overdue loans
+// 1. Fetch overdue loans (FIXED)
 public function getOverdueLoansForNotification() {
     $today = date('Y-m-d');
-    
-    // Selects forms that are 'borrowed', are past their expected date, AND 
-    // where the last notice date is NOT today (or is NULL), ensuring one notice per day.
+    $conn = $this->connect(); // Ensure we have the connection object
+
+    // SQL now selects the required aliases: user_email, user_name (concatenated), and necessary form data.
     $sql = "SELECT 
                 bf.id, 
                 bf.expected_return_date, 
-                u.email, 
-                u.firstname 
+                u.email AS user_email,          
+                CONCAT(u.firstname, ' ', u.lastname) AS user_name 
             FROM borrow_forms bf
             JOIN users u ON bf.user_id = u.id
             WHERE 
@@ -2157,11 +2158,20 @@ public function getOverdueLoansForNotification() {
                 bf.expected_return_date < :today AND
                 (bf.last_overdue_notice_date IS NULL OR bf.last_overdue_notice_date < :today)";
                 
-    $query = $this->connect()->prepare($sql);
+    $query = $conn->prepare($sql);
     $query->bindParam(":today", $today);
     
     if ($query->execute()) {
-        return $query->fetchAll(PDO::FETCH_ASSOC); // Assuming PDO is used
+        $overdue_forms = $query->fetchAll(PDO::FETCH_ASSOC);
+
+        // CRITICAL FIX: Loop through forms and attach the required 'items' array
+        foreach ($overdue_forms as &$form) {
+            // Re-use the existing method that fetches items for the email template
+            $form['items'] = $this->getFormItemsForEmail($form['id']);
+        }
+        unset($form); // Break the reference for safety
+
+        return $overdue_forms;
     }
     return [];
 }

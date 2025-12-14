@@ -22,9 +22,8 @@ $mailer = new Mailer();
 $today = date('Y-m-d');
 
 // --- 2. Fetch Overdue Loans (Assuming this method now returns items as well) ---
-// Note: You may need to change 'getOverdueLoansForNotification' to 'getOverdueTransactions'
-// if the latter includes the item list.
-$overdue_loans = $transaction->getOverdueTransactions(); 
+// FIX 1: Corrected method name from getOverdueTransactions() to getOverdueLoansForNotification()
+$overdue_loans = $transaction->getOverdueLoansForNotification(); 
 
 if (empty($overdue_loans)) {
     // Keep silent output for cron job success
@@ -42,26 +41,26 @@ $html_template = file_get_contents($template_path);
 
 // --- 4. Process and Send Notifications ---
 foreach ($overdue_loans as $loan) {
-    $user_email = $loan['user_email']; // Corrected variable name from transaction object
-    $user_name = htmlspecialchars($loan['user_name']); // Corrected variable name from transaction object
+    // These keys are now correctly returned by the fixed getOverdueLoansForNotification method
+    $user_email = $loan['user_email']; 
+    $user_name = htmlspecialchars($loan['user_name']); 
     $form_id = $loan['id'];
     $expected_date = $loan['expected_return_date'];
     
     // --- CRITICAL FIX 1: Generate HTML for the Overdue Items Table ---
     $itemTableRowsHtml = '';
-    // The 'items' property comes from Transaction::getOverdueTransactions
+    // The 'items' property comes from Transaction::getOverdueLoansForNotification
     foreach ($loan['items'] as $item) { 
         $itemTableRowsHtml .= '
             <tr>
-                <td>' . htmlspecialchars($item['apparatus_name']) . '</td>
-                <td>' . htmlspecialchars($item['quantity']) . '</td>
+                <td>' . htmlspecialchars($item['name']) . '</td> <td>' . htmlspecialchars($item['quantity']) . '</td>
             </tr>
         ';
     }
 
-    // --- CRITICAL FIX 2: Define Dynamic Variables and URLs ---
-    $dynamic_url = 'http://localhost/wd123/student/student_transaction.php?id=' . $form_id; // FIX: Use dynamic ID
-    // IMPORTANT: Replace 'http://localhost/wd123' with your live domain when deployed.
+    // // --- CRITICAL FIX 2: Define Dynamic Variables and URLs ---
+    // $dynamic_url = 'http://localhost/wd123/student/student_transaction.php?id=' . $form_id; // FIX: Use dynamic ID
+    // // IMPORTANT: Replace 'http://localhost/wd123' with your live domain when deployed.
 
     // --- Dynamic Template Population (Replaced by the logic below) ---
     $placeholders = [

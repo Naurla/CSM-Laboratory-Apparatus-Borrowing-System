@@ -82,14 +82,14 @@ $is_success = false;
 $lock_message = "";
 
 if ($hasOverdueLock) {
-    $lock_message = "🚫 **OVERDUE LOCK:** You have item(s) past the expected return date. Please return them immediately before borrowing again.";
+    $lock_message = "🚫 OVERDUE LOCK: You have item(s) past the expected return date. Please return them immediately before borrowing again.";
 } elseif ($isBanned) {
     $ban_until_date_obj = $transaction->getBanUntilDate($student_id);
     $ban_until_date_str = $ban_until_date_obj ? (new DateTime($ban_until_date_obj))->format('Y-m-d h:i A') : 'an unknown date';
 
-    $lock_message = "🚫 **SUSPENDED:** Your account is suspended. Privileges restored on **{$ban_until_date_str}**.";
+    $lock_message = "🚫 SUSPENDED: Your account is suspended. Privileges restored on {$ban_until_date_str}.";
 } elseif ($activeCount >= 3) {
-    $lock_message = "🚫 **Max Active Requests Reached:** You already have **{$activeCount} active transactions** (Limit is 3). Please return or wait for completion before borrowing again.";
+    $lock_message = "🚫 Max Active Requests Reached: You already have {$activeCount} active transactions (Limit is 3). Please return or wait for completion before borrowing again.";
 }
 
 // --- FINAL MESSAGE RESOLUTION (Handles modal display on page load) ---
@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $apparatus_details_for_transaction = json_decode(urldecode($request_array_json), true);
 
     if (empty($type)) {
-        $errors['type'] = "Request type (**Borrow** or **Reserve**) is required.";
+        $errors['type'] = "Request type (Borrow or Reserve) is required.";
     }
 
     if (empty($apparatus_details_for_transaction) || $request_array_json === '[]') {
@@ -177,15 +177,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // --------------------------------------------------------------------------------
             // 🛑 REMOVED DUPLICATE EMAIL LOGIC HERE TO FIX DOUBLE SENDING.
-            //    The submission email is now sent exclusively from
-            //    classes/Transaction.php::createTransaction().
+            //     The submission email is now sent exclusively from
+            //     classes/Transaction.php::createTransaction().
             // --------------------------------------------------------------------------------
 
             $newActiveCount = $transaction->getActiveTransactionCount($student_id);
             $final_secondary_message = '';
 
             if ($newActiveCount >= 3) {
-                $final_secondary_message = "🚫 **Maximum Active Requests Reached:** You now have {$newActiveCount} active requests (Limit is 3). Further requests are temporarily blocked.";
+                $final_secondary_message = "🚫 Maximum Active Requests Reached: You now have {$newActiveCount} active requests (Limit is 3). Further requests are temporarily blocked.";
             }
 
             $_SESSION['submission_status'] = [
@@ -204,7 +204,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $message = "❌ The stock for one or more selected items became unavailable during submission. Please check quantities and try again.";
             } elseif (is_array($result) && $result['error_type'] === 'duplicate_item_request') {
                 $conflicting_item_name = htmlspecialchars($result['item_name']);
-                $message = "🚫 **Duplicate Item Error:** You already have an active request or borrowed item for the apparatus **{$conflicting_item_name}**. Please complete the existing loan before submitting a new one for this item.";
+                $message = "🚫 Duplicate Item Error: You already have an active request or borrowed item for the apparatus {$conflicting_item_name}. Please complete the existing loan before submitting a new one for this item.";
             } elseif ($result === 'db_error') {
                 $message = "❌ A critical database error occurred while finalizing the transaction. Please try again. If the error persists, contact staff.";
             } else {
@@ -416,18 +416,19 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
     /* --- UI STYLES --- */
     
-    /* Request List Items (Cart) */
+    /* Request List Items (Cart) - Modified for better visual list */
     .request-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background-color: var(--bg-light);
-        padding: 8px 15px;
+        background-color: #fff3cd; /* Light warning color to highlight the 'cart' */
+        padding: 10px 15px;
         border-radius: 6px;
         margin-bottom: 8px;
         font-size: 1rem;
-        font-weight: 500;
-        border-left: 5px solid var(--primary-color);
+        font-weight: 600;
+        border-left: 5px solid var(--secondary-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     .request-item .remove-btn {
         background: none;
@@ -436,6 +437,8 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         font-size: 1.2rem;
         cursor: pointer;
         transition: color 0.2s;
+        padding: 0;
+        margin-left: 10px;
     }
     .request-item .remove-btn:hover {
         color: var(--primary-color-dark);
@@ -500,6 +503,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         font-size: 1.05rem;
         height: 40px;
         text-align: center;
+        padding: 0.375rem 0.5rem; /* Adjusted padding */
     }
     .qty-input:focus {
         border-color: var(--secondary-color);
@@ -594,6 +598,32 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         color: white;
     }
 
+    /* --- PAGINATION STYLES --- */
+    .pagination-info {
+        font-size: 0.9rem;
+        color: #6c757d; /* Dark gray for info text */
+        font-weight: 500;
+    }
+    .pagination-info strong {
+        font-weight: 700;
+        color: #343a40;
+    }
+    .page-item .page-link {
+        color: var(--primary-color); /* Link color */
+    }
+    .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+    .page-item.disabled .page-link {
+        color: #6c757d;
+    }
+    .page-item:not(.disabled) .page-link:hover {
+        background-color: #f8f8f8;
+    }
+    /* --- END PAGINATION STYLES --- */
+
 
     /* --- RESPONSIVE ADJUSTMENTS --- */
     @media (max-width: 992px) {
@@ -634,6 +664,18 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         }
         .apparatus-card .qty-input {
             width: 60px;
+        }
+        .apparatus-card .btn-add-request {
+            flex-grow: 1; /* Make button fill horizontal space */
+            width: 100%;
+            text-align: center;
+        }
+        .apparatus-card .action-area > div:last-child {
+            width: 100%;
+        }
+        /* Ensure quantity input is inline with button on mobile */
+        .apparatus-card .action-area > div:last-child .d-flex {
+            width: 100%;
         }
     }
 
@@ -794,9 +836,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                             <label class="form-label fw-bold">Expected Return Date <span class="text-danger">*</span>:</label>
                             <div class="input-group">
                                 <input type="text" id="expected_return_date_display" class="form-control"
-                                             value="<?= htmlspecialchars($expected_return_date) ?>"
-                                             placeholder="Auto-filled"
-                                             readonly>
+                                    value="<?= htmlspecialchars($expected_return_date) ?>"
+                                    placeholder="Auto-filled"
+                                    readonly>
                                 <span class="input-group-text"><i class="fas fa-clock"></i></span>
                             </div>
 
@@ -944,28 +986,49 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         </div>
 
         <?php if ($totalPages > 1): ?>
-        <nav>
-            <ul class="pagination justify-content-center">
-                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
-                    <a class="page-link" href="#" data-page="<?= $currentPage - 1 ?>" onclick="manualPagination(event, this.dataset.page)"><i class="fas fa-chevron-left"></i> Previous</a>
-                </li>
-                <?php
-                $start_page = max(1, $currentPage - 1);
-                $end_page = min($totalPages, $currentPage + 1);
-
-                if ($currentPage == 1 && $totalPages >= 3) $end_page = 3;
-                if ($currentPage == $totalPages && $totalPages >= 3) $start_page = $totalPages - 2;
-
-                for ($i = $start_page; $i <= $end_page; $i++): ?>
-                    <li class="page-item <?= ($currentPage == $i) ? 'active' : '' ?>">
-                             <a class="page-link" href="#" data-page="<?= $i ?>" onclick="manualPagination(event, this.dataset.page)"><?= $i ?></a>
+        <div class="d-flex justify-content-between align-items-center flex-wrap pt-3 mt-3 border-top">
+            <div class="pagination-info my-2">
+                Displaying <?= $offset + 1 ?> to <?= min($offset + $itemsPerPage, $totalItems) ?> of <?= $totalItems ?> items.
+            </div>
+            
+            <nav aria-label="Apparatus Pagination" class="my-2">
+                <ul class="pagination mb-0">
+                    <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                        <a class="page-link" href="#" data-page="<?= $currentPage - 1 ?>" onclick="manualPagination(event, this.dataset.page)" aria-label="Previous">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
                     </li>
-                <?php endfor; ?>
-                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
-                    <a class="page-link" href="#" data-page="<?= $currentPage + 1 ?>" onclick="manualPagination(event, this.dataset.page)">Next <i class="fas fa-chevron-right"></i></a>
-                </li>
-            </ul>
-        </nav>
+                    <?php
+                    // Logic to display a reasonable range of page numbers
+                    $start_page = max(1, $currentPage - 1);
+                    $end_page = min($totalPages, $currentPage + 1);
+
+                    if ($totalPages > 3) {
+                        if ($currentPage == 1) $end_page = 3;
+                        if ($currentPage == $totalPages) $start_page = $totalPages - 2;
+                    }
+
+                    for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <li class="page-item <?= ($currentPage == $i) ? 'active' : '' ?>">
+                            <a class="page-link" href="#" data-page="<?= $i ?>" onclick="manualPagination(event, this.dataset.page)"><?= $i ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    
+                    <?php if ($end_page < $totalPages): ?>
+                        <?php if ($end_page < $totalPages - 1): ?>
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        <?php endif; ?>
+                        <li class="page-item <?= ($currentPage == $totalPages) ? 'active' : '' ?>">
+                            <a class="page-link" href="#" data-page="<?= $totalPages ?>" onclick="manualPagination(event, this.dataset.page)"><?= $totalPages ?></a>
+                        </li>
+                    <?php endif; ?>
+
+                    <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                        <a class="page-link" href="#" data-page="<?= $currentPage + 1 ?>" onclick="manualPagination(event, this.dataset.page)" aria-label="Next">Next <i class="fas fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
         <?php endif; ?>
 
     </div>
@@ -1116,28 +1179,30 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         if (!borrowDateStr) {
             expectedReturnDisplay.value = '';
             expectedReturnHidden.value = '';
-            return;
-        }
-
-        // Reformat YYYY-MM-DD input for MM/DD/YYYY display
-        let displayDateStr = borrowDateStr;
-        try {
-            const dateParts = borrowDateStr.split('-');
-            if (dateParts.length === 3) {
-                // Display in MM/DD/YYYY format for user clarity, although the hidden field remains YYYY-MM-DD
-                displayDateStr = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+        } else {
+            // Reformat YYYY-MM-DD input for MM/DD/YYYY display
+            let displayDateStr = borrowDateStr;
+            try {
+                const dateParts = borrowDateStr.split('-');
+                if (dateParts.length === 3) {
+                    // Display in MM/DD/YYYY format for user clarity, although the hidden field remains YYYY-MM-DD
+                    displayDateStr = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+                }
+            } catch (e) {
+                // Use raw string if formatting fails
             }
-        } catch (e) {
-            // Use raw string if formatting fails
-        }
 
-        // 2. Set Return Date = Borrow Date (No Overnight Rule)
-        expectedReturnDisplay.value = displayDateStr; // Display format for user
-        expectedReturnHidden.value = borrowDateStr; // Keep YYYY-MM-DD for PHP validation/database
+            // 2. Set Return Date = Borrow Date (No Overnight Rule)
+            expectedReturnDisplay.value = displayDateStr; // Display format for user
+            expectedReturnHidden.value = borrowDateStr; // Keep YYYY-MM-DD for PHP validation/database
+        }
 
         // Crucial: Update the sticky hidden input in the filter form for date
         document.getElementById('filter_borrow_date_sticky').value = borrowDateStr;
         document.getElementById('filter_expected_return_date_sticky').value = borrowDateStr;
+        
+        // Update submit button state after date/type change
+        updateRequestDisplay();
     }
 
     // --- Function to handle visual selection and update hidden field (Sticky Fix) ---
@@ -1145,6 +1210,11 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         const typeHiddenInput = document.getElementById('type_hidden');
         const filterTypeHiddenInput = document.getElementById('filter_type_sticky');
         const buttons = document.querySelectorAll('.type-btn');
+        const borrowDateInput = document.getElementById('borrow_date');
+
+        // Capture current date for re-stickiness
+        const currentBorrowDate = borrowDateInput.value;
+
 
         // Toggle logic
         if (typeHiddenInput.value === typeValue) {
@@ -1152,6 +1222,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
             typeHiddenInput.value = '';
             filterTypeHiddenInput.value = '';
             buttons.forEach(btn => btn.classList.remove('selected'));
+            
+            // Do NOT clear the date input here, as requested
+            // borrowDateInput.value = ''; 
         } else {
             // If unselected or different, set the new value
             buttons.forEach(btn => {
@@ -1163,6 +1236,13 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
             });
             typeHiddenInput.value = typeValue;
             filterTypeHiddenInput.value = typeValue;
+            
+            // RETAIN the current date in the input field, even if it's invalid for the new type.
+            // Validation on submission will handle correctness.
+            // Note: If the field was empty, it remains empty. If it had a value (sticky or manual), it keeps it.
+            // If the user selects 'Borrow', the date must be today's date for validation to pass on the server.
+            // If the user selects 'Reserve', the date must be future (up to 3 days) for validation to pass on the server.
+            // We removed the line that clears the date: borrowDateInput.value = ''; 
         }
 
         updateExpectedReturnDate();
@@ -1184,18 +1264,25 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         const name = input.getAttribute('data-apparatus-name');
         const maxQty = parseInt(input.getAttribute('data-max-qty'));
         const typeSelected = document.getElementById('type_hidden').value;
+        const borrowDate = document.getElementById('borrow_date').value;
         const qtyErrorBody = document.getElementById('qtyErrorModalBody');
 
         // This check remains: The button is disabled by PHP/JS if the whole borrowing mechanism is locked.
         const submitButton = document.getElementById('submitButton');
         if (submitButton.disabled && submitButton.getAttribute('data-is-locked') === 'true') {
+            // We show the warning modal if they try to add while locked
+            document.getElementById('lockWarningModalBody').innerHTML = submitButton.getAttribute('data-lock-reason').replace(/\*\*/g, '<strong>');
+            lockWarningModal.show();
             return;
         }
 
-        if (typeSelected === '') {
-            typeErrorModal.show();
-            return;
+        if (typeSelected === '' || borrowDate === '') {
+             document.getElementById('typeErrorModalLabel').textContent = "🚨 Required Form Data";
+             document.getElementById('typeErrorModal').querySelector('.modal-body p').innerHTML = "Please select a request Type AND fill in the Borrow/Reserve Date before adding items.";
+             typeErrorModal.show();
+             return;
         }
+
         if (qty <= 0 || isNaN(qty)) {
             qtyErrorBody.textContent = "Please enter a quantity greater than zero.";
             qtyErrorModal.show();
@@ -1251,6 +1338,9 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
         const filterHiddenInput = document.getElementById('filter_request_array_json_sticky');
         const requestCountSpan = document.getElementById('request-count');
         const submitButton = document.getElementById('submitButton');
+        const typeSelected = document.getElementById('type_hidden').value;
+        const borrowDate = document.getElementById('borrow_date').value;
+
 
         displayDiv.innerHTML = '';
 
@@ -1279,15 +1369,18 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
             requestCountSpan.textContent = totalQty;
         }
 
-        // --- SUBMIT BUTTON STATE LOGIC ---
+        // --- SUBMIT BUTTON STATE LOGIC (MODIFIED) ---
         const isLockedByPHP = submitButton.getAttribute('data-is-locked') === 'true';
+        // Removed client-side form completion checks like termsAgreed, hasItems, and formFieldsComplete.
+        
+        // The button should ONLY be disabled if the user is locked by PHP.
+        let shouldBeDisabled = isLockedByPHP;
 
-        if (isLockedByPHP) {
-            submitButton.disabled = true;
-            submitButton.classList.add('disabled');
+        submitButton.disabled = shouldBeDisabled;
+        if (shouldBeDisabled) {
+             submitButton.classList.add('disabled');
         } else {
-            submitButton.disabled = false;
-            submitButton.classList.remove('disabled');
+             submitButton.classList.remove('disabled');
         }
         // --- END SUBMIT BUTTON STATE LOGIC ---
     }
@@ -1405,11 +1498,11 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                     let iconClass = 'fas fa-info-circle text-secondary';
                     if (notif.message.includes('rejected') || notif.message.includes('OVERDUE')) {
-                           iconClass = 'fas fa-exclamation-triangle text-danger';
+                             iconClass = 'fas fa-exclamation-triangle text-danger';
                     } else if (notif.message.includes('approved') || notif.message.includes('confirmed in good')) {
-                           iconClass = 'fas fa-check-circle text-success';
+                             iconClass = 'fas fa-check-circle text-success';
                     } else if (notif.message.includes('sent') || notif.message.includes('awaiting') || notif.message.includes('Return requested')) {
-                           iconClass = 'fas fa-hourglass-half text-warning';
+                             iconClass = 'fas fa-hourglass-half text-warning';
                     }
 
                     const is_read = notif.is_read == 1;
@@ -1422,7 +1515,7 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
                     // Insert the item into the placeholder div
                     $placeholder.append(`
-                            <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}"
+                             <a class="dropdown-item d-flex align-items-center dynamic-notif-item ${itemClass}"
                                  href="${link}"
                                  data-id="${notif.id}"
                                  data-is-read="${notif.is_read}"
@@ -1434,12 +1527,12 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                                  </div>
                                  ${notif.is_read == 0 ?
                                      `<button type="button" class="mark-read-hover-btn"
-                                             title="Mark as Read"
-                                             data-id="${notif.id}"
-                                             onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
-                                         <i class="fas fa-check-circle"></i>
-                                     </button>` : ''}
-                            </a>
+                                              title="Mark as Read"
+                                              data-id="${notif.id}"
+                                              onclick="event.stopPropagation(); window.markSingleAlertAndGo(event, this, true)">
+                                             <i class="fas fa-check-circle"></i>
+                                           </button>` : ''}
+                             </a>
                      `);
                 });
             } else {
@@ -1465,6 +1558,13 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
 
         const borrowDateInput = document.getElementById('borrow_date');
         borrowDateInput.addEventListener('change', updateExpectedReturnDate);
+        
+        // Add listener for terms agreement to enable/disable submit button
+        document.getElementById('agree_terms').addEventListener('change', updateRequestDisplay);
+        
+        // Add listener for borrow date input to enable/disable submit button
+        document.getElementById('borrow_date').addEventListener('change', updateRequestDisplay);
+
 
         // CRITICAL FIX 1A: Ensure the expected return date is calculated/displayed on load
         updateExpectedReturnDate();
@@ -1538,14 +1638,14 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                 sidebar.classList.toggle('active');
                 if (window.innerWidth <= 992) {
                      if (sidebar.classList.contains('active')) {
-                        document.body.style.overflow = 'hidden'; 
-                        mainWrapper.addEventListener('click', closeSidebarOnce);
-                        topHeaderBar.addEventListener('click', closeSidebarOnce);
-                    } else {
-                        document.body.style.overflow = 'auto'; 
-                        mainWrapper.removeEventListener('click', closeSidebarOnce);
-                        topHeaderBar.removeEventListener('click', closeSidebarOnce); 
-                    }
+                         document.body.style.overflow = 'hidden'; 
+                         mainWrapper.addEventListener('click', closeSidebarOnce);
+                         topHeaderBar.addEventListener('click', closeSidebarOnce);
+                     } else {
+                         document.body.style.overflow = 'auto'; 
+                         mainWrapper.removeEventListener('click', closeSidebarOnce);
+                         topHeaderBar.removeEventListener('click', closeSidebarOnce); 
+                     }
                 }
             });
             
@@ -1563,10 +1663,10 @@ $activeCount = $transaction->getActiveTransactionCount($student_id);
                  link.addEventListener('click', () => {
                      // Check if we are on a mobile view before closing
                      if (window.innerWidth <= 992) {
-                        setTimeout(() => {
+                         setTimeout(() => {
                              sidebar.classList.remove('active');
                              document.body.style.overflow = 'auto';
-                        }, 100); // Small delay to allow navigation
+                         }, 100); // Small delay to allow navigation
                      }
                  });
             });

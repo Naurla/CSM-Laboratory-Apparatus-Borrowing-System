@@ -1,30 +1,29 @@
 <?php
-// File: WD123/api/get_student_alerts.php
-
+// Set up session and response header
 session_start();
 header('Content-Type: application/json');
 
-// We need a class that can provide the database connection (Database.php is usually sufficient)
+// Load database connection class
 require_once '../classes/Database.php'; 
 $db = new Database(); 
 $db_conn = $db->connect(); 
 
-// --- Authentication Check ---
+// Enforce student authentication
 if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'student') {
-    echo json_encode(['count' => 0, 'notifications' => []]);
     http_response_code(403);
+    echo json_encode(['count' => 0, 'notifications' => []]);
     exit;
 }
 
 $current_student_id = $_SESSION['user']['id']; 
 
 $response = [
-    'count' => 0,          // Count of unread notifications
-    'notifications' => []  // List of notifications
+    'count' => 0,        // Count of unread notifications
+    'notifications' => [] // List of notifications
 ];
 
 try {
-    // 1. Fetch the 5 most recent unread notifications for the logged-in student
+    // Fetch up to 5 most recent unread notifications for the student
     $notif_sql = "SELECT message, link, created_at FROM notifications 
                   WHERE user_id = :user_id AND is_read = 0 
                   ORDER BY created_at DESC 
@@ -35,14 +34,15 @@ try {
     $notif_stmt->execute();
     $notifications = $notif_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Set the count and notifications array
+    // Set the count and notification data in the response
     $response['count'] = count($notifications);
     $response['notifications'] = $notifications;
     
-    // Return the combined response as JSON
+    // Return the successful JSON response
     echo json_encode($response);
 
 } catch (PDOException $e) {
+    // Handle database errors
     error_log("Student Alert fetch error: " . $e->getMessage());
     echo json_encode(['count' => 0, 'notifications' => []]);
 }

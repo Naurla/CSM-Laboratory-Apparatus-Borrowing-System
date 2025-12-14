@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_details'])) {
         $result = $transaction->updateApparatusDetailsAndStock($id, $name, $type, $size, $material, $description, $total_stock, $damaged_stock, $lost_stock, $new_image_name);
         
         if ($result === 'stock_too_low') { // Handle specific stock error from Transaction class (redundant due to client check, but kept for safety)
-             $message = "❌ Update failed: Cannot reduce total stock below the number of items currently borrowed/reserved.";
+               $message = "❌ Update failed: Cannot reduce total stock below the number of items currently borrowed/reserved.";
         } elseif ($result === true) {
             $message = "✅ Apparatus #$id ('{$name}') updated successfully!";
             // Redirect to clean URL after success
@@ -323,20 +323,38 @@ if ($edit_id) {
 }  
 
 
-// --- Search and Filter Logic---  
+// --- Search, Filter, and Sort Logic (UPDATED) ---  
 $filter_status = $_GET['status'] ?? 'all';
+// NEW: Apparatus Type Multi-Select Filter
+$filter_types = $_GET['apparatus_type'] ?? [];
+if (!is_array($filter_types)) {
+    $filter_types = [$filter_types]; // Ensure it's an array if only one is selected or it's a string
+}
+
 $search_query = $_GET['search'] ?? '';  
+
+// NEW: Sort parameters
+$sort_by = $_GET['sort_by'] ?? 'id'; // Default sort
+$sort_order = $_GET['sort_order'] ?? 'asc'; // Default order
 
 // We use the updated getAllApparatus() to get the full list
 $apparatusList = $transaction->getAllApparatus();
 
+// 1. Filter by Status
 if ($filter_status !== 'all') {
     $apparatusList = array_filter($apparatusList, function($item) use ($filter_status) {
-        // This checks the aggregated status field in apparatus_type, which is correct
         return strtolower($item['status']) === strtolower($filter_status);
     });
 }
 
+// 2. Filter by Apparatus Type (Multi-Select)
+if (!empty($filter_types) && !in_array('all', $filter_types)) {
+    $apparatusList = array_filter($apparatusList, function($item) use ($filter_types) {
+        return in_array($item['apparatus_type'], $filter_types);
+    });
+}
+
+// 3. Filter by Search Query
 if (!empty($search_query)) {
     $search_query_lower = strtolower($search_query);
     $apparatusList = array_filter($apparatusList, function($item) use ($search_query_lower) {
@@ -348,6 +366,114 @@ if (!empty($search_query)) {
         );
     });
 }
+
+// 4. Sorting Logic (Multi-Sortable)
+$sort_fields = [
+    'id' => 'id',
+    'name' => 'name',
+    'stock' => 'total_stock',
+];
+
+if (isset($sort_fields[$sort_by])) {
+    $field = $sort_fields[$sort_by];
+    $is_numeric = in_array($sort_by, ['id', 'stock']);
+    $multiplier = ($sort_order === 'asc') ? 1 : -1;
+
+    usort($apparatusList, function($a, $b) use ($field, $is_numeric, $multiplier) {
+        $a_val = $a[$field];
+        $b_val = $b[$field];
+
+        if ($is_numeric) {
+            return ($a_val <=> $b_val) * $multiplier;
+        } else {
+            return strcasecmp($a_val, $b_val) * $multiplier;
+        }
+    });
+}
+
+
+// --- START PAGINATION LOGIC ---
+$items_per_page = 10; // Define how many items per page
+$total_items = count($apparatusList); // Total items AFTER filtering/searching/sorting
+$total_pages = ceil($total_items / $items_per_page); // Calculate total pages
+
+// Get current page from URL, default to 1, or clamp between 1 and total_pages
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($current_page < 1) $current_page = 1;
+if ($current_page > $total_pages) $current_page = max(1, $total_pages); // Ensure it's at least 1
+
+// Calculate the offset for array_slice
+$offset = ($current_page - 1) * $items_per_page;
+
+// Slice the array to get only the items for the current page
+$paginatedApparatusList = array_slice($apparatusList, $offset, $items_per_page);
+
+// Function to construct the base URL with current filters/search (excluding 'page')
+function getBaseUrl($currentPage = 1, $remove_param = null) {
+    $params = $_GET;
+    $params['page'] = $currentPage;
+    // Keep 'edit_id' out of base URL construction if it exists, to keep page clean.
+    unset($params['edit_id']);
+    // 'message' is also typically excluded for clean navigation.
+    unset($params['message']);
+    
+    // Allow removing a specific parameter (useful for clearing search or a single type filter)
+    if ($remove_param && isset($params[$remove_param])) {
+        unset($params[$remove_param]);
+    }
+    
+    // NEW: Handle array parameters for apparatus_type
+    $query = http_build_query($params);
+    
+    // Special handling for the type filter array if present
+    if (isset($_GET['apparatus_type']) && is_array($_GET['apparatus_type']) && !empty($_GET['apparatus_type'])) {
+        // Re-encode array parameters manually if needed to ensure correct format (http_build_query should handle this, but for explicit control)
+        // Check if the parameter is already represented in the query string and replace
+        $type_params = http_build_query(['apparatus_type' => $_GET['apparatus_type']]);
+        if (str_contains($query, 'apparatus_type%5B%5D=')) {
+            // Remove old type array serialization and append new one
+            $query = preg_replace('/apparatus_type%5B%5D=[^&]*/', '', $query);
+            // Clean up double ampersands
+            $query = str_replace('&&', '&', $query);
+            $query = rtrim($query, '&');
+            if ($query) $query .= '&';
+            $query .= $type_params;
+        }
+    }
+    
+    return 'staff_apparatus.php?' . $query;
+}
+
+// Function to construct the URL for sorting
+function getSortUrl($column) {
+    global $sort_by, $sort_order, $filter_status, $search_query, $filter_types;
+    $new_order = 'asc';
+    if ($sort_by === $column && $sort_order === 'asc') {
+        $new_order = 'desc';
+    }
+    
+    $params = [
+        'status' => $filter_status,
+        'search' => $search_query,
+        'sort_by' => $column,
+        'sort_order' => $new_order
+    ];
+    
+    // Add type filters back as array
+    if (!empty($filter_types)) {
+        $params['apparatus_type'] = $filter_types;
+    }
+    
+    // Filter out empty params
+    $params = array_filter($params, fn($value) => $value !== null && $value !== '');
+
+    return 'staff_apparatus.php?' . http_build_query($params);
+}
+
+// Get all unique apparatus types for the filter options
+$allApparatusTypes = $transaction->getUniqueApparatusTypes(); // Assuming a method exists in Transaction class to fetch unique types
+
+// --- END PAGINATION LOGIC ---
 ?>
 
 <!DOCTYPE html>
@@ -696,6 +822,17 @@ if (!empty($search_query)) {
         padding: 10px 5px;
         white-space: nowrap;
     }
+    /* Style for sortable columns */
+    .table thead th.sortable {
+        cursor: pointer;
+    }
+    .table thead th .sort-icon {
+        margin-left: 5px;
+        opacity: 0.6;
+    }
+    .table thead th.sorted .sort-icon {
+        opacity: 1;
+    }
     .table tbody td {
         vertical-align: middle;
         font-size: 0.95rem;
@@ -798,6 +935,76 @@ if (!empty($search_query)) {
     /* NEW: Edit Stock Modal Header */
     #editStockConfirmModal .modal-header { background-color: #17a2b8; color: white; }
 
+    /* --- Pagination UI Improvement (Matches Image) --- */
+    /* FIX: Change flex-column to flex-wrap and justify-content */
+    .pagination-container {
+        padding: 10px 0;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between; /* Spread items across the container */
+        align-items: center;
+        flex-wrap: wrap; /* Allows stacking on small screens */
+    }
+
+    .pagination {
+        --bs-pagination-font-size: 0.95rem; /* Slightly larger text */
+    }
+
+    /* DEFAULT STATE (Next, Numbers, etc.): White bg, Red text */
+    .pagination .page-item .page-link {
+        color: var(--msu-red); /* Red text */
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* HOVER STATE */
+    .pagination .page-item .page-link:hover {
+        color: var(--msu-red-dark);
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    /* ACTIVE STATE (The '1' in the image): Red bg, White text */
+    .pagination .page-item.active .page-link {
+        background-color: var(--msu-red) !important;
+        border-color: var(--msu-red) !important;
+        color: white !important;
+        z-index: 1;
+    }
+
+    /* DISABLED STATE (The 'Previous' button in the image): Gray bg */
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    .pagination-info {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+        margin-top: 10px; /* Keep margin for vertical spacing on smaller screens */
+    }
+    
+    /* NEW: Multi-select dropdown styling fix for BS5 */
+    .dropdown-menu-checkbox .dropdown-item {
+        cursor: pointer;
+        padding: 0.25rem 1rem;
+    }
+    .dropdown-menu-checkbox .dropdown-item.active {
+        background-color: #f8f9fa; /* Light background for selected item */
+        color: #212529; /* Dark text */
+        font-weight: 600;
+    }
+    .dropdown-menu-checkbox .form-check-input {
+        margin-right: 0.5rem;
+    }
 
     /* --- RESPONSIVE ADJUSTMENTS --- */
     @media (max-width: 1200px) {
@@ -901,6 +1108,19 @@ if (!empty($search_query)) {
         .action-buttons-group:last-child .btn-icon-only {
             flex-grow: 1;
             width: auto;
+        }
+
+        /* Pagination on smaller screens should stack for space */
+        .pagination-container {
+            flex-direction: column;
+            align-items: center;
+        }
+        .pagination-info {
+            order: 2; /* Move info below pagination nav */
+        }
+        .pagination {
+            order: 1;
+            margin-bottom: 10px;
         }
     }
     
@@ -1242,7 +1462,7 @@ if (!empty($search_query)) {
                 </a>
             <?php else: ?>
                 <button  
-                    class="btn btn-success"  
+                    class="btn btn-primary"  
                     type="button"  
                     data-bs-toggle="collapse"  
                     data-bs-target="#addApparatusCollapse"  
@@ -1462,27 +1682,81 @@ if (!empty($search_query)) {
         
         <h3><i class="fas fa-list me-2"></i> Apparatus Inventory</h3>
         
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
             
-            <form method="GET" class="filter-form d-flex align-items-center mb-0">
-                <label class="form-label me-2 mb-0 fw-bold text-secondary">Filter:</label>
-                <select name="status" onchange="this.form.submit()" class="form-select form-select-sm w-auto me-3">
-                    <option value="all" <?= $filter_status === 'all' ? 'selected' : '' ?>>Show All</option>
-                    <option value="available" <?= $filter_status === 'available' ? 'selected' : '' ?>>Available</option>
-                    <option value="borrowed" <?= $filter_status === 'borrowed' ? 'selected' : '' ?>>Borrowed</option>
-                    <option value="reserved" <?= $filter_status === 'reserved' ? 'selected' : '' ?>>Reserved</option>
-                    <option value="unavailable" <?= $filter_status === 'unavailable' ? 'selected' : '' ?>>Unavailable</option>
-                </select>
-            </form>
+            <div class="d-flex flex-wrap align-items-center mb-2">
+                <label class="form-label me-2 mb-0 fw-bold text-secondary">Status Filter:</label>
+                <form method="GET" class="filter-form d-flex align-items-center mb-0 me-3">
+                    <input type="hidden" name="search" value="<?= htmlspecialchars($search_query) ?>">
+                    <input type="hidden" name="sort_by" value="<?= htmlspecialchars($sort_by) ?>">
+                    <input type="hidden" name="sort_order" value="<?= htmlspecialchars($sort_order) ?>">
+                    <?php if (!empty($filter_types)): 
+                        foreach($filter_types as $type_val): ?>
+                            <input type="hidden" name="apparatus_type[]" value="<?= htmlspecialchars($type_val) ?>">
+                        <?php endforeach;
+                    endif; ?>
+                    <select name="status" onchange="this.form.submit()" class="form-select form-select-sm w-auto">
+                        <option value="all" <?= $filter_status === 'all' ? 'selected' : '' ?>>Show All Status</option>
+                        <option value="available" <?= $filter_status === 'available' ? 'selected' : '' ?>>Available</option>
+                        <option value="borrowed" <?= $filter_status === 'borrowed' ? 'selected' : '' ?>>Borrowed</option>
+                        <option value="reserved" <?= $filter_status === 'reserved' ? 'selected' : '' ?>>Reserved</option>
+                        <option value="unavailable" <?= $filter_status === 'unavailable' ? 'selected' : '' ?>>Unavailable</option>
+                    </select>
+                </form>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="typeFilterDropdown">
+                        <i class="fas fa-filter me-1"></i> Type (<?= empty($filter_types) || in_array('all', $filter_types) ? 'All' : count($filter_types) ?>)
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-checkbox" aria-labelledby="typeFilterDropdown" id="apparatusTypeFilterMenu">
+                        <a class="dropdown-item" href="staff_apparatus.php?<?= http_build_query(array_filter(['status' => $filter_status, 'search' => $search_query, 'sort_by' => $sort_by, 'sort_order' => $sort_order], fn($value) => $value !== null && $value !== '')) ?>">
+                            <i class="fas fa-times me-2"></i> Clear All Filters
+                        </a>
+                        <li><hr class="dropdown-divider"></li>
+                        <?php foreach ($allApparatusTypes as $appType):  
+                            $isSelected = in_array($appType, $filter_types) && !empty($filter_types);
+                            $checkClass = $isSelected ? 'fa-check-square' : 'fa-square';
+                            $itemClass = $isSelected ? 'active' : '';
+                        ?>
+                            <li onclick="toggleApparatusType('<?= htmlspecialchars($appType) ?>')">
+                                <a class="dropdown-item <?= $itemClass ?>" href="#">
+                                    <i class="far <?= $checkClass ?> me-2"></i> <?= htmlspecialchars($appType) ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <form id="apparatusTypeForm" method="GET" class="d-none">
+                    <input type="hidden" name="status" value="<?= htmlspecialchars($filter_status) ?>">
+                    <input type="hidden" name="search" value="<?= htmlspecialchars($search_query) ?>">
+                    <input type="hidden" name="sort_by" value="<?= htmlspecialchars($sort_by) ?>">
+                    <input type="hidden" name="sort_order" value="<?= htmlspecialchars($sort_order) ?>">
+                    <div id="apparatusTypeHiddenInputs">
+                        <?php if (!empty($filter_types)):
+                            foreach($filter_types as $type_val): ?>
+                                <input type="hidden" name="apparatus_type[]" value="<?= htmlspecialchars($type_val) ?>">
+                            <?php endforeach;
+                        endif; ?>
+                    </div>
+                </form>
+
+            </div>
             
-            <form method="GET" class="d-flex align-items-center mb-0">
+            <form method="GET" class="d-flex align-items-center mb-2">
                 <input type="hidden" name="status" value="<?= htmlspecialchars($filter_status) ?>">
+                <input type="hidden" name="sort_by" value="<?= htmlspecialchars($sort_by) ?>">
+                <input type="hidden" name="sort_order" value="<?= htmlspecialchars($sort_order) ?>">
+                <?php if (!empty($filter_types)): 
+                    foreach($filter_types as $type_val): ?>
+                        <input type="hidden" name="apparatus_type[]" value="<?= htmlspecialchars($type_val) ?>">
+                    <?php endforeach;
+                endif; ?>
                 <div class="input-group input-group-sm">
                     <input type="search" name="search" class="form-control" placeholder="Search by Name, Type, Material..." value="<?= htmlspecialchars($search_query) ?>">
                     <button class="btn btn-outline-secondary" type="submit">
                         <i class="fas fa-search"></i>
                     </button>
-                    <?php if (!empty($search_query) || $filter_status !== 'all'): ?>
+                    <?php if (!empty($search_query) || $filter_status !== 'all' || (!empty($filter_types) && !in_array('all', $filter_types))): ?>
                     <a href="staff_apparatus.php" class="btn btn-outline-danger" title="Clear Filters">
                         <i class="fas fa-times"></i>
                     </a>
@@ -1495,13 +1769,25 @@ if (!empty($search_query)) {
             <table class="table table-striped table-hover align-middle">
                 <thead>
                     <tr>
-                        <th style="width: 4%;">ID</th>
+                        <th style="width: 4%;" class="sortable <?= $sort_by === 'id' ? 'sorted' : '' ?>"  
+                            onclick="window.location.href='<?= getSortUrl('id') ?>'">
+                            ID
+                            <i class="fas fa-sort sort-icon <?= $sort_by === 'id' ? ($sort_order === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'text-muted' ?>"></i>
+                        </th>
                         <th style="width: 7%;">Image</th>
-                        <th style="width: 12%;">Name</th>
+                        <th style="width: 12%;" class="sortable <?= $sort_by === 'name' ? 'sorted' : '' ?>"  
+                            onclick="window.location.href='<?= getSortUrl('name') ?>'">
+                            Name
+                            <i class="fas fa-sort sort-icon <?= $sort_by === 'name' ? ($sort_order === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'text-muted' ?>"></i>
+                        </th>
                         <th style="width: 9%;">Type</th>
                         <th style="width: 6%;">Size</th>
                         <th style="width: 8%;">Material</th>
-                        <th style="width: 7%;">Total Stock</th>  
+                        <th style="width: 7%;" class="sortable <?= $sort_by === 'stock' ? 'sorted' : '' ?>"  
+                            onclick="window.location.href='<?= getSortUrl('stock') ?>'">
+                            Total Stock
+                            <i class="fas fa-sort sort-icon <?= $sort_by === 'stock' ? ($sort_order === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'text-muted' ?>"></i>
+                        </th>  
                         <th style="width: 7%;">Available Stock</th>  
                         <th style="width: 7%;">Damaged Units</th>  
                         <th style="width: 6%;">Lost Units</th>  
@@ -1512,8 +1798,8 @@ if (!empty($search_query)) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (!empty($apparatusList)): ?>
-                        <?php foreach ($apparatusList as $app): ?>
+                    <?php if (!empty($paginatedApparatusList)): ?>
+                        <?php foreach ($paginatedApparatusList as $app): ?>
                             <tr>
                                 <td data-label="ID:"><?= $app['id'] ?></td>
                                 <td data-label="Image:">
@@ -1535,20 +1821,20 @@ if (!empty($search_query)) {
                                 
                                 <td data-label="Description:" class="text-start">
                                     <?php  
-                                            $description = htmlspecialchars($app['description'] ?? '');
-                                            $display_limit = 60;
-                                            $display_text = (strlen($description) > $display_limit) ? substr($description, 0, $display_limit) . '...' : $description;
+                                        $description = htmlspecialchars($app['description'] ?? '');
+                                        $display_limit = 60;
+                                        $display_text = (strlen($description) > $display_limit) ? substr($description, 0, $display_limit) . '...' : $description;
 
-                                            echo '<span  
-                                                        tabindex="0"  
-                                                        role="button"
-                                                        data-bs-toggle="popover"  
-                                                        data-bs-trigger="hover focus"  
-                                                        data-bs-placement="bottom"  
-                                                        data-bs-custom-class="description-popover"  
-                                                        data-bs-title="Full Description"  
-                                                        data-bs-content="' . $description . '">' . $display_text .  
-                                                        '</span>';
+                                        echo '<span  
+                                                     tabindex="0"  
+                                                     role="button"
+                                                     data-bs-toggle="popover"  
+                                                     data-bs-trigger="hover focus"  
+                                                     data-bs-placement="bottom"  
+                                                     data-bs-custom-class="description-popover"  
+                                                     data-bs-title="Full Description"  
+                                                     data-bs-content="' . $description . '">' . $display_text .  
+                                                     '</span>';
                                     ?>
                                 </td>
                                 
@@ -1585,7 +1871,63 @@ if (!empty($search_query)) {
                 </tbody>
             </table>
         </div>
-    </div>
+
+        <div class="pagination-container mt-3 mb-3">
+            
+            <?php if (!empty($apparatusList)): ?>
+            <div class="pagination-info my-2">
+                Displaying <?= $offset + 1 ?> to <?= min($offset + $items_per_page, $total_items) ?> of <?= $total_items ?> items.
+            </div>
+            <?php endif; ?>
+
+            <?php if ($total_pages > 1): ?>
+            <nav aria-label="Apparatus Pagination">
+                <ul class="pagination pagination-sm justify-content-center mb-0 my-2">
+                    
+                    <li class="page-item <?= ($current_page <= 1) ? 'disabled' : '' ?>">
+                        <a class="page-link" href="<?= getBaseUrl($current_page - 1) ?>" aria-label="Previous">
+                            <i class="fas fa-chevron-left me-1" style="font-size: 0.8rem;"></i> Previous
+                        </a>
+                    </li>
+
+                    <?php
+                    $start_page = max(1, $current_page - 2);
+                    $end_page = min($total_pages, $current_page + 2);
+
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><a class="page-link" href="' . getBaseUrl(1) . '">1</a></li>';
+                        if ($start_page > 2) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                    }
+
+                    for ($i = $start_page; $i <= $end_page; $i++):
+                    ?>
+                        <li class="page-item <?= ($i === $current_page) ? 'active' : '' ?>">
+                            <a class="page-link" href="<?= getBaseUrl($i) ?>"><?= $i ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    
+                    <?php
+                    if ($end_page < $total_pages) {
+                        if ($end_page < $total_pages - 1) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                        echo '<li class="page-item"><a class="page-link" href="' . getBaseUrl($total_pages) . '">' . $total_pages . '</a></li>';
+                    }
+                    ?>
+
+                    <li class="page-item <?= ($current_page >= $total_pages) ? 'disabled' : '' ?>">
+                        <a class="page-link" href="<?= getBaseUrl($current_page + 1) ?>" aria-label="Next">
+                            Next <i class="fas fa-chevron-right ms-1" style="font-size: 0.8rem;"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
+            
+        </div>
+        </div>
 </div>
 
 <div class="modal fade" id="deleteApparatusModal" tabindex="-1" aria-labelledby="deleteApparatusModalLabel" aria-hidden="true">
@@ -1597,12 +1939,12 @@ if (!empty($search_query)) {
       </div>
       <form method="POST" id="deleteApparatusForm">
           <div class="modal-body">
-              <p>You are about to permanently delete <span id="apparatusName" class="fw-bold"></span> (ID: <span id="apparatusId" class="fw-bold"></span>) from the inventory.</p>
-              <p class="fw-bold text-danger">WARNING: This action is irreversible. The apparatus record and its image file will be permanently removed.</p>
-              
-              <input type="hidden" name="apparatus_id" id="modalApparatusId">
-              <input type="hidden" name="apparatus_image" id="modalApparatusImage">
-              <input type="hidden" name="delete_apparatus" value="1">
+            <p>You are about to permanently delete <span id="apparatusName" class="fw-bold"></span> (ID: <span id="apparatusId" class="fw-bold"></span>) from the inventory.</p>
+            <p class="fw-bold text-danger">WARNING: This action is irreversible. The apparatus record and its image file will be permanently removed.</p>
+            
+            <input type="hidden" name="apparatus_id" id="modalApparatusId">
+            <input type="hidden" name="apparatus_image" id="modalApparatusImage">
+            <input type="hidden" name="delete_apparatus" value="1">
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -1621,7 +1963,7 @@ if (!empty($search_query)) {
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-          <p>You are about to change the stock counts for **<span id="editConfirmName" class="fw-bold"></span>**.</p>
+          <p>You are about to change the stock counts for <span id="editConfirmName" class="fw-bold"></span>.</p>
           
           <div id="edit-change-summary">
               </div>
@@ -1658,6 +2000,82 @@ if (!empty($search_query)) {
 <script>
     // Global variable to hold the ID of the unit currently being restored
     let currentUnitIdToRestore = null;
+    
+    // --- START: JAVASCRIPT FOR MULTI-SELECT TYPE FILTER ---
+    window.toggleApparatusType = function(typeValue) {
+        const form = document.getElementById('apparatusTypeForm');
+        const hiddenInputsContainer = document.getElementById('apparatusTypeHiddenInputs');
+        const existingInput = hiddenInputsContainer.querySelector(`input[name="apparatus_type[]"][value="${typeValue}"]`);
+        
+        // Remove existing inputs to rebuild the list
+        const existingInputs = Array.from(hiddenInputsContainer.querySelectorAll('input[name="apparatus_type[]"]'));
+        existingInputs.forEach(input => input.remove());
+        
+        let selectedTypes = [];
+        // Extract current selected types from the GET parameters if any
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.getAll('apparatus_type[]').forEach(type => {
+            if (type !== typeValue) {
+                selectedTypes.push(type);
+            }
+        });
+        
+        // If the clicked type was NOT found, it means it was added
+        if (!existingInput) {
+            selectedTypes.push(typeValue);
+        }
+        
+        // Rebuild the hidden inputs
+        selectedTypes.forEach(type => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'apparatus_type[]';
+            input.value = type;
+            hiddenInputsContainer.appendChild(input);
+        });
+        
+        // Submit the form to apply the filter
+        form.submit();
+    };
+
+    // Update the visual state of the dropdown on load (to persist checks)
+    document.addEventListener('DOMContentLoaded', () => {
+        const typeFilterMenu = document.getElementById('apparatusTypeFilterMenu');
+        if (typeFilterMenu) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedTypes = urlParams.getAll('apparatus_type[]');
+            
+            // Loop through all list items in the dropdown (skipping the "Clear All" link and divider)
+            typeFilterMenu.querySelectorAll('li[onclick]').forEach(li => {
+                const typeValue = li.getAttribute('onclick').match(/'([^']+)'/)[1];
+                const link = li.querySelector('a');
+                const icon = li.querySelector('i');
+                
+                if (selectedTypes.includes(typeValue)) {
+                    link.classList.add('active');
+                    icon.classList.remove('fa-square');
+                    icon.classList.add('fa-check-square');
+                } else {
+                    link.classList.remove('active');
+                    icon.classList.remove('fa-check-square');
+                    icon.classList.add('fa-square');
+                }
+            });
+            
+            // Update the display text of the button
+            const typeFilterDropdown = document.getElementById('typeFilterDropdown');
+            if (typeFilterDropdown) {
+                let count = selectedTypes.length;
+                if (count === 0 || selectedTypes.includes('all')) {
+                    typeFilterDropdown.innerHTML = '<i class="fas fa-filter me-1"></i> Type (All)';
+                } else {
+                    typeFilterDropdown.innerHTML = `<i class="fas fa-filter me-1"></i> Type (${count})`;
+                }
+            }
+        }
+    });
+
+    // --- END: JAVASCRIPT FOR MULTI-SELECT TYPE FILTER ---
     
     // --- START: JAVASCRIPT FOR EDIT FORM CONFIRMATION MODAL ---
 
@@ -1706,13 +2124,13 @@ if (!empty($search_query)) {
         let changes = [];
 
         if (newTotal !== originalTotal) {
-            changes.push(`**Total Stock**: changed from <span class="text-danger">${originalTotal}</span> to <span class="text-success">${newTotal}</span>.`);
+            changes.push(`Total Stock: changed from <span class="text-danger">${originalTotal}</span> to <span class="text-success">${newTotal}</span>.`);
         }
         if (newDamaged !== originalDamaged) {
-            changes.push(`**Damaged Stock**: changed from <span class="text-warning">${originalDamaged}</span> to <span class="text-warning">${newDamaged}</span>.`);
+            changes.push(`Damaged Stock: changed from <span class="text-warning">${originalDamaged}</span> to <span class="text-warning">${newDamaged}</span>.`);
         }
         if (newLost !== originalLost) {
-            changes.push(`**Lost Stock**: changed from <span class="text-danger">${originalLost}</span> to <span class="text-danger">${newLost}</span>.`);
+            changes.push(`Lost Stock**: changed from <span class="text-danger">${originalLost}</span> to <span class="text-danger">${newLost}</span>.`);
         }
 
         // 4. Update the Modal Content
@@ -1840,7 +2258,7 @@ if (!empty($search_query)) {
     
     // 2. Function to handle single notification click (Mark as read + navigate)
     window.handleNotificationClick = function(event, element, notificationId) {
-        event.preventDefault(); 
+        event.preventDefault();  
         const linkHref = element.getAttribute('href');
 
         // Explicitly close the Bootstrap Dropdown
@@ -1865,23 +2283,23 @@ if (!empty($search_query)) {
 
     // 3. Function to fetch the count and populate the dropdown
     function fetchStaffNotifications() {
-        const apiPath = '../api/get_notifications.php'; 
+        const apiPath = '../api/get_notifications.php';  
 
-        $.getJSON(apiPath, function(response) { 
+        $.getJSON(apiPath, function(response) {  
             
-            const unreadCount = response.count; 
-            const notifications = response.alerts || []; 
+            const unreadCount = response.count;  
+            const notifications = response.alerts || [];  
             
             const $badge = $('#notification-bell-badge');
             const $markAllLink = $('#mark-all-link'); // Get the static HTML element
             const $dropdown = $('#notification-dropdown');
             
             // Clear previous dynamic items
-            $dropdown.find('.dynamic-notif-item').remove(); 
+            $dropdown.find('.dynamic-notif-item').remove();  
             
             // 1. Update the Badge Count
             $badge.text(unreadCount);
-            $badge.toggle(unreadCount > 0); 
+            $badge.toggle(unreadCount > 0);  
             
             // 2. Control visibility of the static Mark All link
             if (unreadCount > 0) {
@@ -1898,11 +2316,11 @@ if (!empty($search_query)) {
             if (notifications.length > 0) {
                 notifications.slice(0, 5).forEach(notif => {
                     
-                    let iconClass = 'fas fa-info-circle text-info'; 
+                    let iconClass = 'fas fa-info-circle text-info';  
                     if (notif.type.includes('form_pending')) {
-                            iconClass = 'fas fa-hourglass-half text-warning';
+                             iconClass = 'fas fa-hourglass-half text-warning';
                     } else if (notif.type.includes('checking')) {
-                            iconClass = 'fas fa-redo text-primary';
+                             iconClass = 'fas fa-redo text-primary';
                     }
                     
                     const is_read = notif.is_read == 1;
@@ -1911,7 +2329,7 @@ if (!empty($search_query)) {
 
 
                     $placeholder.append(`
-                             <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
+                             <a class="dropdown-item d-flex align-items-center dynamic-notif-item"  
                                  href="${targetLink}"
                                  data-id="${notif.id}"
                                  onclick="handleNotificationClick(event, this, ${notif.id})">
@@ -1972,7 +2390,7 @@ if (!empty($search_query)) {
                 sidebar.classList.remove('closed');
                 sidebar.classList.remove('active');
                 if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-                if (menuToggle) menuToggle.style.display = 'flex'; 
+                if (menuToggle) menuToggle.style.display = 'flex';  
             }
         }
         
@@ -1984,7 +2402,7 @@ if (!empty($search_query)) {
                     sidebarBackdrop.style.display = isActive ? 'block' : 'none';
                     sidebarBackdrop.style.opacity = isActive ? '1' : '0';
                 }
-            } 
+            }  
         }
 
         if (menuToggle && sidebar) {

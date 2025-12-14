@@ -607,7 +607,7 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                 
                 <div class="filter-row mb-3">
                     <div class="filter-column col-span-1">
-                        <label for="report_view_type_select" class="form-label fw-bold">**Select Report View Type**</label>
+                        <label for="report_view_type_select" class="form-label fw-bold">Select Report View Type</label>
                         <select name="report_view_type" id="report_view_type_select" class="form-select">
                             <option value="all" <?= ($report_view_type === 'all') ? 'selected' : '' ?>>View/Print: All Sections (Hub View)</option>
                             <option value="summary" <?= ($report_view_type === 'summary') ? 'selected' : '' ?>>View/Print: Transaction Summary Only</option>
@@ -687,7 +687,7 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                             <option value="approved" <?= ($status_filter === 'approved') ? 'selected' : '' ?>>Reserved (Approved)</option>
                             <option value="borrowed" <?= ($status_filter === 'borrowed') ? 'selected' : '' ?>>Currently Borrowed</option>
                             <option value="borrowed_reserved" <?= ($status_filter === 'borrowed_reserved') ? 'selected' : '' ?>>All Active/Completed Forms</option>
-                            <option value="overdue" <?= ($status_filter === 'overdue') ? 'selected' : '' ?>>** Overdue **</option>
+                            <option value="overdue" <?= ($status_filter === 'overdue') ? 'selected' : '' ?>> Overdue </option>
                             <option value="returned" <?= ($status_filter === 'returned') ? 'selected' : '' ?>>Returned (On Time)</option>
                             <option value="late_returns" <?= ($status_filter === 'late_returns') ? 'selected' : '' ?>>Returned (LATE)</option>
                             <option value="damaged" <?= ($status_filter === 'damaged') ? 'selected' : '' ?>>Damaged/Lost</option>
@@ -717,7 +717,7 @@ $uniqueApparatusTypes = array_unique(array_column($allApparatus, 'apparatus_type
                     </div>
                 </div>
             </form>
-            <p class="text-muted small mt-3 mb-0">Note: Filters apply to either the **Detailed Transaction History** or **Detailed Apparatus List** based on your selected view type.</p>
+            <p class="text-muted small mt-3 mb-0">Note: Filters apply to either the Detailed Transaction History or Detailed Apparatus List based on your selected view type.</p>
         </div>
         
         <div class="report-section print-summary print-target" id="report-summary">

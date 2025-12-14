@@ -76,18 +76,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
-        /* --- THEME MATCHING (Consistent Theme) --- */
         
         :root {
-            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
-            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --primary-color: #A40404; 
+            --secondary-color: #f4b400; 
             --text-dark: #2c3e50;
             --text-light: #ecf0f1;
         }
 
-        /* Global Styles */
+      
         body {
-            /* Consistent background image and overlay */
+          
             background: 
                 linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
                 url("../uploads/Western_Mindanao_State_University_College_of_Teacher_Education_(Normal_Road,_Baliwasan,_Zamboanga_City;_10-06-2023).jpg") 
@@ -108,22 +107,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Card Container - Consistent with login.php */
+        
         .card {
             background: rgba(255, 255, 255, 0.98);
             padding: 50px;
             border-radius: 12px; 
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); 
             width: 100%;
-            max-width: 420px; /* Consistent card width */
+            max-width: 420px; 
             text-align: center;
             z-index: 10;
             animation: fadeIn 0.8s ease-out;
         }
 
-        /* Logo and Title */
+        
         .logo {
-            width: 100px; /* Consistent logo size */
+            width: 100px; 
             margin: 0 auto 5px auto;
         }
         .app-title {
@@ -148,7 +147,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             line-height: 1.5;
         }
 
-        /* Form Elements - Consistent with login.php */
+        
         .input-group {
             margin-bottom: 25px;
             text-align: left;
@@ -163,7 +162,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         input[type="email"] {
             width: 100%;
             padding: 12px 15px; 
-            height: 48px; /* Consistent height */
+            height: 48px; 
             border: 1px solid #ddd; 
             border-radius: 6px; 
             box-sizing: border-box;
@@ -179,14 +178,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: #aaa;
         }
 
-        /* Button - Consistent with login.php CTA */
+        
         .btn-continue {
             width: 100%;
             padding: 15px;
             background-color: var(--primary-color); 
             color: white;
             border: none;
-            border-radius: 50px; /* Pill shape */
+            border-radius: 50px; 
             cursor: pointer;
             font-size: 1.1rem;
             font-weight: 700;
@@ -204,7 +203,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             transform: translateY(0);
         }
 
-        /* Alerts - Replicating styles from reset_password.php */
+        
         .alert {
             padding: 15px;
             border-radius: 6px;
@@ -219,17 +218,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background-color: #f8d7da;
             border: 1px solid #f5c6cb;
         }
-        .alert-security { /* Used for the generic "check your email" message */
+        .alert-security { 
             color: #004085;
             background-color: #cce5ff;
             border: 1px solid #b8daff;
         }
 
-        /* Back Link - Consistent with login.php */
+        
         .back-link {
             display: inline-block; 
             margin-top: 25px;
-            color: var(--text-dark); /* Use dark text for "Back to Login" */
+            color: var(--text-dark); 
             text-decoration: none;
             font-size: 0.9em; 
             font-weight: 500;

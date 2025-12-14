@@ -1077,11 +1077,11 @@ $pendingForms = $transaction->getPendingForms();
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                This item is **LATE**. Confirming LATE RETURN will:
+                This item is LATE. Confirming LATE RETURN will:
                 <ul>
-                    <li>Mark the item status as **RETURNED**.</li>
-                    <li>**Clear** any existing student bans related to this transaction.</li>
-                    <li>Set the internal **LATE RETURN flag** for penalty tracking.</li>
+                    <li>Mark the item status as RETURNED.</li>
+                    <li>Clear any existing student bans related to this transaction.</li>
+                    <li>Set the internal LATE RETURN flag for penalty tracking.</li>
                     
                 </ul>
                 <p class="text-danger fw-bold mb-0">Please ensure the items are accounted for before proceeding.</p>
@@ -1103,11 +1103,11 @@ $pendingForms = $transaction->getPendingForms();
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                You are about to **MANUALLY MARK** this transaction as **OVERDUE**. This action:
+                You are about to MANUALLY MARK this transaction as OVERDUE. This action:
                 <ul>
-                    <li>Applies a **ban** to the borrowing student.</li>
-                    <li>**Restores units** to the inventory (assuming loss/missing).</li>
-                    <li>Is typically used ONLY for **missing items** that were not returned past the due date.</li>
+                    <li>Applies a ban to the borrowing student.</li>
+                    <li>Restores units to the inventory (assuming loss/missing).</li>
+                    <li>Is typically used ONLY for missing items that were not returned past the due date.</li>
                 </ul>
                 <p class="text-danger fw-bold mb-0">Use this action with extreme caution.</p>
                 <input type="hidden" id="modal_overdue_form_id">

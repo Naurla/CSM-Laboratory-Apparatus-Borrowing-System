@@ -33,8 +33,8 @@ function markNotificationAsRead($db_conn, $form_id, $staff_id) {
     // This function is generally deprecated by $transaction->clearNotificationsByFormId
     $form_link_pattern = "%staff_pending.php?view={$form_id}%";
     $mark_read_sql = "UPDATE notifications SET is_read = 1
-                      WHERE link LIKE :form_link_pattern
-                      AND user_id = :staff_id";
+                     WHERE link LIKE :form_link_pattern
+                     AND user_id = :staff_id";
 
     $mark_read_stmt = $db_conn->prepare($mark_read_sql);
     $mark_read_stmt->bindParam(":staff_id", $staff_id, PDO::PARAM_INT);
@@ -254,7 +254,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
                 // ------------------------------------
             } else { $message = "❌ Failed to mark as damaged due to a database error."; $is_success = false; }
-        } else { $message = "❌ Error: Please select a specific item unit to mark as damaged."; $is_success = false; }
+        } else { 
+            // NOTE: The error modal on the client side should prevent this message from being displayed.
+            $message = "❌ Error: Please select a specific item unit to mark as damaged."; $is_success = false; 
+        }
 
     } elseif (isset($_POST["manually_mark_overdue"])) {
         if ($form_data) {
@@ -819,7 +822,7 @@ $pendingForms = $transaction->getPendingForms();
                 border-bottom: none;
             }
             
-            /* Action Button Grouping: Stacked for best touch interaction */
+            
             .actions-cell {
                 padding: 10px 10px 15px 10px !important;
                 text-align: center !important;
@@ -835,7 +838,7 @@ $pendingForms = $transaction->getPendingForms();
         }
 
         @media (max-width: 576px) {
-            /* Smallest screen adjustments */
+            
             .main-content { padding: 10px; padding-top: calc(var(--header-height) + 10px); }
             .content-area { padding: 10px; }
             .top-header-bar { padding-left: 65px; }
@@ -945,21 +948,17 @@ $pendingForms = $transaction->getPendingForms();
                         $clean_status = strtolower($form["status"]);
                         $display_status = ucfirst(str_replace('_', ' ', $clean_status));
                         
-                        // Set the status class for row highlighting
                         $row_status_class = 'table-row-' . $clean_status;
                         
-                        // Fetch the full form details to get the student's remarks 
                         $full_form_data = $transaction->getBorrowFormById($form["id"]);
                         
-                        // Display student remarks by pulling from the staff_remarks column (if status is 'checking')
                         $student_remarks = ($clean_status === 'checking') ? 
-                                                ($full_form_data['staff_remarks'] ?? '-') : 
-                                                'N/A';
+                                                     ($full_form_data['staff_remarks'] ?? '-') : 
+                                                     'N/A';
                         
-                        // Fetch unit-level items for the "Mark Damaged" dropdown
+                        
                         $items = $transaction->getTransactionItems($form["id"]);
                         
-                        // Check if item is overdue (for button logic)
                         $today_dt = new DateTime();
                         $today_dt->setTime(0, 0, 0); 
 
@@ -968,12 +967,11 @@ $pendingForms = $transaction->getPendingForms();
                         
                         $is_currently_overdue = ($expected_return < $today_dt);
                         
-                        // Logic for manually marking overdue (past the expected return date + 1 day grace)
                         $grace_period_end_date = (clone $expected_return)->modify('+1 day'); 
                         $is_ban_eligible_now = ($today_dt > $grace_period_end_date); 
 
                         if ($clean_status == "borrowed" && $is_ban_eligible_now) {
-                            $row_status_class .= ' overdue-candidate'; // Add class for extra visual cue
+                            $row_status_class .= ' overdue-candidate'; 
                         }
                     ?>
                         <tr class="<?= $row_status_class ?>">
@@ -1010,13 +1008,13 @@ $pendingForms = $transaction->getPendingForms();
                                                 <label for="damaged_unit_id_<?= $form['id'] ?>" class="fw-bold mb-1">Mark Damaged Unit:</label>
                                                 <select name="damaged_unit_id" id="damaged_unit_id_<?= $form['id'] ?>" class="form-select-sm">
                                                     <option value="">-- None / All Good --</option>
-                                                     <?php
-                                                     foreach ($items as $item):
-                                                     ?>
-                                                        <option value="<?= htmlspecialchars($item["unit_id"]) ?>">
-                                                            <?= htmlspecialchars($item["name"]) ?> (Unit ID: <?= htmlspecialchars($item["unit_id"]) ?>)
-                                                        </option>
-                                                     <?php endforeach; ?>
+                                                        <?php
+                                                        foreach ($items as $item):
+                                                        ?>
+                                                            <option value="<?= htmlspecialchars($item["unit_id"]) ?>">
+                                                                <?= htmlspecialchars($item["name"]) ?> (Unit ID: <?= htmlspecialchars($item["unit_id"]) ?>)
+                                                            </option>
+                                                        <?php endforeach; ?>
                                                 </select>
                                             </div>
                                     <?php endif; ?>
@@ -1031,26 +1029,31 @@ $pendingForms = $transaction->getPendingForms();
                                     <?php elseif ($clean_status == "checking"): ?>
                                             <?php if ($is_currently_overdue): ?>
                                                  <button type="button"
-                                                      class="btn warning late-return-btn"
-                                                      data-bs-toggle="modal"
-                                                      data-bs-target="#lateReturnModal"
-                                                      data-form-id="<?= htmlspecialchars($form["id"]) ?>">
-                                                      Confirm LATE Return
+                                                               class="btn warning late-return-btn"
+                                                               data-bs-toggle="modal"
+                                                               data-bs-target="#lateReturnModal"
+                                                               data-form-id="<?= htmlspecialchars($form["id"]) ?>">
+                                                               Confirm LATE Return
                                                  </button>
                                             <?php else: ?>
                                                  <button type="submit" name="approve_return" class="btn approve">Mark Returned (Good)</button>
                                             <?php endif; ?>
 
-                                            <button type="button" name="mark_damaged_pre_check" id="mark_damaged_btn_<?= $form['id'] ?>" class="btn secondary mark-damaged-btn">Returned with Issues</button>
-                                            
-                                    <?php elseif ($clean_status == "borrowed" && $is_ban_eligible_now): ?>
-                                             <button type="button"
-                                                   class="btn reject overdue-btn"
-                                                   data-bs-toggle="modal"
-                                                   data-bs-target="#overdueModal"
-                                                   data-form-id="<?= htmlspecialchars($form["id"]) ?>">
-                                                   Manually Mark OVERDUE
-                                             </button>
+                                            <button type="submit" 
+                                                    name="mark_damaged" 
+                                                    id="mark_damaged_btn_<?= $form['id'] ?>" 
+                                                    class="btn secondary"
+                                                    onclick="return validateDamagedSelection(<?= $form['id'] ?>);">
+                                                Returned with Issues
+                                            </button>
+                                            <?php elseif ($clean_status == "borrowed" && $is_ban_eligible_now): ?>
+                                                 <button type="button"
+                                                               class="btn reject overdue-btn"
+                                                               data-bs-toggle="modal"
+                                                               data-bs-target="#overdueModal"
+                                                               data-form-id="<?= htmlspecialchars($form["id"]) ?>">
+                                                               Manually Mark OVERDUE
+                                                 </button>
                                             
                                     <?php else: ?>
                                             <button type="button" class="btn secondary" disabled>No Action Needed</button>
@@ -1142,14 +1145,28 @@ $pendingForms = $transaction->getPendingForms();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- NOTIFICATION HANDLER IMPLEMENTATION ---
-    
-    // 1. Function to handle marking ALL staff notifications as read
+    // FIX START: New validation function for the damaged item selection
+    window.validateDamagedSelection = function(formId) {
+        const unitSelect = document.getElementById(`damaged_unit_id_${formId}`);
+        // The value of the "None / All Good" option is an empty string "".
+        const selectedUnit = unitSelect ? unitSelect.value : "";
+        
+        // If no unit ID is selected (value is empty string or null), show the modal and prevent submission.
+        if (!selectedUnit || selectedUnit === "") {
+            const modal = new bootstrap.Modal(document.getElementById('requiredUnitSelectModal'));
+            modal.show();
+            return false; // Prevents the form from submitting
+        }
+        
+        // If a unit is selected, allow the form to submit to the server logic for 'mark_damaged'.
+        return true; 
+    };
+    // FIX END
+
+
     window.markAllStaffAsRead = function() {
-        // Use the generalized API endpoint for staff batch read
         $.post('../api/mark_notification_as_read.php', { mark_all: true, role: 'staff' }, function(response) {
             if (response.success) {
-                // Update text and force UI refresh via re-fetch
                 $('#mark-all-link').text('Successfully marked all as read!').removeClass('text-muted').addClass('text-success');
                 setTimeout(fetchStaffNotifications, 500);
             } else {
@@ -1161,20 +1178,16 @@ $pendingForms = $transaction->getPendingForms();
         });
     };
     
-    // 2. Function to handle single notification click (Mark as read + navigate)
     window.handleNotificationClick = function(event, element, notificationId) {
         event.preventDefault(); 
         const linkHref = element.getAttribute('href');
 
-        // Explicitly close the Bootstrap Dropdown
         const $dropdownToggle = $('#alertsDropdown');
         const dropdownInstance = bootstrap.Dropdown.getInstance($dropdownToggle[0]);
         if (dropdownInstance) { dropdownInstance.hide(); }
         
-        // Use the generalized API endpoint to mark the single alert as read
         $.post('../api/mark_notification_as_read.php', { notification_id: notificationId, role: 'staff' }, function(response) {
             if (response.success) {
-                // Navigate after marking as read
                 window.location.href = linkHref;
             } else {
                 console.error("Failed to mark notification as read. Navigating anyway.");
@@ -1186,7 +1199,7 @@ $pendingForms = $transaction->getPendingForms();
         });
     };
 
-    // 3. Function to fetch the count and populate the dropdown
+    
     function fetchStaffNotifications() {
         const apiPath = '../api/get_notifications.php'; 
 
@@ -1196,32 +1209,31 @@ $pendingForms = $transaction->getPendingForms();
             const notifications = response.alerts || []; 
             
             const $badge = $('#notification-bell-badge');
-            const $markAllLink = $('#mark-all-link'); // Get the static HTML element
+            const $markAllLink = $('#mark-all-link');
             const $dropdown = $('#notification-dropdown');
             
-            // 1. Update the Badge Count
+            
             $badge.text(unreadCount);
             $badge.toggle(unreadCount > 0); 
             
-            // 2. Control visibility of the static Mark All link
+            
             if (unreadCount > 0) {
-                 // Show the link and update the count text
-                 $markAllLink.show().text(`Mark All ${unreadCount} as Read`).removeClass('text-success').addClass('text-muted');
+                
+                $markAllLink.show().text(`Mark All ${unreadCount} as Read`).removeClass('text-success').addClass('text-muted');
             } else {
-                 // Hide the link
-                 $markAllLink.hide();
+                
+                $markAllLink.hide();
             }
 
-            // 3. Clear and Populate the Dynamic Placeholder
             const $placeholder = $dropdown.find('.dynamic-notif-placeholder').empty();
             
             if (notifications.length > 0) {
-                // Sort by unread status, then by time (latest first)
+                
                 notifications.sort((a, b) => {
                     if (a.is_read == b.is_read) {
                         return new Date(b.created_at) - new Date(a.created_at);
                     }
-                    return a.is_read - b.is_read; // Unread (0) comes before read (1)
+                    return a.is_read - b.is_read; 
                 });
 
                 notifications.slice(0, 5).forEach(notif => {
@@ -1234,8 +1246,8 @@ $pendingForms = $transaction->getPendingForms();
                     }
                     
                     const is_read = notif.is_read == 1;
-                    const itemClass = is_read ? 'text-muted' : 'fw-bold'; // Highlight unread
-                    const targetLink = notif.link ? notif.link : 'staff_pending.php';  
+                    const itemClass = is_read ? 'text-muted' : 'fw-bold'; 
+                    const targetLink = notif.link ? notif.link : 'staff_pending.php';  
 
                     $placeholder.append(`
                              <a class="dropdown-item d-flex align-items-center dynamic-notif-item" 
@@ -1251,7 +1263,6 @@ $pendingForms = $transaction->getPendingForms();
                      `);
                 });
             } else {
-                // Display a "No Alerts" message
                 $placeholder.html(`
                     <a class="dropdown-item text-center small text-muted dynamic-notif-item">No New Notifications</a>
                 `);
@@ -1259,17 +1270,14 @@ $pendingForms = $transaction->getPendingForms();
             
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error fetching staff notifications:", textStatus, errorThrown);
-            // Ensure the badge is hidden and link is hidden on failure
+            
             $('#notification-bell-badge').text('0').hide();
             $('#mark-all-link').hide();
         });
     }
-    // --- END NOTIFICATION HANDLER IMPLEMENTATION ---
 
-
-    // --- JS Initialization ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Sidebar active link script
+        
         const path = window.location.pathname.split('/').pop();
         const links = document.querySelectorAll('.sidebar .nav-link');
         
@@ -1282,33 +1290,28 @@ $pendingForms = $transaction->getPendingForms();
             }
         });
         
-        // --- NEW DESKTOP COLLAPSE LOGIC ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.querySelector('.sidebar');
         const sidebarBackdrop = document.getElementById('sidebarBackdrop');
         
-        // Function to set the initial state (open on desktop, closed on mobile)
+
         function setInitialState() {
             if (window.innerWidth > 992) {
-                // Desktop: Default is permanently OPEN, remove all collapse/active classes
                 sidebar.classList.remove('closed');
                 sidebar.classList.remove('active');
                 if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-                // **CRITICAL FIX: Hide the burger button on desktop**
                 if (menuToggle) menuToggle.style.display = 'none';
             } else {
-                // Mobile: Default is hidden, but keep menu toggle visible for mobile
                 sidebar.classList.remove('closed');
                 sidebar.classList.remove('active');
                 if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-                if (menuToggle) menuToggle.style.display = 'flex'; // Show for mobile
+                if (menuToggle) menuToggle.style.display = 'flex'; 
             }
         }
         
-        // Function to toggle the state of the sidebar and layout
         function toggleSidebar() {
             if (window.innerWidth <= 992) {
-                // Mobile behavior: Toggle 'active' class for overlay/menu
+                
                 sidebar.classList.toggle('active');
                 if (sidebarBackdrop) {
                     const isActive = sidebar.classList.contains('active');
@@ -1316,22 +1319,20 @@ $pendingForms = $transaction->getPendingForms();
                     sidebarBackdrop.style.opacity = isActive ? '1' : '0';
                 }
             } else {
-                // Desktop behavior: DO NOTHING - Sidebar is permanently open
+                
             }
         }
 
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', toggleSidebar);
             
-            // Backdrop click handler (only for mobile overlay)
             if (sidebarBackdrop) {
                 sidebarBackdrop.addEventListener('click', () => {
-                    sidebar.classList.remove('active'); // Close mobile overlay
+                    sidebar.classList.remove('active'); 
                     sidebarBackdrop.style.display = 'none';
                 });
             }
             
-            // Hide mobile overlay when navigating
             const navLinks = sidebar.querySelectorAll('.nav-link');
             navLinks.forEach(link => {
                 link.addEventListener('click', () => {
@@ -1344,17 +1345,10 @@ $pendingForms = $transaction->getPendingForms();
                 });
             });
 
-            // Handle window resize (switching between mobile/desktop layouts)
             window.addEventListener('resize', setInitialState);
 
-            // Set initial state on load
             setInitialState();
         }
-        // --- END NEW DESKTOP COLLAPSE LOGIC ---
-        
-        // --- MODAL AND POPOVER INITIALIZATION ---
-        
-        // Delete Modal Handler (Existing - kept for completeness)
         const deleteModal = document.getElementById('deleteApparatusModal');
         if (deleteModal) {
             deleteModal.addEventListener('show.bs.modal', function (event) {
@@ -1370,29 +1364,27 @@ $pendingForms = $transaction->getPendingForms();
             });
         }
 
-        // Popover Initialization (Existing - kept for completeness)
         const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
         [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
 
 
-        // --- AUTOHIDE LOGIC ---
         const statusAlert = document.getElementById('status-alert');
         if (statusAlert) {
             if (statusAlert.classList.contains('alert-success') || statusAlert.classList.contains('alert-danger')) {
                 setTimeout(() => {
                     const bsAlert = bootstrap.Alert.getInstance(statusAlert) || new bootstrap.Alert(statusAlert);
                     bsAlert.close();
-                }, 4000); // 4000 milliseconds = 4 seconds
+                }, 4000); 
             }
         }
         
-        // NEW: Initial fetch on page load and polling for notifications
+        
         fetchStaffNotifications();
-        setInterval(fetchStaffNotifications, 30000); // Poll every 30 seconds
+        setInterval(fetchStaffNotifications, 30000); 
         
-        // --- Transaction Action Modals (Late Return, Overdue, Damaged Unit Check) ---
         
-        // 1. Late Return Modal Handler
+        
+        
         $('#lateReturnModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
             const formId = button.data('form-id');
@@ -1404,7 +1396,6 @@ $pendingForms = $transaction->getPendingForms();
             const formElement = $(`.pending-form[data-form-id="${formId}"]`);
             const remarks = formElement.find('textarea[name="staff_remarks"]').val();
 
-            // Set the necessary fields in the hidden form and submit it
             const submissionForm = document.createElement('form');
             submissionForm.method = 'POST';
             submissionForm.action = 'staff_pending.php';
@@ -1417,7 +1408,7 @@ $pendingForms = $transaction->getPendingForms();
             submissionForm.submit();
         });
 
-        // 2. Overdue Modal Handler
+        
         $('#overdueModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
             const formId = button.data('form-id');
@@ -1429,7 +1420,7 @@ $pendingForms = $transaction->getPendingForms();
             const formElement = $(`.pending-form[data-form-id="${formId}"]`);
             const remarks = formElement.find('textarea[name="staff_remarks"]').val();
 
-            // Set the necessary fields in the hidden form and submit it
+            
             const submissionForm = document.createElement('form');
             submissionForm.method = 'POST';
             submissionForm.action = 'staff_pending.php';
@@ -1442,38 +1433,9 @@ $pendingForms = $transaction->getPendingForms();
             submissionForm.submit();
         });
         
-        // 3. Mark Damaged Pre-Check Handler
-        $('.mark-damaged-btn').on('click', function(e) {
-            e.preventDefault();
-            const formId = $(this).closest('form').data('form-id');
-            const formElement = $(`.pending-form[data-form-id="${formId}"]`);
-            const unitSelect = formElement.find(`#damaged_unit_id_${formId}`);
-            const selectedUnit = unitSelect.val();
-
-            if (!selectedUnit || selectedUnit === "") {
-                // If no unit is selected, show the warning modal
-                const modal = new bootstrap.Modal(document.getElementById('requiredUnitSelectModal'));
-                modal.show();
-                // Store the form ID so the user can go back and fix it
-                $('#form_to_submit_after_error_fix').val(formId);
-                return;
-            }
-
-            // If a unit IS selected, create a hidden form and submit the damaged action directly
-            const remarks = formElement.find('textarea[name="staff_remarks"]').val();
-            
-            const submissionForm = document.createElement('form');
-            submissionForm.method = 'POST';
-            submissionForm.action = 'staff_pending.php';
-
-            $(submissionForm).append('<input type="hidden" name="form_id" value="' + formId + '">');
-            $(submissionForm).append('<input type="hidden" name="staff_remarks" value="' + remarks + '">');
-            $(submissionForm).append('<input type="hidden" name="damaged_unit_id" value="' + selectedUnit + '">');
-            $(submissionForm).append('<input type="hidden" name="mark_damaged" value="1">'); // Action trigger
-            
-            document.body.appendChild(submissionForm);
-            submissionForm.submit();
-        });
+        // FIX: Removed the old broken .mark-damaged-btn click handler.
+        // The new function validateDamagedSelection(formId) handles the validation
+        // when the button with type="submit" and name="mark_damaged" is clicked.
         
     });
 </script>

@@ -12,7 +12,7 @@ class Mailer {
     public function __construct() {
         $this->mail = new PHPMailer(true);
         try {
-            // *** FINAL CONFIGURATION: GMAIL SMTP (Uses App Password) ***
+        
             $this->mail->isSMTP();
             $this->mail->Host = 'smtp.gmail.com'; // CORRECT Host for Gmail
             $this->mail->SMTPAuth = true;
@@ -20,7 +20,7 @@ class Mailer {
             $this->mail->Password = 'aezq hfjs fbpl fnew'; // Your 16-digit App Password
             $this->mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // CORRECT: Use SMTPS
             $this->mail->Port = 465; // CORRECT Port for SMTPS
-            // ---------------------------------------------------------------------
+           
 
             $this->mail->setFrom('jngiglesia@gmail.com', 'CSM Borrowing System');
             $this->mail->isHTML(true);
@@ -38,10 +38,6 @@ class Mailer {
         return $this->mail->ErrorInfo;
     }
 
-    /**
-     * Loads, processes, and injects a content template into the base layout.
-     * NOTE: This method correctly handles all conditional logic and tags.
-     */
     protected function loadTemplate($templateName, array $variables = []) {
         $basePath = __DIR__ . '/../templates/emails/'; 
         $contentPath = $basePath . $templateName . '.html';
@@ -52,33 +48,29 @@ class Mailer {
             return "Error: Template not found."; 
         }
 
-        // 1. Load Content Template
         $content = file_get_contents($contentPath);
         
         $status_class = $variables['STATUS_CLASS'] ?? ''; 
 
-        // --- STEP 2: Handle Conditional Logic (IF/ELSEIF/ENDIF) ---
-        
-        // A. Handle generic IF variable check (e.g., {{ IF APPROVAL_DATE }})
         $content = preg_replace_callback('/{{\s*IF\s+([A-Z_]+)\s*}}(.*?){{\s*ENDIF\s*}}/s', function($matches) use ($variables) {
             $key = strtoupper($matches[1]);
             $content_block = $matches[2];
             return !empty($variables[$key]) ? $content_block : '';
         }, $content);
 
-        // B. Handle STATUS_CLASS IF/ELSEIF/ENDIF block logic
+      
         $pattern = '/{{\s*IF\s+STATUS_CLASS\s*==\s*\'([^\']+)\'\s*}}(.*?){{\s*ELSEIF\s+STATUS_CLASS\s*==\s*\'([^\']+)\'\s*}}(.*?){{\s*ELSEIF\s+STATUS_CLASS\s*==\s*\'([^\']+)\'\s*}}(.*?){{\s*ENDIF\s*}}/s';
 
         $content = preg_replace_callback($pattern, function($matches) use ($status_class) {
-            // Check IF 
+            
             if ($status_class == $matches[1]) {
                 return $matches[2]; 
             }
-            // Check first ELSEIF
+            
             if (isset($matches[3]) && $status_class == $matches[3]) {
                 return $matches[4]; 
             }
-            // Check second ELSEIF
+
             if (isset($matches[5]) && $status_class == $matches[5]) {
                 return $matches[6];
             }
@@ -86,7 +78,6 @@ class Mailer {
             return ''; 
         }, $content);
         
-        // C. Handle REMARKS conditional block
         $content = preg_replace_callback('/{{\s*IF\s+REMARKS\s*}}(.*?){{\s*ENDIF\s*}}/s', function($matches) use ($variables) {
             $remarks_content = $variables['REMARKS'] ?? '';
             $content_block = $matches[1];
@@ -94,28 +85,22 @@ class Mailer {
         }, $content);
         
 
-        // 3. Simple Replacement (for all standard variables, including injected HTML)
         foreach ($variables as $key => $value) {
             $upperKey = strtoupper($key);
             $value = is_string($value) ? $value : (string)$value;
 
-            // Handle the | UPPERCASE filter (Keep for safety, even though the status box is pre-processed)
             if (strpos($content, "{{ {$upperKey} | UPPERCASE }}") !== false) {
                 $content = str_replace('{{ ' . $upperKey . ' | UPPERCASE }}', strtoupper($value), $content);
             }
             
-            // Handle simple replacement: {{ KEY }}
             $content = str_replace('{{ ' . $upperKey . ' }}', $value, $content);
             
-            // Handle bold-wrapped replacement: **{{ KEY }}**
             $content = str_replace('**{{ ' . $upperKey . ' }}**', '**' . $value . '**', $content);
         }
         
-        // 4. Load the Base Layout and inject the finalized content
         $bodyHtml = file_get_contents($layoutPath);
         $bodyHtml = str_replace('{{ BODY_CONTENT }}', $content, $bodyHtml);
         
-        // Also replace variables in the layout itself (e.g., {{ SUBJECT }})
         foreach ($variables as $key => $value) {
             $upperKey = strtoupper($key);
             $value = is_string($value) ? $value : (string)$value;
@@ -125,9 +110,6 @@ class Mailer {
         return $bodyHtml;
     }
 
-    /**
-     * Sends the account verification email using the templating system.
-     */
     public function sendVerificationEmail($recipientEmail, $code) {
         try {
             $verification_code = $code; 
@@ -157,12 +139,7 @@ class Mailer {
         }
     }
 
-    /**
-     * Sends the password reset code email.
-     */
-/**
-     * Sends the password reset code email.
-     */
+ 
     public function sendResetCodeEmail($recipientEmail, $code) {
         try {
             $this->mail->clearAddresses();
@@ -170,30 +147,23 @@ class Mailer {
 
             $subject = 'CSM Borrowing System Password Reset Code';
             
-            // NOTE: We use body_verification template for the layout consistency
-            // and adapt the content via str_replace below.
             $variables = [
                 'SUBJECT' => $subject,
                 'VERIFICATION_CODE' => $code, 
                 'RECIPIENT_NAME' => 'User',
             ];
             
-            // 1. Load the template content (body_verification template)
             $bodyHtml = $this->loadTemplate('body_verification', $variables); 
             
-            // 2. Adjust the specific text to reflect a password reset instead of registration
             $bodyHtml = str_replace('Account Verification', 'Password Reset Code', $bodyHtml);
             $bodyHtml = str_replace('to activate your borrowing privileges:', 'to reset your password. This code is valid for a limited time:', $bodyHtml);
-            // $bodyHtml = str_replace('Verification Link:', 'Code:', $bodyHtml); // This replacement might be unnecessary if not in your template
+    
 
-            // ************************************************************
-            // *** CRITICAL FIX: ASSIGN THE BODY AND ALT BODY CONTENT ***
-            // ************************************************************
             $this->mail->Subject = $subject;
-            $this->mail->Body = $bodyHtml; // <--- THIS LINE WAS MISSING
-            $this->mail->AltBody = "Your password reset code is: " . $code; // <--- THIS LINE WAS MISSING
+            $this->mail->Body = $bodyHtml;
+            $this->mail->AltBody = "Your password reset code is: " . $code; 
             
-            // ************************************************************
+            
 
             return $this->mail->send();
 
@@ -204,9 +174,7 @@ class Mailer {
         }
     }
 
-    /**
-     * Sends generic email.
-     */
+   
     public function sendRawEmail($recipientEmail, $subject, $bodyHtml) {
         try {
             $this->mail->clearAddresses();
@@ -224,16 +192,7 @@ class Mailer {
         }
     }
     
-    /**
-     * Sends updates for form submission, approval, or rejection.
-     * FIX APPLIED: Signature updated to accept 9 arguments including itemsList.
-     */
-   // File: classes/Mailer.php (Replace the entire function)
 
-/**
- * Sends updates for form submission, approval, or rejection.
- * FIX APPLIED: Robust date parsing using strtotime() checks.
- */
 public function sendTransactionStatusEmail($recipientEmail, $recipientName, $formId, $status, $remarks = null, $requestDate = '', $dueDate = '', $approvalDate = '', array $itemsList = []) {
     try {
         $this->mail->clearAddresses();
@@ -243,7 +202,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
         $subject = "Update: Request #{$formId} is {$statusText}";
         $cleanRemarks = $remarks ? nl2br(htmlspecialchars($remarks)) : 'No specific remarks were provided by staff.';
         
-        // --- 1. DETERMINE DYNAMIC CONTENT AND STYLING (Unchanged) ---
+        
         $dynamic_message = '';
         $status_css_class = 'status-waiting'; 
         $status_bg = '#fff3cd'; 
@@ -254,14 +213,14 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
             case 'approved':
                 $dynamic_message = 'The staff has **APPROVED** your request! You may proceed to collect the apparatus on the scheduled borrow date.';
                 $status_css_class = 'status-approved';
-                $status_bg = '#d4edda'; // Light Green
-                $status_color = '#155724'; // Dark Green
+                $status_bg = '#d4edda'; 
+                $status_color = '#155724'; 
                 break;
             case 'rejected':
                 $dynamic_message = 'Your request has been **REJECTED**. Please review the remarks below for the reason and submit a new request.';
                 $status_css_class = 'status-rejected';
-                $status_bg = '#f8d7da'; // Light Red
-                $status_color = '#721c24'; // Dark Red
+                $status_bg = '#f8d7da'; 
+                $status_color = '#721c24'; 
                 break;
             case 'waiting_for_approval': 
             case 'returned': 
@@ -270,8 +229,8 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
             default:
                 $dynamic_message = 'Your submission has been successfully received and is **awaiting staff review**. You will receive another email once your request is approved or rejected.';
                 $status_css_class = 'status-waiting'; 
-                $status_bg = '#fff3cd'; // Light Yellow
-                $status_color = '#856404'; // Dark Yellow
+                $status_bg = '#fff3cd';
+                $status_color = '#856404'; 
                 if ($status == 'rejected' || $status == 'overdue') {
                     $status_bg = '#f8d7da'; $status_color = '#721c24';
                 } elseif ($status == 'returned' || $status == 'damaged') {
@@ -281,7 +240,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
                 break;
         }
         
-        // 2. Generate the Status Box HTML (Unchanged)
+        
         $finalStatusDisplay = strtoupper($statusText); 
         $statusBoxHtml = "
             <div style=\"background-color: {$status_bg}; color: {$status_color}; padding: 15px; border: 1px solid {$status_color}; border-radius: 4px; font-weight: bold; text-align: center; font-size: 1.1em;\">
@@ -289,7 +248,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
             </div>
         ";
         
-        // 3. Generate the Item List HTML (Unchanged)
+        
         $itemTableHtml = '';
         if (!empty($itemsList)) {
             $itemRows = '';
@@ -326,10 +285,10 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
             ';
         }
 
-        // --- 4. FORMAT DATES ROBUSTLY (CRITICAL FIX FOR N/A) ---
+        
         
         $reqDateFormatted = 'N/A';
-        // Only attempt formatting if the variable exists and strtotime can parse it
+        
         if (!empty($requestDate) && ($ts = strtotime($requestDate)) !== false) {
             $reqDateFormatted = date('F j, Y', $ts);
         }
@@ -344,7 +303,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
             $approvalDateFormatted = date('F j, Y', $ts);
         }
         
-        // 5. Define variables for template injection
+        
         $variables = [
             'SUBJECT' => $subject,
             'RECIPIENT_NAME' => $recipientName,
@@ -354,7 +313,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
             'STATUS_CLASS' => $status_css_class,
             'REMARKS' => $cleanRemarks,
             
-            // --- Use the robustly formatted dates ---
+          
             'REQUEST_DATE' => $reqDateFormatted,
             'DUE_DATE' => $dueDateFormatted,
             'APPROVAL_DATE' => $approvalDateFormatted,
@@ -393,7 +352,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
 
             $statusText = '';
             
-            // --- 1. GENERATE HTML BLOCK: STATUS_BOX_HTML ---
+           
             $statusBoxHtml = '';
             switch ($condition) {
                 case 'damaged':
@@ -411,7 +370,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
                     break;
             }
 
-            // --- 2. GENERATE HTML BLOCK: ITEM_ROWS_HTML (The list of items) ---
+        
             $itemRowsHtml = '';
             foreach ($returnedItems as $item) {
                 $itemCondition = htmlspecialchars($item['condition_on_return'] ?? 'Good');
@@ -430,7 +389,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
                 ';
             }
 
-            // --- 3. GENERATE HTML BLOCK: REMARKS_SECTION_HTML (Reasoning/Fine section) ---
+           
             $remarksSectionHtml = '';
             if ($condition == 'damaged' || $condition == 'late' || $totalFine > 0) {
                 
@@ -453,7 +412,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
                 $remarksSectionHtml .= '</div>';
             }
             
-            // --- 4. Define variables for template injection ---
+            
             $variables = [
                 'RECIPIENT_NAME' => $recipientName,
                 'FORM_ID' => $formId,
@@ -480,9 +439,7 @@ public function sendTransactionStatusEmail($recipientEmail, $recipientName, $for
         }
     }
     
-    /**
-     * Sends the overdue notice email (requires overdue_notice.html).
-     */
+   
     public function sendOverdueNotice($recipientEmail, $recipientName, $formId, $returnDate, $itemsList) {
         try {
             $this->mail->clearAddresses();

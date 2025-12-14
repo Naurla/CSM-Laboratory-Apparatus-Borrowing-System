@@ -48,9 +48,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #A40404; /* Dark Red / Maroon (WMSU-inspired) */
+            --primary-color: #A40404; 
             --primary-color-dark: #820303;
-            --secondary-color: #f4b400; /* Gold/Yellow Accent */
+            --secondary-color: #f4b400; 
             --text-dark: #2c3e50;
             --bg-light: #f5f6fa;
             --danger-color: #dc3545;
@@ -96,7 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         .form-group { 
             margin-bottom: 25px; 
-            text-align: center; /* Center the code label */
+            text-align: center; 
         }
         
         input[type="email"], input[type="text"] { 
@@ -115,11 +115,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             outline: none;
         }
         
-        /* Specific styling for the 6-digit code input */
+       
         .code-input { 
             text-align: center; 
-            font-size: 1.5em; /* Larger font size */
-            letter-spacing: 0.5em; /* Increased spacing */
+            font-size: 1.5em; 
+            letter-spacing: 0.5em; 
             font-weight: bold;
             padding: 15px 10px;
         }
@@ -130,7 +130,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background-color: var(--primary-color); 
             color: white; 
             border: none; 
-            border-radius: 50px; /* Pill shape */
+            border-radius: 50px; 
             cursor: pointer; 
             font-size: 1.1em; 
             font-weight: 700;
